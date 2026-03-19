@@ -24,30 +24,41 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Initialize Google APIs
 const getGoogleAuth = () => {
   let privateKey = process.env.GOOGLE_PRIVATE_KEY;
-  if (privateKey) {
-    privateKey = privateKey.trim();
-    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-      privateKey = privateKey.slice(1, -1);
-    } else if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
-      privateKey = privateKey.slice(1, -1);
-    }
-    privateKey = privateKey.replace(/\\n/g, '\n');
-
-    const begin = '-----BEGIN PRIVATE KEY-----';
-    const end = '-----END PRIVATE KEY-----';
-    
-    if (privateKey.includes(begin) && privateKey.includes(end)) {
-      const keyBodyStartIndex = privateKey.indexOf(begin) + begin.length;
-      const keyBodyEndIndex = privateKey.indexOf(end);
-      const keyBody = privateKey.substring(keyBodyStartIndex, keyBodyEndIndex).replace(/\s+/g, '');
-      const lines = keyBody.match(/.{1,64}/g) || [];
-      privateKey = `${begin}\n${lines.join('\n')}\n${end}`;
-    }
-  }
-
-  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !privateKey) {
+  if (!privateKey || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
     return null;
   }
+
+  try {
+    // 1. Check if user accidentally pasted the entire JSON file content
+    const parsed = JSON.parse(privateKey);
+    if (parsed.private_key) {
+      privateKey = parsed.private_key;
+    }
+  } catch (e) {
+    // Not JSON, proceed normally
+  }
+
+  // 2. Remove surrounding quotes if present
+  privateKey = privateKey.trim().replace(/^["']|["']$/g, '');
+  
+  // 3. Replace literal '\n' strings with actual newlines
+  privateKey = privateKey.replace(/\\n/g, '\n');
+  
+  // 4. Ensure proper PEM formatting
+  const beginMatch = privateKey.match(/-----BEGIN [A-Z ]+-----/);
+  const endMatch = privateKey.match(/-----END [A-Z ]+-----/);
+  
+  if (beginMatch && endMatch) {
+    const begin = beginMatch[0];
+    const end = endMatch[0];
+    const body = privateKey
+      .substring(privateKey.indexOf(begin) + begin.length, privateKey.indexOf(end))
+      .replace(/\s+/g, ''); // Remove all whitespace/newlines from body
+    
+    const formattedBody = body.match(/.{1,64}/g)?.join('\n') || body;
+    privateKey = `${begin}\n${formattedBody}\n${end}`;
+  }
+
   return new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
