@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { fetchSheet, addRow, deleteRow } from '@/lib/api';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/lib/AuthContext';
+import DeleteButton from '@/components/DeleteButton';
 
 export default function Settings() {
+  const { user } = useAuth();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [formName, setFormName] = useState('');
@@ -27,6 +30,7 @@ export default function Settings() {
     setLoading(true);
     try {
       const result = await fetchSheet('MasterData');
+      console.log('MasterData result:', result);
       setData(result);
     } catch (error) {
       toast.error('Failed to load master data');
@@ -59,11 +63,13 @@ export default function Settings() {
   }
 
   async function handleDelete(index: number) {
+    console.log('Attempting to delete row at index:', index);
     try {
       await deleteRow('MasterData', index);
       toast.success('Option deleted');
       loadData();
     } catch (error) {
+      console.error('Delete error:', error);
       toast.error('Failed to delete option');
     }
   }
@@ -151,9 +157,9 @@ export default function Settings() {
                 {(items as any[]).map((item: any, idx: number) => (
                   <li key={idx} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg text-sm">
                     <span>{item['dropdwon options']}</span>
-                    <button onClick={() => handleDelete(item.rowIndex)} className="text-red-500 hover:text-red-700">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {user?.role === 'Admin' && (
+                      <DeleteButton onClick={() => handleDelete(item._rowIndex)} className="text-red-500 hover:text-red-700" />
+                    )}
                   </li>
                 ))}
               </ul>

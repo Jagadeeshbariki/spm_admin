@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Box, CheckCircle2, AlertCircle, Wrench, Edit, Trash2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
+import DeleteButton from '@/components/DeleteButton';
 
 export default function Assets() {
   const [activeTab, setActiveTab] = useState<'registry' | 'usage'>('registry');
@@ -353,9 +354,7 @@ export default function Assets() {
                         <button onClick={() => handleOpenModal(asset)} className="text-slate-400 hover:text-blue-600 mr-3">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(asset._rowIndex)} className="text-slate-400 hover:text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <DeleteButton onClick={() => handleDelete(asset._rowIndex)} />
                       </td>
                     </tr>
                   ))
@@ -393,9 +392,7 @@ export default function Assets() {
                         <button onClick={() => handleOpenModal(usage)} className="text-slate-400 hover:text-blue-600 mr-3">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(usage._rowIndex)} className="text-slate-400 hover:text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <DeleteButton onClick={() => handleDelete(usage._rowIndex)} />
                       </td>
                     </tr>
                   ))

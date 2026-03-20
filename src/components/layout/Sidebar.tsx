@@ -13,7 +13,7 @@ import {
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-const navItems = [
+const officeAdminItems = [
   { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Expenses', path: '/admin/expenses', icon: ReceiptIndianRupee },
   { name: 'Assets', path: '/admin/assets', icon: Box },
@@ -37,7 +37,8 @@ export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolea
     >
       <div className="flex-1 py-6 flex flex-col gap-6 px-3">
         <div className="flex flex-col gap-2">
-          {navItems.map((item) => (
+          {!collapsed && <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Office Admin</p>}
+          {officeAdminItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}

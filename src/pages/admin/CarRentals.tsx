@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Download, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, Filter, Download, Edit2, Loader2 } from 'lucide-react';
 import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
+import DeleteButton from '@/components/DeleteButton';
+import { useAuth } from '@/lib/AuthContext';
 
 interface CarRental {
   _rowIndex?: number;
@@ -26,6 +28,7 @@ const initialFormState: CarRental = {
 };
 
 export default function CarRentals() {
+  const { user } = useAuth();
   const [rentals, setRentals] = useState<CarRental[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -237,12 +240,7 @@ export default function CarRentals() {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button 
-                          onClick={() => rental._rowIndex && handleDelete(rental._rowIndex)}
-                          className="text-slate-400 hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <DeleteButton onClick={() => rental._rowIndex && handleDelete(rental._rowIndex)} />
                       </div>
                     </td>
                   </tr>
