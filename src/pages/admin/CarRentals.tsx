@@ -37,9 +37,25 @@ export default function CarRentals() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState('All Projects');
 
+  const [projects, setProjects] = useState<string[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
+
   useEffect(() => {
     loadRentals();
+    loadMasterData();
   }, []);
+
+  const loadMasterData = async () => {
+    try {
+      const data = await fetchSheet('MasterData');
+      const projectOptions = data.filter((row: any) => row['dropdwon catagorty'] === 'Project').map((row: any) => row['dropdwon options']);
+      const vehicleTypeOptions = data.filter((row: any) => row['dropdwon catagorty'] === 'Vehicle Type').map((row: any) => row['dropdwon options']);
+      setProjects(projectOptions);
+      setVehicleTypes(vehicleTypeOptions);
+    } catch (error) {
+      console.error('Failed to load master data:', error);
+    }
+  };
 
   const loadRentals = async () => {
     try {
@@ -117,8 +133,6 @@ export default function CarRentals() {
       }
     }
   };
-
-  const projects = Array.from(new Set(rentals.map(r => r.Project).filter(Boolean)));
 
   const filteredRentals = rentals.filter(rental => {
     const matchesSearch = 
@@ -260,13 +274,14 @@ export default function CarRentals() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
-                  <input 
-                    type="text" 
-                    placeholder="Enter project" 
+                  <select 
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData.Project}
                     onChange={(e) => setFormData({...formData, Project: e.target.value})}
-                  />
+                  >
+                    <option value="">Select Project</option>
+                    {projects.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Employee Name(s)</label>
@@ -300,13 +315,14 @@ export default function CarRentals() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Vehicle Type</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g., Sedan, SUV" 
+                  <select 
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData['Vehicle Type']}
                     onChange={(e) => setFormData({...formData, 'Vehicle Type': e.target.value})}
-                  />
+                  >
+                    <option value="">Select Vehicle Type</option>
+                    {vehicleTypes.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Amount</label>

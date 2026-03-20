@@ -16,6 +16,7 @@ import Assets from './pages/admin/Assets';
 import Meetings from './pages/admin/Meetings';
 import CarRentals from './pages/admin/CarRentals';
 import Vendors from './pages/admin/Vendors';
+import Settings from './pages/admin/Settings';
 import Reports from './pages/admin/Reports';
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
                 <Route path="expenses" element={<Expenses />} />
                 <Route path="vendors" element={<Vendors />} />
                 <Route path="reports" element={<Reports />} />
+                <Route path="settings" element={<Settings />} />
               </Route>
 
               {/* All roles (Admin, Office Admin, TL) */}

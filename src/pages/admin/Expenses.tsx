@@ -17,12 +17,31 @@ export default function Expenses() {
     Amount: '',
     Description: '',
     Paid_by: '',
+    Farm_name: '',
   });
   const [file, setFile] = useState<File | null>(null);
 
+  const [expenseTypes, setExpenseTypes] = useState<string[]>([]);
+  const [farmNames, setFarmNames] = useState<string[]>([]);
+
   useEffect(() => {
     loadData();
+    loadMasterData();
   }, []);
+
+  const loadMasterData = async () => {
+    try {
+      const data = await fetchSheet('MasterData');
+      const types = data.filter((item: any) => item['dropdwon catagorty'] === 'Expense Type').map((item: any) => item['dropdwon options']);
+      setExpenseTypes(types.length > 0 ? types : ['Electricity', 'Internet', 'Kitchen', 'Courier', 'Guest Room', 'Others']);
+      
+      const farms = data.filter((item: any) => item['dropdwon catagorty'] === 'Farm Name').map((item: any) => item['dropdwon options']);
+      setFarmNames(farms);
+    } catch (error) {
+      setExpenseTypes(['Electricity', 'Internet', 'Kitchen', 'Courier', 'Guest Room', 'Others']);
+      setFarmNames([]);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -45,6 +64,7 @@ export default function Expenses() {
         Amount: expense.Amount || '',
         Description: expense.Description || '',
         Paid_by: expense.Paid_by || '',
+        Farm_name: expense.Farm_name || '',
       });
     } else {
       setEditingRow(null);
@@ -55,6 +75,7 @@ export default function Expenses() {
         Amount: '',
         Description: '',
         Paid_by: '',
+        Farm_name: '',
       });
     }
     setFile(null);
@@ -71,7 +92,19 @@ export default function Expenses() {
         Bill_url = uploadRes.url;
       }
 
-      const rowData = { ...formData, Bill_url };
+      let finalBillId = formData.Bill_id;
+      if (!editingRow) {
+        let maxId = 0;
+        expenses.forEach(e => {
+          if (e.Bill_id && typeof e.Bill_id === 'string' && e.Bill_id.startsWith('SPMBILL')) {
+            const num = parseInt(e.Bill_id.replace('SPMBILL', ''), 10);
+            if (!isNaN(num) && num > maxId) maxId = num;
+          }
+        });
+        finalBillId = `SPMBILL${String(maxId + 1).padStart(5, '0')}`;
+      }
+
+      const rowData = { ...formData, Bill_id: finalBillId, Bill_url };
 
       if (editingRow) {
         await updateRow('expenses', editingRow, rowData);
@@ -137,6 +170,7 @@ export default function Expenses() {
             <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
               <tr>
                 <th className="px-6 py-4">Bill ID</th>
+                <th className="px-6 py-4">Farm Name</th>
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4">Expense Type</th>
                 <th className="px-6 py-4">Amount</th>
@@ -148,13 +182,14 @@ export default function Expenses() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={8} className="text-center py-8 text-slate-500">Loading...</td></tr>
+                <tr><td colSpan={9} className="text-center py-8 text-slate-500">Loading...</td></tr>
               ) : expenses.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-8 text-slate-500">No expenses found</td></tr>
+                <tr><td colSpan={9} className="text-center py-8 text-slate-500">No expenses found</td></tr>
               ) : (
                 expenses.map((expense, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-blue-600">{expense.Bill_id}</td>
+                    <td className="px-6 py-4 text-slate-600">{expense.Farm_name}</td>
                     <td className="px-6 py-4 text-slate-600">{expense.date}</td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
@@ -196,8 +231,11 @@ export default function Expenses() {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Bill ID</label>
-                <input type="text" value={formData.Bill_id} onChange={e => setFormData({...formData, Bill_id: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Farm Name</label>
+                <select value={formData.Farm_name} onChange={e => setFormData({...formData, Farm_name: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Select Farm</option>
+                  {farmNames.map(name => <option key={name} value={name}>{name}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
@@ -206,12 +244,7 @@ export default function Expenses() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Expense Type</label>
                 <select value={formData.Expense_type} onChange={e => setFormData({...formData, Expense_type: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option>Electricity</option>
-                  <option>Internet</option>
-                  <option>Kitchen</option>
-                  <option>Courier</option>
-                  <option>Guest Room</option>
-                  <option>Others</option>
+                  {expenseTypes.map(type => <option key={type} value={type}>{type}</option>)}
                 </select>
               </div>
               <div>

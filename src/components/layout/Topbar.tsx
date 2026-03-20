@@ -1,7 +1,16 @@
-import { Bell, Search, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Bell, Search, User, LogOut, LogIn } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Topbar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-20">
       <div className="flex items-center gap-4">
@@ -22,15 +31,23 @@ export default function Topbar() {
           <Bell className="w-5 h-5 text-slate-600" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
-        <div className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1.5 rounded-lg">
-          <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
-            <User className="w-4 h-4" />
-          </div>
-          <div className="hidden md:block text-sm">
-            <p className="font-medium leading-none">Admin User</p>
-            <p className="text-xs text-slate-500 mt-1">Office Admin</p>
-          </div>
-        </div>
+        {user ? (
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+        ) : (
+          <Link 
+            to="/login"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          >
+            <LogIn className="w-4 h-4" />
+            Login
+          </Link>
+        )}
       </div>
     </header>
   );

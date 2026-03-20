@@ -12,6 +12,7 @@ interface Meeting {
   'Minutes of Meeting': string;
   'Photo Upload (link)': string;
   'Aqu_link': string;
+  'Farm_name': string;
 }
 
 const initialFormState: Meeting = {
@@ -22,7 +23,8 @@ const initialFormState: Meeting = {
   'Participants': '',
   'Minutes of Meeting': '',
   'Photo Upload (link)': '',
-  'Aqu_link': ''
+  'Aqu_link': '',
+  'Farm_name': ''
 };
 
 export default function Meetings() {
@@ -34,14 +36,33 @@ export default function Meetings() {
   const [editingRow, setEditingRow] = useState<number | null>(null);
   
   const [minutesFile, setMinutesFile] = useState<File | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [aquFile, setAquFile] = useState<File | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All Types');
 
+  const [projectNames, setProjectNames] = useState<string[]>([]);
+  const [farmNames, setFarmNames] = useState<string[]>([]);
+
   useEffect(() => {
     loadMeetings();
+    loadMasterData();
   }, []);
+
+  const loadMasterData = async () => {
+    try {
+      const data = await fetchSheet('MasterData');
+      const projects = data.filter((item: any) => item['dropdwon catagorty'] === 'Project').map((item: any) => item['dropdwon options']);
+      const farms = data.filter((item: any) => item['dropdwon catagorty'] === 'Farm Name').map((item: any) => item['dropdwon options']);
+      
+      setProjectNames(projects.length > 0 ? projects : ['Project A', 'Project B']);
+      setFarmNames(farms);
+    } catch (error) {
+      setProjectNames(['Project A', 'Project B']);
+      setFarmNames([]);
+    }
+  };
 
   const loadMeetings = async () => {
     try {
@@ -65,7 +86,8 @@ export default function Meetings() {
       setEditingRow(null);
     }
     setMinutesFile(null);
-    setPhotoFile(null);
+    setPhotoFiles([]);
+    setAquFile(null);
     setIsModalOpen(true);
   };
 
@@ -74,29 +96,39 @@ export default function Meetings() {
     setFormData(initialFormState);
     setEditingRow(null);
     setMinutesFile(null);
-    setPhotoFile(null);
+    setPhotoFiles([]);
+    setAquFile(null);
   };
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
       let minutesUrl = formData['Minutes of Meeting'];
-      let photoUrl = formData['Photo Upload (link)'];
+      let photoUrls = formData['Photo Upload (link)'];
+      let aquUrl = formData['Aqu_link'];
 
       if (minutesFile) {
         const { webViewLink } = await uploadFile(minutesFile);
         minutesUrl = webViewLink;
       }
 
-      if (photoFile) {
-        const { webViewLink } = await uploadFile(photoFile);
-        photoUrl = webViewLink;
+      if (photoFiles.length > 0) {
+        const uploadPromises = photoFiles.map(f => uploadFile(f));
+        const results = await Promise.all(uploadPromises);
+        const newUrls = results.map(r => r.webViewLink).join(', ');
+        photoUrls = newUrls;
+      }
+
+      if (aquFile) {
+        const { webViewLink } = await uploadFile(aquFile);
+        aquUrl = webViewLink;
       }
 
       const dataToSave = {
         ...formData,
         'Minutes of Meeting': minutesUrl,
-        'Photo Upload (link)': photoUrl
+        'Photo Upload (link)': photoUrls,
+        'Aqu_link': aquUrl
       };
 
       if (editingRow !== null) {
@@ -182,6 +214,7 @@ export default function Meetings() {
             <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
               <tr>
                 <th className="px-6 py-4">Meeting Date</th>
+                <th className="px-6 py-4">Farm Name</th>
                 <th className="px-6 py-4">Project Name</th>
                 <th className="px-6 py-4">Type</th>
                 <th className="px-6 py-4">Reason</th>
@@ -209,6 +242,7 @@ export default function Meetings() {
                 filteredMeetings.map((meeting, index) => (
                   <tr key={meeting._rowIndex || index} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 text-slate-600">{meeting['Meeting Date']}</td>
+                    <td className="px-6 py-4 text-slate-600">{meeting['Farm_name']}</td>
                     <td className="px-6 py-4 font-medium text-slate-900">{meeting['Project Name']}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -277,14 +311,26 @@ export default function Meetings() {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Farm Name</label>
+                  <select 
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formData['Farm_name']}
+                    onChange={(e) => setFormData({...formData, 'Farm_name': e.target.value})}
+                  >
+                    <option value="">Select Farm</option>
+                    {farmNames.map(farm => <option key={farm} value={farm}>{farm}</option>)}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="Enter project" 
+                  <select 
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData['Project Name']}
                     onChange={(e) => setFormData({...formData, 'Project Name': e.target.value})}
-                  />
+                  >
+                    <option value="">Select Project</option>
+                    {projectNames.map(proj => <option key={proj} value={proj}>{proj}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Meeting Type</label>
@@ -329,25 +375,36 @@ export default function Meetings() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Photo Upload</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Photo Upload (Max 5)</label>
                   <input 
                     type="file" 
+                    multiple
+                    accept="image/*"
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 5) {
+                        alert('You can only upload up to 5 photos');
+                        setPhotoFiles(files.slice(0, 5));
+                      } else {
+                        setPhotoFiles(files);
+                      }
+                    }}
                   />
-                  {formData['Photo Upload (link)'] && !photoFile && (
-                    <p className="text-xs text-slate-500 mt-1 truncate">Current: {formData['Photo Upload (link)']}</p>
+                  {formData['Photo Upload (link)'] && photoFiles.length === 0 && (
+                    <p className="text-xs text-slate-500 mt-1 truncate">Current photos uploaded</p>
                   )}
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Aqu Link</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Aqu File</label>
                   <input 
-                    type="url" 
-                    placeholder="Enter link" 
+                    type="file" 
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData['Aqu_link']}
-                    onChange={(e) => setFormData({...formData, 'Aqu_link': e.target.value})}
+                    onChange={(e) => setAquFile(e.target.files?.[0] || null)}
                   />
+                  {formData['Aqu_link'] && !aquFile && (
+                    <p className="text-xs text-slate-500 mt-1 truncate">Current: {formData['Aqu_link']}</p>
+                  )}
                 </div>
               </div>
             </div>

@@ -11,20 +11,25 @@ export default function Assets() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [editingAssetId, setEditingAssetId] = useState('');
   
-  const [registryForm, setRegistryForm] = useState({
-    asset_id: '',
-    asset_name: '',
-    Asset_Category: 'Electronics',
-    Asset_type: 'Laptop',
+  const [commonForm, setCommonForm] = useState({
     'Purchase Date': '',
-    Cost: '',
     purchased_by: '',
     Project: '',
     Vendor: '',
+    Farm_name: '',
+  });
+  
+  const [assetItems, setAssetItems] = useState([{
+    id: Date.now(),
+    asset_name: '',
+    Asset_Category: 'Electronics',
+    Asset_type: 'Laptop',
+    Cost: '',
     Warranty: '',
     Status: 'Available',
-  });
+  }]);
   
   const [usageForm, setUsageForm] = useState({
     'Asset Name': '',
@@ -33,13 +38,36 @@ export default function Assets() {
     'Issue Date': '',
     'Return Date': '',
     Condition: '',
+    Farm_name: '',
   });
 
   const [file, setFile] = useState<File | null>(null);
 
+  const [assetCategories, setAssetCategories] = useState<string[]>([]);
+  const [assetTypes, setAssetTypes] = useState<string[]>([]);
+  const [farmNames, setFarmNames] = useState<string[]>([]);
+
   useEffect(() => {
     loadData();
+    loadMasterData();
   }, [activeTab]);
+
+  const loadMasterData = async () => {
+    try {
+      const data = await fetchSheet('MasterData');
+      const categories = data.filter((item: any) => item['dropdwon catagorty'] === 'Asset Category').map((item: any) => item['dropdwon options']);
+      const types = data.filter((item: any) => item['dropdwon catagorty'] === 'Asset Type').map((item: any) => item['dropdwon options']);
+      const farms = data.filter((item: any) => item['dropdwon catagorty'] === 'Farm Name').map((item: any) => item['dropdwon options']);
+      
+      setAssetCategories(categories.length > 0 ? categories : ['Electronics', 'Furniture', 'Vehicles']);
+      setAssetTypes(types.length > 0 ? types : ['Laptop', 'Monitor', 'Chair']);
+      setFarmNames(farms);
+    } catch (error) {
+      setAssetCategories(['Electronics', 'Furniture', 'Vehicles']);
+      setAssetTypes(['Laptop', 'Monitor', 'Chair']);
+      setFarmNames([]);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -48,8 +76,12 @@ export default function Assets() {
         const data = await fetchSheet('asset_registry');
         setAssets(data);
       } else {
-        const data = await fetchSheet('asset_uses');
-        setAssetUses(data);
+        const [usageData, assetsData] = await Promise.all([
+          fetchSheet('asset_uses'),
+          fetchSheet('asset_registry')
+        ]);
+        setAssetUses(usageData);
+        setAssets(assetsData);
       }
     } catch (error) {
       toast.error('Failed to load data');
@@ -62,34 +94,42 @@ export default function Assets() {
     if (activeTab === 'registry') {
       if (item) {
         setEditingRow(item._rowIndex);
-        setRegistryForm({
-          asset_id: item.asset_id || '',
-          asset_name: item.asset_name || '',
-          Asset_Category: item.Asset_Category || 'Electronics',
-          Asset_type: item.Asset_type || 'Laptop',
+        setEditingAssetId(item.asset_id || '');
+        setCommonForm({
           'Purchase Date': item['Purchase Date'] || '',
-          Cost: item.Cost || '',
           purchased_by: item.purchased_by || '',
           Project: item.Project || '',
           Vendor: item.Vendor || '',
+          Farm_name: item.Farm_name || '',
+        });
+        setAssetItems([{
+          id: Date.now(),
+          asset_name: item.asset_name || '',
+          Asset_Category: item.Asset_Category || 'Electronics',
+          Asset_type: item.Asset_type || 'Laptop',
+          Cost: item.Cost || '',
           Warranty: item.Warranty || '',
           Status: item.Status || 'Available',
-        });
+        }]);
       } else {
         setEditingRow(null);
-        setRegistryForm({
-          asset_id: '',
-          asset_name: '',
-          Asset_Category: 'Electronics',
-          Asset_type: 'Laptop',
+        setEditingAssetId('');
+        setCommonForm({
           'Purchase Date': '',
-          Cost: '',
           purchased_by: '',
           Project: '',
           Vendor: '',
+          Farm_name: '',
+        });
+        setAssetItems([{
+          id: Date.now(),
+          asset_name: '',
+          Asset_Category: 'Electronics',
+          Asset_type: 'Laptop',
+          Cost: '',
           Warranty: '',
           Status: 'Available',
-        });
+        }]);
       }
     } else {
       if (item) {
@@ -101,6 +141,7 @@ export default function Assets() {
           'Issue Date': item['Issue Date'] || '',
           'Return Date': item['Return Date'] || '',
           Condition: item.Condition || '',
+          Farm_name: item.Farm_name || '',
         });
       } else {
         setEditingRow(null);
@@ -111,6 +152,7 @@ export default function Assets() {
           'Issue Date': '',
           'Return Date': '',
           Condition: '',
+          Farm_name: '',
         });
       }
     }
@@ -127,13 +169,32 @@ export default function Assets() {
           const uploadRes = await uploadFile(file);
           Bill_url = uploadRes.url;
         }
-        const rowData = { ...registryForm, Bill_url };
+
         if (editingRow) {
+          const rowData = { ...commonForm, ...assetItems[0], asset_id: editingAssetId, Bill_url };
+          delete rowData.id;
           await updateRow('asset_registry', editingRow, rowData);
           toast.success('Asset updated successfully!');
         } else {
-          await addRow('asset_registry', rowData);
-          toast.success('Asset added successfully!');
+          let maxId = 0;
+          assets.forEach(a => {
+            if (a.asset_id && typeof a.asset_id === 'string' && a.asset_id.startsWith('SPMASSET')) {
+              const numStr = a.asset_id.replace('SPMASSET', '');
+              const num = parseInt(numStr, 10);
+              if (!isNaN(num) && num > maxId) {
+                maxId = num;
+              }
+            }
+          });
+          
+          for (let i = 0; i < assetItems.length; i++) {
+            const nextId = maxId + 1 + i;
+            const finalAssetId = `SPMASSET${nextId.toString().padStart(4, '0')}`;
+            const rowData = { ...commonForm, ...assetItems[i], asset_id: finalAssetId, Bill_url };
+            delete rowData.id;
+            await addRow('asset_registry', rowData);
+          }
+          toast.success(`${assetItems.length} Asset(s) added successfully!`);
         }
       } else {
         if (editingRow) {
@@ -353,77 +414,144 @@ export default function Assets() {
             </div>
             <div className="p-6 overflow-y-auto">
               {activeTab === 'registry' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Asset ID</label>
-                    <input type="text" value={registryForm.asset_id} onChange={e => setRegistryForm({...registryForm, asset_id: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <h3 className="text-sm font-semibold text-slate-800 mb-3 border-b pb-2">Common Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Date</label>
+                        <input type="date" value={commonForm['Purchase Date']} onChange={e => setCommonForm({...commonForm, 'Purchase Date': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Purchased By</label>
+                        <input type="text" value={commonForm.purchased_by} onChange={e => setCommonForm({...commonForm, purchased_by: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
+                        <input type="text" value={commonForm.Project} onChange={e => setCommonForm({...commonForm, Project: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Farm Name</label>
+                        <select value={commonForm.Farm_name} onChange={e => setCommonForm({...commonForm, Farm_name: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <option value="">Select Farm</option>
+                          {farmNames.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Vendor</label>
+                        <input type="text" value={commonForm.Vendor} onChange={e => setCommonForm({...commonForm, Vendor: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Upload Bill</label>
+                        <input type="file" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                    </div>
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Asset Name</label>
-                    <input type="text" value={registryForm.asset_name} onChange={e => setRegistryForm({...registryForm, asset_name: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Asset Category</label>
-                    <select value={registryForm.Asset_Category} onChange={e => setRegistryForm({...registryForm, Asset_Category: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option>Electronics</option>
-                      <option>Furniture</option>
-                      <option>Vehicles</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Asset Type</label>
-                    <select value={registryForm.Asset_type} onChange={e => setRegistryForm({...registryForm, Asset_type: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option>Laptop</option>
-                      <option>Monitor</option>
-                      <option>Chair</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Date</label>
-                    <input type="date" value={registryForm['Purchase Date']} onChange={e => setRegistryForm({...registryForm, 'Purchase Date': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Cost</label>
-                    <input type="number" value={registryForm.Cost} onChange={e => setRegistryForm({...registryForm, Cost: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Purchased By</label>
-                    <input type="text" value={registryForm.purchased_by} onChange={e => setRegistryForm({...registryForm, purchased_by: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
-                    <input type="text" value={registryForm.Project} onChange={e => setRegistryForm({...registryForm, Project: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Vendor</label>
-                    <input type="text" value={registryForm.Vendor} onChange={e => setRegistryForm({...registryForm, Vendor: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Warranty</label>
-                    <input type="text" value={registryForm.Warranty} onChange={e => setRegistryForm({...registryForm, Warranty: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                    <select value={registryForm.Status} onChange={e => setRegistryForm({...registryForm, Status: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option>Available</option>
-                      <option>In Use</option>
-                      <option>Under Repair</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Upload Bill</label>
-                    <input type="file" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <div className="flex justify-between items-center mb-3 border-b pb-2">
+                      <h3 className="text-sm font-semibold text-slate-800">Asset Details</h3>
+                      {!editingRow && (
+                        <button type="button" onClick={() => setAssetItems([...assetItems, { id: Date.now(), asset_name: '', Asset_Category: 'Electronics', Asset_type: 'Laptop', Cost: '', Warranty: '', Status: 'Available' }])} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                          <Plus className="w-4 h-4" /> Add Another Asset
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {assetItems.map((item, index) => (
+                        <div key={item.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 relative">
+                          {!editingRow && assetItems.length > 1 && (
+                            <button type="button" onClick={() => setAssetItems(assetItems.filter(a => a.id !== item.id))} className="absolute top-2 right-2 text-slate-400 hover:text-red-600">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Asset Name</label>
+                              <input type="text" value={item.asset_name} onChange={e => {
+                                const newItems = [...assetItems];
+                                newItems[index].asset_name = e.target.value;
+                                setAssetItems(newItems);
+                              }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Asset Category</label>
+                              <select value={item.Asset_Category} onChange={e => {
+                                const newItems = [...assetItems];
+                                newItems[index].Asset_Category = e.target.value;
+                                setAssetItems(newItems);
+                              }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select Category</option>
+                                {assetCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Asset Type</label>
+                              <select value={item.Asset_type} onChange={e => {
+                                const newItems = [...assetItems];
+                                newItems[index].Asset_type = e.target.value;
+                                setAssetItems(newItems);
+                              }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select Type</option>
+                                {assetTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Cost</label>
+                              <input type="number" value={item.Cost} onChange={e => {
+                                const newItems = [...assetItems];
+                                newItems[index].Cost = e.target.value;
+                                setAssetItems(newItems);
+                              }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Warranty</label>
+                              <input type="text" value={item.Warranty} onChange={e => {
+                                const newItems = [...assetItems];
+                                newItems[index].Warranty = e.target.value;
+                                setAssetItems(newItems);
+                              }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                              <select value={item.Status} onChange={e => {
+                                const newItems = [...assetItems];
+                                newItems[index].Status = e.target.value;
+                                setAssetItems(newItems);
+                              }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option>Available</option>
+                                <option>In Use</option>
+                                <option>Under Repair</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Asset Name</label>
-                    <input type="text" value={usageForm['Asset Name']} onChange={e => setUsageForm({...usageForm, 'Asset Name': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <select value={usageForm['Asset Name']} onChange={e => setUsageForm({...usageForm, 'Asset Name': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Select an Asset</option>
+                      {assets.map((asset, idx) => (
+                        <option key={idx} value={asset.asset_name}>{asset.asset_name} ({asset.asset_id})</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
                     <input type="text" value={usageForm['Assigned To']} onChange={e => setUsageForm({...usageForm, 'Assigned To': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Farm Name</label>
+                    <select value={usageForm.Farm_name} onChange={e => setUsageForm({...usageForm, Farm_name: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Select Farm</option>
+                      {farmNames.map(name => <option key={name} value={name}>{name}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>

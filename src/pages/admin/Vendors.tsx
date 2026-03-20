@@ -44,9 +44,22 @@ export default function Vendors() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterService, setFilterService] = useState('All Services');
 
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
+
   useEffect(() => {
     loadVendors();
+    loadMasterData();
   }, []);
+
+  const loadMasterData = async () => {
+    try {
+      const data = await fetchSheet('MasterData');
+      const types = data.filter((item: any) => item['dropdwon catagorty'] === 'Service Type').map((item: any) => item['dropdwon options']);
+      setServiceTypes(types);
+    } catch (error) {
+      console.error('Failed to load master data:', error);
+    }
+  };
 
   const loadVendors = async () => {
     try {
@@ -112,7 +125,7 @@ export default function Vendors() {
     }
   };
 
-  const serviceTypes = Array.from(new Set(vendors.map(v => v['Service Type']).filter(Boolean)));
+  const uniqueServiceTypes = Array.from(new Set(vendors.map(v => v['Service Type']).filter(Boolean)));
 
   const filteredVendors = vendors.filter(vendor => {
     const matchesSearch = 
@@ -144,7 +157,7 @@ export default function Vendors() {
               onChange={(e) => setFilterService(e.target.value)}
             >
               <option value="All Services">All Services</option>
-              {serviceTypes.map(type => (
+              {uniqueServiceTypes.map(type => (
                 <option key={type} value={type}>{type}</option>
               ))}
             </select>
@@ -259,13 +272,14 @@ export default function Vendors() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Service Type</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g., Electronics, Transport" 
+                  <select 
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={formData['Service Type']}
                     onChange={(e) => setFormData({...formData, 'Service Type': e.target.value})}
-                  />
+                  >
+                    <option value="">Select Service Type</option>
+                    {serviceTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Contact Person</label>
