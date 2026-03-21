@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Loader2, FileJson, X, Upload, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
+import { fetchSheet, addRow, updateRow, deleteRow, uploadFile, WATER_COLLECTIVES_FOLDER_ID } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -80,7 +80,7 @@ export default function WaterCollectiveManagement() {
 
       if (file) {
         toast.loading('Uploading GeoJSON to Drive...', { id: 'upload' });
-        const uploadResult = await uploadFile(file);
+        const uploadResult = await uploadFile(file, WATER_COLLECTIVES_FOLDER_ID);
         geoJsonUrl = uploadResult.url || uploadResult.webViewLink;
         fileName = file.name;
         toast.success('File uploaded successfully', { id: 'upload' });

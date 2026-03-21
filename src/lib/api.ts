@@ -1,4 +1,17 @@
-const API_BASE = 'https://script.google.com/macros/s/AKfycbzRx6plxswS1MkTSm6mB5KsVsOn9Ws6PdafrLBPrz2RikyD9VeXoLs1ImjPxPrPsw0j_g/exec';
+const API_BASE = 'https://script.google.com/macros/s/AKfycbwmJxHEodAZPOUN9qQ-o1Uj9mEmt3OgymdLCzCqUpPYWTaq-brr-PdPfftd5pmpBr8/exec';
+
+const OFFICE_ADMIN_SPREADSHEET_ID = '18Afss-S7VLMhgGluuwm4RanzyRfew61NLa_QzmBxHz4';
+const WATER_COLLECTIVE_SPREADSHEET_ID = '1n2qE-rdkVefVieM1z0C0Ah_Z04Gg6b7MrRca-LcNrvo';
+
+export const ADMIN_FOLDER_ID = '1d_4gLeoJ84zPrUe-vPJDR-f5b4V-ksY3';
+export const WATER_COLLECTIVES_FOLDER_ID = '1gga5glk6oNlI5tRDZFMthh4B-sUa0NnG';
+
+function getSpreadsheetId(sheetName: string) {
+  if (sheetName === 'water_collectives') {
+    return WATER_COLLECTIVE_SPREADSHEET_ID;
+  }
+  return OFFICE_ADMIN_SPREADSHEET_ID;
+}
 
 async function fetchWithFallback(url: string, options: RequestInit = {}) {
   try {
@@ -15,7 +28,8 @@ async function fetchWithFallback(url: string, options: RequestInit = {}) {
 
 export async function fetchSheet(sheetName: string) {
   try {
-    const url = `${API_BASE}?sheetName=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+    const spreadsheetId = getSpreadsheetId(sheetName);
+    const url = `${API_BASE}?sheetName=${encodeURIComponent(sheetName)}&spreadsheetId=${encodeURIComponent(spreadsheetId)}&t=${Date.now()}`;
     const res = await fetchWithFallback(url);
     if (!res.ok) throw new Error(`Failed to fetch ${sheetName}`);
     const data = await res.json();
@@ -35,10 +49,11 @@ export async function fetchSheet(sheetName: string) {
 
 export async function addRow(sheetName: string, data: any) {
   try {
+    const spreadsheetId = getSpreadsheetId(sheetName);
     const res = await fetchWithFallback(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'add', sheetName, data }),
+      body: JSON.stringify({ action: 'add', sheetName, spreadsheetId, data }),
     });
     if (!res.ok) throw new Error(`Failed to add row to ${sheetName}`);
     const result = await res.json();
@@ -54,10 +69,11 @@ export async function addRow(sheetName: string, data: any) {
 
 export async function updateRow(sheetName: string, rowIndex: number, data: any) {
   try {
+    const spreadsheetId = getSpreadsheetId(sheetName);
     const res = await fetchWithFallback(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'update', sheetName, rowIndex, data }),
+      body: JSON.stringify({ action: 'update', sheetName, spreadsheetId, rowIndex, data }),
     });
     if (!res.ok) throw new Error(`Failed to update row in ${sheetName}`);
     const result = await res.json();
@@ -73,10 +89,11 @@ export async function updateRow(sheetName: string, rowIndex: number, data: any) 
 
 export async function deleteRow(sheetName: string, rowIndex: number) {
   try {
+    const spreadsheetId = getSpreadsheetId(sheetName);
     const res = await fetchWithFallback(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'delete', sheetName, rowIndex }),
+      body: JSON.stringify({ action: 'delete', sheetName, spreadsheetId, rowIndex }),
     });
     if (!res.ok) throw new Error(`Failed to delete row from ${sheetName}`);
     const result = await res.json();
@@ -106,7 +123,7 @@ export async function fetchGeoJson(fileId: string) {
   }
 }
 
-export async function uploadFile(file: File): Promise<any> {
+export async function uploadFile(file: File, folderId: string = ADMIN_FOLDER_ID): Promise<any> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async () => {
@@ -119,7 +136,8 @@ export async function uploadFile(file: File): Promise<any> {
             action: 'upload',
             base64: base64String,
             mimeType: file.type,
-            fileName: file.name
+            fileName: file.name,
+            folderId: folderId
           }),
         });
         if (!res.ok) throw new Error('Failed to upload file');
