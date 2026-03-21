@@ -90,6 +90,22 @@ export async function deleteRow(sheetName: string, rowIndex: number) {
   }
 }
 
+export async function fetchGeoJson(fileId: string) {
+  try {
+    const url = `${API_BASE}?action=getFile&fileId=${encodeURIComponent(fileId)}&t=${Date.now()}`;
+    const res = await fetchWithFallback(url);
+    if (!res.ok) throw new Error('Failed to fetch file');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    
+    // The content is returned as a string, parse it to JSON
+    return JSON.parse(data.content);
+  } catch (error: any) {
+    console.error('Fetch GeoJSON error:', error);
+    throw new Error('Failed to load GeoJSON. Please update your Apps Script.');
+  }
+}
+
 export async function uploadFile(file: File): Promise<any> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
