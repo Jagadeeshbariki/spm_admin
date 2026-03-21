@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchSheet, addRow, deleteRow } from '@/lib/api';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/AuthContext';
 import DeleteButton from '@/components/DeleteButton';
@@ -15,11 +16,12 @@ export default function Settings() {
   const [pendingOptions, setPendingOptions] = useState<{ 'formname': string; 'dropdwon catagorty': string; 'dropdwon options': string }[]>([]);
 
   const formConfig: Record<string, string[]> = {
-    'Asset Registry': ['Asset Category', 'Asset Type'],
-    'Expenses Registry': ['Expense Type'],
+    'Asset Registry': ['Asset Category', 'Asset Type', 'Units'],
+    'Asset Usage': ['Units'],
+    'Expenses Registry': ['Expense Type', 'Units'],
     'Meetings Tracker': ['Project'],
     'Vendors': ['Vendor Type'],
-    'Car Rentals': ['Vehicle Type'],
+    'Car Rentals': ['Vehicle Type', 'Employee Name'],
   };
 
   useEffect(() => {
@@ -83,7 +85,15 @@ export default function Settings() {
 
   return (
     <div className="p-4 md:p-6 overflow-x-hidden">
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">Master Data Settings</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">Master Data Settings</h1>
+        <Link 
+          to="/admin/water-collective-management"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
+        >
+          <MapPin className="w-4 h-4" /> Water Collective Sites
+        </Link>
+      </div>
       
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Add New Option</h2>

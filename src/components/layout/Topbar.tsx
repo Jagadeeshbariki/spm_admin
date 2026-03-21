@@ -28,9 +28,27 @@ export default function Topbar() {
 
   const navLinks = [
     { name: 'Home', path: '/' },
-    { name: 'Office Admin', path: '/admin/dashboard' },
-    { name: 'Admin', path: '/admin/settings' },
+    { 
+      name: 'Office Admin', 
+      path: '/admin/dashboard',
+      roles: ['Admin', 'office admin', 'TL', 'CC'] // All roles can view data
+    },
+    { 
+      name: 'Water Collective', 
+      path: '/admin/water-collective',
+      roles: ['Admin', 'office admin', 'TL', 'CC']
+    },
+    { 
+      name: 'Admin', 
+      path: '/admin/settings',
+      roles: ['Admin']
+    },
   ];
+
+  const filteredLinks = navLinks.filter(link => {
+    if (!link.roles) return true;
+    return link.roles.some(role => role.toLowerCase() === user?.role?.toLowerCase());
+  });
 
   return (
     <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-50">
@@ -40,18 +58,26 @@ export default function Topbar() {
         </Link>
         
         <nav className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-blue-600",
-                location.pathname === link.path ? "text-blue-600" : "text-slate-600"
-              )}
-            >
-              {link.name}
-            </Link>
-          ))}
+          {filteredLinks.map((link) => {
+            const isActive = location.pathname === link.path || 
+              (link.name === 'Office Admin' && location.pathname.startsWith('/admin/') && 
+               !location.pathname.startsWith('/admin/water-collective') && 
+               !location.pathname.startsWith('/admin/irrigation-management') && 
+               !location.pathname.startsWith('/admin/settings'));
+            
+            return (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-blue-600",
+                  isActive ? "text-blue-600" : "text-slate-600"
+                )}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 

@@ -13,6 +13,8 @@ interface CarRental {
   'Travel Agent Name': string;
   'Vehicle Type': string;
   'Amount': string;
+  'Opening Reading': string;
+  'Ending Reading': string;
   'Upload Bill': string;
 }
 
@@ -24,6 +26,8 @@ const initialFormState: CarRental = {
   'Travel Agent Name': '',
   'Vehicle Type': '',
   'Amount': '',
+  'Opening Reading': '',
+  'Ending Reading': '',
   'Upload Bill': ''
 };
 
@@ -37,11 +41,20 @@ export default function CarRentals() {
   const [editingRow, setEditingRow] = useState<number | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
 
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState('All Projects');
 
   const [projects, setProjects] = useState<string[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
+  const [employeeNames, setEmployeeNames] = useState<string[]>([]);
+  const [showOtherInput, setShowOtherInput] = useState(false);
+  const [otherName, setOtherName] = useState('');
+
+  const userRole = user?.role?.toLowerCase();
+  const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
     loadRentals();
@@ -53,8 +66,11 @@ export default function CarRentals() {
       const data = await fetchSheet('MasterData');
       const projectOptions = data.filter((row: any) => row['dropdwon catagorty'] === 'Project').map((row: any) => row['dropdwon options']);
       const vehicleTypeOptions = data.filter((row: any) => row['dropdwon catagorty'] === 'Vehicle Type').map((row: any) => row['dropdwon options']);
+      const employeeOptions = data.filter((row: any) => row['dropdwon catagorty'] === 'Employee Name').map((row: any) => row['dropdwon options']);
+      
       setProjects(projectOptions);
       setVehicleTypes(vehicleTypeOptions);
+      setEmployeeNames([...employeeOptions, 'Others']);
     } catch (error) {
       console.error('Failed to load master data:', error);
     }
@@ -77,12 +93,30 @@ export default function CarRentals() {
     if (rental) {
       setFormData(rental);
       setEditingRow(rental._rowIndex || null);
+      // Check if "Others" was used
+      const selectedUsers = rental.users.split(', ');
+      const knownEmployees = employeeNames.filter(e => e !== 'Others');
+      const hasOthers = selectedUsers.some(u => !knownEmployees.includes(u));
+      if (hasOthers) {
+        setShowOtherInput(true);
+        setOtherName(selectedUsers.filter(u => !knownEmployees.includes(u)).join(', '));
+      } else {
+        setShowOtherInput(false);
+        setOtherName('');
+      }
     } else {
       setFormData(initialFormState);
       setEditingRow(null);
+      setShowOtherInput(false);
+      setOtherName('');
     }
     setBillFile(null);
     setIsModalOpen(true);
+  };
+
+  const handleViewDetails = (item: any) => {
+    setSelectedItem(item);
+    setIsViewModalOpen(true);
   };
 
   const handleCloseModal = () => {
@@ -90,10 +124,26 @@ export default function CarRentals() {
     setFormData(initialFormState);
     setEditingRow(null);
     setBillFile(null);
+    setShowOtherInput(false);
+    setOtherName('');
   };
 
   const handleSave = async () => {
     try {
+      // Validation
+      const opening = parseFloat(formData['Opening Reading']);
+      const ending = parseFloat(formData['Ending Reading']);
+      
+      if (isNaN(opening) || isNaN(ending)) {
+        alert('Please enter valid numbers for readings');
+        return;
+      }
+      
+      if (opening >= ending) {
+        alert('Opening reading must be less than ending reading');
+        return;
+      }
+
       setIsSaving(true);
       let billUrl = formData['Upload Bill'];
 
@@ -102,8 +152,15 @@ export default function CarRentals() {
         billUrl = webViewLink;
       }
 
+      let finalUsers = formData.users;
+      if (showOtherInput && otherName) {
+        const usersList = formData.users.split(', ').filter(u => u !== 'Others');
+        finalUsers = [...usersList, otherName].join(', ');
+      }
+
       const dataToSave = {
         ...formData,
+        'users': finalUsers,
         'Upload Bill': billUrl
       };
 
@@ -149,12 +206,14 @@ export default function CarRentals() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-800">Car Rentals</h1>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> Add Entry
-        </button>
+        {canEdit && (
+          <button 
+            onClick={() => handleOpenModal()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Add Entry
+          </button>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-4 items-center justify-between">
@@ -194,7 +253,8 @@ export default function CarRentals() {
                 <th className="px-6 py-4">Project</th>
                 <th className="px-6 py-4">Users</th>
                 <th className="px-6 py-4">Travel Route</th>
-                <th className="px-6 py-4">Travel Agent</th>
+                <th className="px-6 py-4">Opening</th>
+                <th className="px-6 py-4">Ending</th>
                 <th className="px-6 py-4">Vehicle Type</th>
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4">Bill</th>
@@ -204,14 +264,14 @@ export default function CarRentals() {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={10} className="px-6 py-8 text-center text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Loading car rentals...
                   </td>
                 </tr>
               ) : filteredRentals.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={10} className="px-6 py-8 text-center text-slate-500">
                     No car rentals found
                   </td>
                 </tr>
@@ -222,7 +282,8 @@ export default function CarRentals() {
                     <td className="px-6 py-4 font-medium text-slate-900">{rental.Project}</td>
                     <td className="px-6 py-4 text-slate-600">{rental.users}</td>
                     <td className="px-6 py-4 text-slate-600">{rental['Travel Route']}</td>
-                    <td className="px-6 py-4 text-slate-600">{rental['Travel Agent Name']}</td>
+                    <td className="px-6 py-4 text-slate-600">{rental['Opening Reading']}</td>
+                    <td className="px-6 py-4 text-slate-600">{rental['Ending Reading']}</td>
                     <td className="px-6 py-4 text-slate-600">{rental['Vehicle Type']}</td>
                     <td className="px-6 py-4 font-medium text-slate-900">{rental.Amount}</td>
                     <td className="px-6 py-4">
@@ -235,12 +296,23 @@ export default function CarRentals() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <button 
-                          onClick={() => handleOpenModal(rental)}
+                          onClick={() => handleViewDetails(rental)}
                           className="text-slate-400 hover:text-blue-600 transition-colors"
+                          title="View Details"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Search className="w-4 h-4" />
                         </button>
-                        <DeleteButton onClick={() => rental._rowIndex && handleDelete(rental._rowIndex)} />
+                        {canEdit && (
+                          <>
+                            <button 
+                              onClick={() => handleOpenModal(rental)}
+                              className="text-slate-400 hover:text-blue-600 transition-colors"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <DeleteButton onClick={() => rental._rowIndex && handleDelete(rental._rowIndex)} />
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -259,7 +331,7 @@ export default function CarRentals() {
               </h2>
               <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600">&times;</button>
             </div>
-            <div className="p-6 overflow-y-auto">
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
@@ -281,14 +353,68 @@ export default function CarRentals() {
                     {projects.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Employee Name(s)</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 border border-slate-200 rounded-lg max-h-40 overflow-y-auto">
+                    {employeeNames.map(name => (
+                      <label key={name} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                        <input 
+                          type="checkbox"
+                          checked={formData.users.split(', ').includes(name)}
+                          onChange={(e) => {
+                            const currentUsers = formData.users ? formData.users.split(', ') : [];
+                            let newUsers;
+                            if (e.target.checked) {
+                              newUsers = [...currentUsers, name];
+                              if (name === 'Others') setShowOtherInput(true);
+                            } else {
+                              newUsers = currentUsers.filter(u => u !== name);
+                              if (name === 'Others') {
+                                setShowOtherInput(false);
+                                setOtherName('');
+                              }
+                            }
+                            setFormData({...formData, users: newUsers.filter(u => u).join(', ')});
+                          }}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        {name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {showOtherInput && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Enter Other Name(s)</label>
+                    <input 
+                      type="text" 
+                      placeholder="Enter names separated by comma" 
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={otherName}
+                      onChange={(e) => setOtherName(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Opening Reading</label>
                   <input 
-                    type="text" 
-                    placeholder="Enter employee name" 
+                    type="number" 
+                    step="0.01"
+                    placeholder="0.00" 
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.users}
-                    onChange={(e) => setFormData({...formData, users: e.target.value})}
+                    value={formData['Opening Reading']}
+                    onChange={(e) => setFormData({...formData, 'Opening Reading': e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Ending Reading</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    placeholder="0.00" 
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formData['Ending Reading']}
+                    onChange={(e) => setFormData({...formData, 'Ending Reading': e.target.value})}
                   />
                 </div>
                 <div>
@@ -361,6 +487,40 @@ export default function CarRentals() {
                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isSaving ? 'Saving...' : 'Save Entry'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isViewModalOpen && selectedItem && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <h2 className="text-lg font-bold text-slate-800">Car Rental Details</h2>
+              <button onClick={() => setIsViewModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
+              <div className="space-y-4">
+                {Object.entries(selectedItem).map(([key, value]) => {
+                  if (key.startsWith('_') || key === 'Upload Bill') return null;
+                  return (
+                    <div key={key} className="border-b border-slate-50 pb-2">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
+                      <p className="text-sm text-slate-700 mt-1">{String(value) || '-'}</p>
+                    </div>
+                  );
+                })}
+                {selectedItem['Upload Bill'] && (
+                  <div className="pt-2">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Attachment</p>
+                    <a href={selectedItem['Upload Bill']} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                      <Download className="w-4 h-4" /> View Bill/Document
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0">
+              <button onClick={() => setIsViewModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">Close</button>
             </div>
           </div>
         </div>

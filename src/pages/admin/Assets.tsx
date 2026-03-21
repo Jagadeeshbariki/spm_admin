@@ -3,8 +3,10 @@ import { Plus, Search, Filter, Box, CheckCircle2, AlertCircle, Wrench, Edit, Tra
 import toast from 'react-hot-toast';
 import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
 import DeleteButton from '@/components/DeleteButton';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Assets() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'registry' | 'usage'>('registry');
   const [assets, setAssets] = useState<any[]>([]);
   const [assetUses, setAssetUses] = useState<any[]>([]);
@@ -14,12 +16,14 @@ export default function Assets() {
   const [editingRow, setEditingRow] = useState<number | null>(null);
   const [editingAssetId, setEditingAssetId] = useState('');
   
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  
   const [commonForm, setCommonForm] = useState({
     'Purchase Date': '',
     purchased_by: '',
     Project: '',
     Vendor: '',
-    Farm_name: '',
   });
   
   const [assetItems, setAssetItems] = useState([{
@@ -30,6 +34,9 @@ export default function Assets() {
     Cost: '',
     Warranty: '',
     Status: 'Available',
+    'Number of Assets Purchased': '',
+    'Unit Price': '',
+    'Units': '',
   }]);
   
   const [usageForm, setUsageForm] = useState({
@@ -39,14 +46,18 @@ export default function Assets() {
     'Issue Date': '',
     'Return Date': '',
     Condition: '',
-    Farm_name: '',
+    'Number of Assets Purchased': '',
+    'Unit Price': '',
+    'Units': '',
   });
 
   const [file, setFile] = useState<File | null>(null);
 
   const [assetCategories, setAssetCategories] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<string[]>([]);
-  const [farmNames, setFarmNames] = useState<string[]>([]);
+
+  const userRole = user?.role?.toLowerCase();
+  const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
     loadData();
@@ -58,15 +69,12 @@ export default function Assets() {
       const data = await fetchSheet('MasterData');
       const categories = data.filter((item: any) => item['dropdwon catagorty'] === 'Asset Category').map((item: any) => item['dropdwon options']);
       const types = data.filter((item: any) => item['dropdwon catagorty'] === 'Asset Type').map((item: any) => item['dropdwon options']);
-      const farms = data.filter((item: any) => item['dropdwon catagorty'] === 'Farm Name').map((item: any) => item['dropdwon options']);
       
       setAssetCategories(categories.length > 0 ? categories : ['Electronics', 'Furniture', 'Vehicles']);
       setAssetTypes(types.length > 0 ? types : ['Laptop', 'Monitor', 'Chair']);
-      setFarmNames(farms);
     } catch (error) {
       setAssetCategories(['Electronics', 'Furniture', 'Vehicles']);
       setAssetTypes(['Laptop', 'Monitor', 'Chair']);
-      setFarmNames([]);
     }
   };
 
@@ -101,7 +109,6 @@ export default function Assets() {
           purchased_by: item.purchased_by || '',
           Project: item.Project || '',
           Vendor: item.Vendor || '',
-          Farm_name: item.Farm_name || '',
         });
         setAssetItems([{
           id: Date.now(),
@@ -111,6 +118,9 @@ export default function Assets() {
           Cost: item.Cost || '',
           Warranty: item.Warranty || '',
           Status: item.Status || 'Available',
+          'Number of Assets Purchased': item['Number of Assets Purchased'] || '',
+          'Unit Price': item['Unit Price'] || '',
+          'Units': item['Units'] || '',
         }]);
       } else {
         setEditingRow(null);
@@ -120,7 +130,6 @@ export default function Assets() {
           purchased_by: '',
           Project: '',
           Vendor: '',
-          Farm_name: '',
         });
         setAssetItems([{
           id: Date.now(),
@@ -130,6 +139,9 @@ export default function Assets() {
           Cost: '',
           Warranty: '',
           Status: 'Available',
+          'Number of Assets Purchased': '',
+          'Unit Price': '',
+          'Units': '',
         }]);
       }
     } else {
@@ -142,7 +154,9 @@ export default function Assets() {
           'Issue Date': item['Issue Date'] || '',
           'Return Date': item['Return Date'] || '',
           Condition: item.Condition || '',
-          Farm_name: item.Farm_name || '',
+          'Number of Assets Purchased': item['Number of Assets Purchased'] || '',
+          'Unit Price': item['Unit Price'] || '',
+          'Units': item['Units'] || '',
         });
       } else {
         setEditingRow(null);
@@ -153,12 +167,19 @@ export default function Assets() {
           'Issue Date': '',
           'Return Date': '',
           Condition: '',
-          Farm_name: '',
+          'Number of Assets Purchased': '',
+          'Unit Price': '',
+          'Units': '',
         });
       }
     }
     setFile(null);
     setIsModalOpen(true);
+  };
+
+  const handleViewDetails = (item: any) => {
+    setSelectedItem(item);
+    setIsViewModalOpen(true);
   };
 
   const handleSave = async () => {
@@ -234,12 +255,14 @@ export default function Assets() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-800">Asset Management</h1>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> {activeTab === 'registry' ? 'Add Asset' : 'Assign Asset'}
-        </button>
+        {canEdit && (
+          <button 
+            onClick={() => handleOpenModal()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> {activeTab === 'registry' ? 'Add Asset' : 'Assign Asset'}
+          </button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -307,6 +330,9 @@ export default function Assets() {
                   <th className="px-6 py-4">Asset Name</th>
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Type</th>
+                  <th className="px-6 py-4">Qty</th>
+                  <th className="px-6 py-4">Unit Price</th>
+                  <th className="px-6 py-4">Units</th>
                   <th className="px-6 py-4">Purchase Date</th>
                   <th className="px-6 py-4">Cost</th>
                   <th className="px-6 py-4">Purchased By</th>
@@ -330,6 +356,9 @@ export default function Assets() {
                       <td className="px-6 py-4 font-medium text-slate-900">{asset.asset_name}</td>
                       <td className="px-6 py-4 text-slate-600">{asset.Asset_Category}</td>
                       <td className="px-6 py-4 text-slate-600">{asset.Asset_type}</td>
+                      <td className="px-6 py-4 text-slate-600">{asset['Number of Assets Purchased']}</td>
+                      <td className="px-6 py-4 text-slate-600">{asset['Unit Price']}</td>
+                      <td className="px-6 py-4 text-slate-600">{asset['Units']}</td>
                       <td className="px-6 py-4 text-slate-600">{asset['Purchase Date']}</td>
                       <td className="px-6 py-4 font-medium text-slate-900">{asset.Cost}</td>
                       <td className="px-6 py-4 text-slate-600">{asset.purchased_by}</td>
@@ -351,10 +380,17 @@ export default function Assets() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button onClick={() => handleOpenModal(asset)} className="text-slate-400 hover:text-blue-600 mr-3">
-                          <Edit className="w-4 h-4" />
+                        <button onClick={() => handleViewDetails(asset)} className="text-slate-400 hover:text-blue-600 mr-3" title="View Details">
+                          <Search className="w-4 h-4" />
                         </button>
-                        <DeleteButton onClick={() => handleDelete(asset._rowIndex)} />
+                        {canEdit && (
+                          <>
+                            <button onClick={() => handleOpenModal(asset)} className="text-slate-400 hover:text-blue-600 mr-3">
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <DeleteButton onClick={() => handleDelete(asset._rowIndex)} />
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -367,6 +403,9 @@ export default function Assets() {
                 <tr>
                   <th className="px-6 py-4">Asset Name</th>
                   <th className="px-6 py-4">Assigned To</th>
+                  <th className="px-6 py-4">Qty</th>
+                  <th className="px-6 py-4">Unit Price</th>
+                  <th className="px-6 py-4">Units</th>
                   <th className="px-6 py-4">Project</th>
                   <th className="px-6 py-4">Issue Date</th>
                   <th className="px-6 py-4">Return Date</th>
@@ -384,15 +423,25 @@ export default function Assets() {
                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-medium text-slate-900">{usage['Asset Name']}</td>
                       <td className="px-6 py-4 text-slate-600">{usage['Assigned To']}</td>
+                      <td className="px-6 py-4 text-slate-600">{usage['Number of Assets Purchased']}</td>
+                      <td className="px-6 py-4 text-slate-600">{usage['Unit Price']}</td>
+                      <td className="px-6 py-4 text-slate-600">{usage['Units']}</td>
                       <td className="px-6 py-4 text-slate-600">{usage.Project}</td>
                       <td className="px-6 py-4 text-slate-600">{usage['Issue Date']}</td>
                       <td className="px-6 py-4 text-slate-600">{usage['Return Date']}</td>
                       <td className="px-6 py-4 text-slate-600">{usage.Condition}</td>
                       <td className="px-6 py-4 text-right">
-                        <button onClick={() => handleOpenModal(usage)} className="text-slate-400 hover:text-blue-600 mr-3">
-                          <Edit className="w-4 h-4" />
+                        <button onClick={() => handleViewDetails(usage)} className="text-slate-400 hover:text-blue-600 mr-3" title="View Details">
+                          <Search className="w-4 h-4" />
                         </button>
-                        <DeleteButton onClick={() => handleDelete(usage._rowIndex)} />
+                        {canEdit && (
+                          <>
+                            <button onClick={() => handleOpenModal(usage)} className="text-slate-400 hover:text-blue-600 mr-3">
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <DeleteButton onClick={() => handleDelete(usage._rowIndex)} />
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -409,7 +458,7 @@ export default function Assets() {
               <h2 className="text-lg font-bold text-slate-800">{activeTab === 'registry' ? (editingRow ? 'Edit Asset' : 'Add New Asset') : (editingRow ? 'Edit Assignment' : 'Assign Asset')}</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">&times;</button>
             </div>
-            <div className="p-6 overflow-y-auto">
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
               {activeTab === 'registry' ? (
                 <div className="space-y-6">
                   <div>
@@ -428,13 +477,6 @@ export default function Assets() {
                         <input type="text" value={commonForm.Project} onChange={e => setCommonForm({...commonForm, Project: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Farm Name</label>
-                        <select value={commonForm.Farm_name} onChange={e => setCommonForm({...commonForm, Farm_name: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          <option value="">Select Farm</option>
-                          {farmNames.map(name => <option key={name} value={name}>{name}</option>)}
-                        </select>
-                      </div>
-                      <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Vendor</label>
                         <input type="text" value={commonForm.Vendor} onChange={e => setCommonForm({...commonForm, Vendor: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                       </div>
@@ -449,7 +491,7 @@ export default function Assets() {
                     <div className="flex justify-between items-center mb-3 border-b pb-2">
                       <h3 className="text-sm font-semibold text-slate-800">Asset Details</h3>
                       {!editingRow && (
-                        <button type="button" onClick={() => setAssetItems([...assetItems, { id: Date.now(), asset_name: '', Asset_Category: 'Electronics', Asset_type: 'Laptop', Cost: '', Warranty: '', Status: 'Available' }])} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                        <button type="button" onClick={() => setAssetItems([...assetItems, { id: Date.now(), asset_name: '', Asset_Category: 'Electronics', Asset_type: 'Laptop', Cost: '', Warranty: '', Status: 'Available', 'Number of Assets Purchased': '', 'Unit Price': '', 'Units': '' }])} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
                           <Plus className="w-4 h-4" /> Add Another Asset
                         </button>
                       )}
@@ -522,6 +564,37 @@ export default function Assets() {
                                 <option>Under Repair</option>
                               </select>
                             </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Number of Assets Purchased</label>
+                              <input type="number" step="0.01" value={item['Number of Assets Purchased']} onChange={e => {
+                                const newItems = [...assetItems];
+                                newItems[index]['Number of Assets Purchased'] = e.target.value;
+                                setAssetItems(newItems);
+                              }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price</label>
+                              <input type="number" step="0.01" value={item['Unit Price']} onChange={e => {
+                                const newItems = [...assetItems];
+                                newItems[index]['Unit Price'] = e.target.value;
+                                setAssetItems(newItems);
+                              }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Units</label>
+                              <select value={item['Units']} onChange={e => {
+                                const newItems = [...assetItems];
+                                newItems[index]['Units'] = e.target.value;
+                                setAssetItems(newItems);
+                              }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select Unit</option>
+                                <option value="kg">kg</option>
+                                <option value="no">no</option>
+                                <option value="lit">lit</option>
+                                <option value="mtr">mtr</option>
+                                <option value="pkt">pkt</option>
+                              </select>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -544,13 +617,6 @@ export default function Assets() {
                     <input type="text" value={usageForm['Assigned To']} onChange={e => setUsageForm({...usageForm, 'Assigned To': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Farm Name</label>
-                    <select value={usageForm.Farm_name} onChange={e => setUsageForm({...usageForm, Farm_name: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="">Select Farm</option>
-                      {farmNames.map(name => <option key={name} value={name}>{name}</option>)}
-                    </select>
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
                     <input type="text" value={usageForm.Project} onChange={e => setUsageForm({...usageForm, Project: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
@@ -566,6 +632,25 @@ export default function Assets() {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Condition</label>
                     <input type="text" value={usageForm.Condition} onChange={e => setUsageForm({...usageForm, Condition: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Quantity Used</label>
+                    <input type="number" step="0.01" value={usageForm['Number of Assets Purchased']} onChange={e => setUsageForm({...usageForm, 'Number of Assets Purchased': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price</label>
+                    <input type="number" step="0.01" value={usageForm['Unit Price']} onChange={e => setUsageForm({...usageForm, 'Unit Price': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Units</label>
+                    <select value={usageForm['Units']} onChange={e => setUsageForm({...usageForm, 'Units': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Select Unit</option>
+                      <option value="kg">kg</option>
+                      <option value="no">no</option>
+                      <option value="lit">lit</option>
+                      <option value="mtr">mtr</option>
+                      <option value="pkt">pkt</option>
+                    </select>
+                  </div>
                 </div>
               )}
             </div>
@@ -574,6 +659,40 @@ export default function Assets() {
               <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50" disabled={isSaving}>
                 {isSaving ? 'Saving...' : (editingRow ? 'Update' : 'Save')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isViewModalOpen && selectedItem && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <h2 className="text-lg font-bold text-slate-800">Entry Details</h2>
+              <button onClick={() => setIsViewModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
+              <div className="space-y-4">
+                {Object.entries(selectedItem).map(([key, value]) => {
+                  if (key.startsWith('_') || key === 'id' || key === 'Bill_url') return null;
+                  return (
+                    <div key={key} className="border-b border-slate-50 pb-2">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
+                      <p className="text-sm text-slate-700 mt-1">{String(value) || '-'}</p>
+                    </div>
+                  );
+                })}
+                {selectedItem.Bill_url && (
+                  <div className="pt-2">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Attachment</p>
+                    <a href={selectedItem.Bill_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                      <Download className="w-4 h-4" /> View Bill/Document
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0">
+              <button onClick={() => setIsViewModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">Close</button>
             </div>
           </div>
         </div>

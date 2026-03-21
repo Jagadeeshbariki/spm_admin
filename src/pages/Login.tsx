@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { toast } from 'react-hot-toast';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -26,8 +28,11 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <div className="flex flex-col items-center">
+          <Link to="/" className="self-start mb-4 flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors text-sm font-medium">
+            <ArrowLeft className="w-4 h-4" /> Back to Home
+          </Link>
+          <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900">
             Sign in to your account
           </h2>
         </div>
@@ -44,16 +49,23 @@ export default function Login() {
                 onChange={(e) => setUsername(e.target.value)}
               />
             </div>
-            <div>
+            <div className="relative">
               <input
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm pr-10"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 

@@ -2,13 +2,18 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Download, Edit, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Expenses() {
+  const { user } = useAuth();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingRow, setEditingRow] = useState<number | null>(null);
+  
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     Bill_id: '',
@@ -17,12 +22,17 @@ export default function Expenses() {
     Amount: '',
     Description: '',
     Paid_by: '',
-    Farm_name: '',
+    'Number of Assets Purchased': '',
+    'Unit Price': '',
+    'Units': '',
   });
   const [file, setFile] = useState<File | null>(null);
 
   const [expenseTypes, setExpenseTypes] = useState<string[]>([]);
   const [farmNames, setFarmNames] = useState<string[]>([]);
+
+  const userRole = user?.role?.toLowerCase();
+  const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
     loadData();
@@ -34,12 +44,8 @@ export default function Expenses() {
       const data = await fetchSheet('MasterData');
       const types = data.filter((item: any) => item['dropdwon catagorty'] === 'Expense Type').map((item: any) => item['dropdwon options']);
       setExpenseTypes(types.length > 0 ? types : ['Electricity', 'Internet', 'Kitchen', 'Courier', 'Guest Room', 'Others']);
-      
-      const farms = data.filter((item: any) => item['dropdwon catagorty'] === 'Farm Name').map((item: any) => item['dropdwon options']);
-      setFarmNames(farms);
     } catch (error) {
       setExpenseTypes(['Electricity', 'Internet', 'Kitchen', 'Courier', 'Guest Room', 'Others']);
-      setFarmNames([]);
     }
   };
 
@@ -64,7 +70,9 @@ export default function Expenses() {
         Amount: expense.Amount || '',
         Description: expense.Description || '',
         Paid_by: expense.Paid_by || '',
-        Farm_name: expense.Farm_name || '',
+        'Number of Assets Purchased': expense['Number of Assets Purchased'] || '',
+        'Unit Price': expense['Unit Price'] || '',
+        'Units': expense['Units'] || '',
       });
     } else {
       setEditingRow(null);
@@ -75,11 +83,18 @@ export default function Expenses() {
         Amount: '',
         Description: '',
         Paid_by: '',
-        Farm_name: '',
+        'Number of Assets Purchased': '',
+        'Unit Price': '',
+        'Units': '',
       });
     }
     setFile(null);
     setIsModalOpen(true);
+  };
+
+  const handleViewDetails = (item: any) => {
+    setSelectedItem(item);
+    setIsViewModalOpen(true);
   };
 
   const handleSave = async () => {
@@ -138,12 +153,14 @@ export default function Expenses() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-800">Expenses Management</h1>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> Add Expense
-        </button>
+        {canEdit && (
+          <button 
+            onClick={() => handleOpenModal()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Add Expense
+          </button>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-4 items-center justify-between">
@@ -170,9 +187,11 @@ export default function Expenses() {
             <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
               <tr>
                 <th className="px-6 py-4">Bill ID</th>
-                <th className="px-6 py-4">Farm Name</th>
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4">Expense Type</th>
+                <th className="px-6 py-4">Qty</th>
+                <th className="px-6 py-4">Unit Price</th>
+                <th className="px-6 py-4">Units</th>
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4">Description</th>
                 <th className="px-6 py-4">Bill URL</th>
@@ -189,13 +208,15 @@ export default function Expenses() {
                 expenses.map((expense, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-blue-600">{expense.Bill_id}</td>
-                    <td className="px-6 py-4 text-slate-600">{expense.Farm_name}</td>
                     <td className="px-6 py-4 text-slate-600">{expense.date}</td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
                         {expense.Expense_type}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-slate-600">{expense['Number of Assets Purchased']}</td>
+                    <td className="px-6 py-4 text-slate-600">{expense['Unit Price']}</td>
+                    <td className="px-6 py-4 text-slate-600">{expense['Units']}</td>
                     <td className="px-6 py-4 font-medium text-slate-900">{expense.Amount}</td>
                     <td className="px-6 py-4 text-slate-600">{expense.Description}</td>
                     <td className="px-6 py-4">
@@ -207,12 +228,19 @@ export default function Expenses() {
                     </td>
                     <td className="px-6 py-4 text-slate-600">{expense.Paid_by}</td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => handleOpenModal(expense)} className="text-slate-400 hover:text-blue-600 mr-3">
-                        <Edit className="w-4 h-4" />
+                      <button onClick={() => handleViewDetails(expense)} className="text-slate-400 hover:text-blue-600 mr-3" title="View Details">
+                        <Search className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(expense._rowIndex)} className="text-slate-400 hover:text-red-600">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {canEdit && (
+                        <>
+                          <button onClick={() => handleOpenModal(expense)} className="text-slate-400 hover:text-blue-600 mr-3">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDelete(expense._rowIndex)} className="text-slate-400 hover:text-red-600">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -224,19 +252,12 @@ export default function Expenses() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h2 className="text-lg font-bold text-slate-800">{editingRow ? 'Edit Expense' : 'Add New Expense'}</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">&times;</button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Farm Name</label>
-                <select value={formData.Farm_name} onChange={e => setFormData({...formData, Farm_name: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Select Farm</option>
-                  {farmNames.map(name => <option key={name} value={name}>{name}</option>)}
-                </select>
-              </div>
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
                 <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -251,6 +272,27 @@ export default function Expenses() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Amount</label>
                 <input type="number" value={formData.Amount} onChange={e => setFormData({...formData, Amount: e.target.value})} placeholder="Enter amount" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Number of Assets Purchased</label>
+                  <input type="number" step="0.01" value={formData['Number of Assets Purchased']} onChange={e => setFormData({...formData, 'Number of Assets Purchased': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price</label>
+                  <input type="number" step="0.01" value={formData['Unit Price']} onChange={e => setFormData({...formData, 'Unit Price': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Units</label>
+                <select value={formData['Units']} onChange={e => setFormData({...formData, 'Units': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Select Unit</option>
+                  <option value="kg">kg</option>
+                  <option value="no">no</option>
+                  <option value="lit">lit</option>
+                  <option value="mtr">mtr</option>
+                  <option value="pkt">pkt</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                 <textarea rows={3} value={formData.Description} onChange={e => setFormData({...formData, Description: e.target.value})} placeholder="Enter description" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
@@ -264,11 +306,45 @@ export default function Expenses() {
                 <input type="text" value={formData.Paid_by} onChange={e => setFormData({...formData, Paid_by: e.target.value})} placeholder="Enter name" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 shrink-0">
               <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors" disabled={isSaving}>Cancel</button>
               <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50" disabled={isSaving}>
                 {isSaving ? 'Saving...' : (editingRow ? 'Update Expense' : 'Save Expense')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isViewModalOpen && selectedItem && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <h2 className="text-lg font-bold text-slate-800">Expense Details</h2>
+              <button onClick={() => setIsViewModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
+              <div className="space-y-4">
+                {Object.entries(selectedItem).map(([key, value]) => {
+                  if (key.startsWith('_') || key === 'Bill_url') return null;
+                  return (
+                    <div key={key} className="border-b border-slate-50 pb-2">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
+                      <p className="text-sm text-slate-700 mt-1">{String(value) || '-'}</p>
+                    </div>
+                  );
+                })}
+                {selectedItem.Bill_url && (
+                  <div className="pt-2">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Attachment</p>
+                    <a href={selectedItem.Bill_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                      <Download className="w-4 h-4" /> View Bill/Document
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0">
+              <button onClick={() => setIsViewModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">Close</button>
             </div>
           </div>
         </div>

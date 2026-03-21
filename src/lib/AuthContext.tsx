@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { fetchSheet } from './api';
 
-type Role = 'Admin' | 'office admin' | 'TL';
+type Role = 'Admin' | 'office admin' | 'TL' | 'CC';
 
 export interface User {
   user_name: string;

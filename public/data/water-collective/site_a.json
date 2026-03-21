@@ -1,0 +1,53 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Seethampeta Irrigation Site 1",
+        "type": "Check Dam",
+        "status": "Active"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [83.95, 18.66]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Irrigation Canal A",
+        "type": "Canal",
+        "status": "Under Maintenance"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [83.94, 18.65],
+          [83.96, 18.67],
+          [83.98, 18.66]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Water Reservoir Area",
+        "type": "Reservoir",
+        "status": "Full"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [83.92, 18.68],
+            [83.93, 18.69],
+            [83.94, 18.68],
+            [83.93, 18.67],
+            [83.92, 18.68]
+          ]
+        ]
+      }
+    }
+  ]
+}

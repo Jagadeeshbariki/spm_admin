@@ -16,8 +16,11 @@ import Assets from './pages/admin/Assets';
 import Meetings from './pages/admin/Meetings';
 import CarRentals from './pages/admin/CarRentals';
 import Vendors from './pages/admin/Vendors';
+import GuestRoom from './pages/admin/GuestRoom';
 import Settings from './pages/admin/Settings';
 import Reports from './pages/admin/Reports';
+import WaterCollective from './pages/admin/WaterCollective';
+import WaterCollectiveManagement from './pages/admin/WaterCollectiveManagement';
 
 export default function App() {
   return (
@@ -32,18 +35,21 @@ export default function App() {
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               
-              {/* Admin & Office Admin only routes */}
-              <Route element={<ProtectedRoute allowedRoles={['Admin', 'office admin']} />}>
-                <Route path="expenses" element={<Expenses />} />
-                <Route path="vendors" element={<Vendors />} />
-                <Route path="reports" element={<Reports />} />
-                <Route path="settings" element={<Settings />} />
-              </Route>
-
-              {/* All roles (Admin, Office Admin, TL) */}
+              {/* Data pages accessible to all roles */}
+              <Route path="expenses" element={<Expenses />} />
+              <Route path="vendors" element={<Vendors />} />
+              <Route path="guest-room" element={<GuestRoom />} />
+              <Route path="reports" element={<Reports />} />
               <Route path="assets" element={<Assets />} />
               <Route path="meetings" element={<Meetings />} />
               <Route path="car-rentals" element={<CarRentals />} />
+              <Route path="water-collective" element={<WaterCollective />} />
+              <Route path="water-collective-management" element={<WaterCollectiveManagement />} />
+
+              {/* Admin only routes */}
+              <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
+                <Route path="settings" element={<Settings />} />
+              </Route>
             </Route>
           </Route>
         </Routes>

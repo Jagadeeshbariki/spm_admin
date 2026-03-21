@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Edit, Trash2, Loader2 } from 'lucide-react';
 import { fetchSheet, addRow, updateRow, deleteRow } from '../../lib/api';
+import { useAuth } from '@/lib/AuthContext';
 
 interface Vendor {
   _rowIndex?: number;
-  'vendor_id': string;
   'Vendor Name': string;
   'Service Type': string;
   'Contact Person': string;
@@ -16,10 +16,10 @@ interface Vendor {
   'Account Number': string;
   'IFSC_code': string;
   'Branch': string;
+  'vendor_id'?: string;
 }
 
 const initialFormState: Vendor = {
-  'vendor_id': '',
   'Vendor Name': '',
   'Service Type': '',
   'Contact Person': '',
@@ -34,6 +34,7 @@ const initialFormState: Vendor = {
 };
 
 export default function Vendors() {
+  const { user } = useAuth();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,10 +42,16 @@ export default function Vendors() {
   const [formData, setFormData] = useState<Vendor>(initialFormState);
   const [editingRow, setEditingRow] = useState<number | null>(null);
 
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterService, setFilterService] = useState('All Services');
 
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
+
+  const userRole = user?.role?.toLowerCase();
+  const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
     loadVendors();
@@ -85,6 +92,11 @@ export default function Vendors() {
     setIsModalOpen(true);
   };
 
+  const handleViewDetails = (item: any) => {
+    setSelectedItem(item);
+    setIsViewModalOpen(true);
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setFormData(initialFormState);
@@ -95,10 +107,21 @@ export default function Vendors() {
     try {
       setIsSaving(true);
 
+      let finalData = { ...formData };
+      
       if (editingRow !== null) {
-        await updateRow('Vendor_Management', editingRow, formData);
+        await updateRow('Vendor_Management', editingRow, finalData);
       } else {
-        await addRow('Vendor_Management', formData);
+        // Auto-generate Vendor ID
+        let maxId = 0;
+        vendors.forEach(v => {
+          if (v.vendor_id && v.vendor_id.startsWith('SPMV')) {
+            const num = parseInt(v.vendor_id.replace('SPMV', ''), 10);
+            if (!isNaN(num) && num > maxId) maxId = num;
+          }
+        });
+        finalData.vendor_id = `SPMV${String(maxId + 1).padStart(4, '0')}`;
+        await addRow('Vendor_Management', finalData);
       }
       
       await loadVendors();
@@ -139,12 +162,14 @@ export default function Vendors() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-slate-800">Vendors</h1>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> Add Vendor
-        </button>
+        {canEdit && (
+          <button 
+            onClick={() => handleOpenModal()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Add Vendor
+          </button>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-4 items-center justify-between">
@@ -219,17 +244,28 @@ export default function Vendors() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <button 
-                          onClick={() => handleOpenModal(vendor)}
+                          onClick={() => handleViewDetails(vendor)}
                           className="text-slate-400 hover:text-blue-600 transition-colors"
+                          title="View Details"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Search className="w-4 h-4" />
                         </button>
-                        <button 
-                          onClick={() => vendor._rowIndex && handleDelete(vendor._rowIndex)}
-                          className="text-slate-400 hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canEdit && (
+                          <>
+                            <button 
+                              onClick={() => handleOpenModal(vendor)}
+                              className="text-slate-400 hover:text-blue-600 transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => vendor._rowIndex && handleDelete(vendor._rowIndex)}
+                              className="text-slate-400 hover:text-red-600 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -248,18 +284,8 @@ export default function Vendors() {
               </h2>
               <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600">&times;</button>
             </div>
-            <div className="p-6 overflow-y-auto">
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Vendor ID</label>
-                  <input 
-                    type="text" 
-                    placeholder="Enter vendor ID" 
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData.vendor_id}
-                    onChange={(e) => setFormData({...formData, vendor_id: e.target.value})}
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Vendor Name</label>
                   <input 
@@ -393,6 +419,32 @@ export default function Vendors() {
                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isSaving ? 'Saving...' : 'Save Vendor'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isViewModalOpen && selectedItem && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <h2 className="text-lg font-bold text-slate-800">Vendor Details</h2>
+              <button onClick={() => setIsViewModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
+              <div className="space-y-4">
+                {Object.entries(selectedItem).map(([key, value]) => {
+                  if (key.startsWith('_')) return null;
+                  return (
+                    <div key={key} className="border-b border-slate-50 pb-2">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
+                      <p className="text-sm text-slate-700 mt-1">{String(value) || '-'}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0">
+              <button onClick={() => setIsViewModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">Close</button>
             </div>
           </div>
         </div>
