@@ -34,7 +34,7 @@ export default function WaterCollective() {
 
   const { user } = useAuth();
   const userRole = user?.role?.toLowerCase();
-  const canEdit = userRole === 'admin' || userRole === 'office admin';
+  const canEdit = userRole === 'admin';
 
   useEffect(() => {
     loadSites();

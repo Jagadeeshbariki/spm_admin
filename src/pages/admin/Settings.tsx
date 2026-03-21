@@ -87,12 +87,14 @@ export default function Settings() {
     <div className="p-4 md:p-6 overflow-x-hidden">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Master Data Settings</h1>
-        <Link 
-          to="/admin/water-collective-management"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
-        >
-          <MapPin className="w-4 h-4" /> Water Collective Sites
-        </Link>
+        {user?.role?.toLowerCase() === 'admin' && (
+          <Link 
+            to="/admin/water-collective-management"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
+          >
+            <MapPin className="w-4 h-4" /> Water Collective Sites
+          </Link>
+        )}
       </div>
       
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 mb-6">
