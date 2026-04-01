@@ -2,6 +2,7 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwmJxHEodAZPOUN9qQ-o1U
 
 const OFFICE_ADMIN_SPREADSHEET_ID = '18Afss-S7VLMhgGluuwm4RanzyRfew61NLa_QzmBxHz4';
 const WATER_COLLECTIVE_SPREADSHEET_ID = '1n2qE-rdkVefVieM1z0C0Ah_Z04Gg6b7MrRca-LcNrvo';
+const MAIL_TRACKER_SPREADSHEET_ID = '18cmONE4zcVWsfWJ42vSUUX-LYjt-GEe-sRPfizHbQic'; // Replace with your Application_Mail Tracker Spreadsheet ID
 
 export const ADMIN_FOLDER_ID = '1d_4gLeoJ84zPrUe-vPJDR-f5b4V-ksY3';
 export const WATER_COLLECTIVES_FOLDER_ID = '1gga5glk6oNlI5tRDZFMthh4B-sUa0NnG';
@@ -9,6 +10,9 @@ export const WATER_COLLECTIVES_FOLDER_ID = '1gga5glk6oNlI5tRDZFMthh4B-sUa0NnG';
 function getSpreadsheetId(sheetName: string) {
   if (sheetName === 'water_collectives') {
     return WATER_COLLECTIVE_SPREADSHEET_ID;
+  }
+  if (sheetName === 'mail_tracker' || sheetName === 'mail_tracker_batches') {
+    return MAIL_TRACKER_SPREADSHEET_ID;
   }
   return OFFICE_ADMIN_SPREADSHEET_ID;
 }

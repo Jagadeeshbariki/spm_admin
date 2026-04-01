@@ -55,6 +55,7 @@ export default function Assets() {
 
   const [assetCategories, setAssetCategories] = useState<string[]>([]);
   const [assetTypes, setAssetTypes] = useState<string[]>([]);
+  const [staffNames, setStaffNames] = useState<string[]>([]);
 
   const userRole = user?.role?.toLowerCase();
   const canEdit = userRole === 'admin' || userRole === 'office admin';
@@ -67,14 +68,26 @@ export default function Assets() {
   const loadMasterData = async () => {
     try {
       const data = await fetchSheet('MasterData');
-      const categories = data.filter((item: any) => item['dropdwon catagorty'] === 'Asset Category').map((item: any) => item['dropdwon options']);
-      const types = data.filter((item: any) => item['dropdwon catagorty'] === 'Asset Type').map((item: any) => item['dropdwon options']);
+      const categories = Array.from(new Set(data
+        .filter((item: any) => item['dropdwon catagorty'] === 'Asset Category')
+        .map((item: any) => item['dropdwon options'])
+        .filter(Boolean)));
+      const types = Array.from(new Set(data
+        .filter((item: any) => item['dropdwon catagorty'] === 'Asset Type')
+        .map((item: any) => item['dropdwon options'])
+        .filter(Boolean)));
+      const staff = Array.from(new Set(data
+        .filter((item: any) => item['dropdwon catagorty'] === 'Staff Name')
+        .map((item: any) => item['dropdwon options'])
+        .filter(Boolean)));
       
       setAssetCategories(categories.length > 0 ? categories : ['Electronics', 'Furniture', 'Vehicles']);
       setAssetTypes(types.length > 0 ? types : ['Laptop', 'Monitor', 'Chair']);
+      setStaffNames(staff);
     } catch (error) {
       setAssetCategories(['Electronics', 'Furniture', 'Vehicles']);
       setAssetTypes(['Laptop', 'Monitor', 'Chair']);
+      setStaffNames([]);
     }
   };
 
@@ -99,13 +112,35 @@ export default function Assets() {
     }
   };
 
+  const formatDateForDisplay = (dateStr: any) => {
+    if (!dateStr) return '-';
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return String(dateStr);
+      
+      // Add 12 hours to compensate for timezone shifts
+      const adjustedDate = new Date(date.getTime() + 12 * 60 * 60 * 1000);
+      
+      const y = adjustedDate.getUTCFullYear();
+      const m = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(adjustedDate.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    } catch (e) {
+      return String(dateStr);
+    }
+  };
+
   const handleOpenModal = (item?: any) => {
     if (activeTab === 'registry') {
       if (item) {
         setEditingRow(item._rowIndex);
         setEditingAssetId(item.asset_id || '');
+        
+        const purchaseDate = item['Purchase Date'] ? formatDateForDisplay(item['Purchase Date']) : '';
+
         setCommonForm({
-          'Purchase Date': item['Purchase Date'] || '',
+          'Purchase Date': purchaseDate,
           purchased_by: item.purchased_by || '',
           Project: item.Project || '',
           Vendor: item.Vendor || '',
@@ -147,12 +182,16 @@ export default function Assets() {
     } else {
       if (item) {
         setEditingRow(item._rowIndex);
+        
+        const issueDate = item['Issue Date'] ? formatDateForDisplay(item['Issue Date']) : '';
+        const returnDate = item['Return Date'] ? formatDateForDisplay(item['Return Date']) : '';
+
         setUsageForm({
           'Asset Name': item['Asset Name'] || '',
           'Assigned To': item['Assigned To'] || '',
           Project: item.Project || '',
-          'Issue Date': item['Issue Date'] || '',
-          'Return Date': item['Return Date'] || '',
+          'Issue Date': issueDate,
+          'Return Date': returnDate,
           Condition: item.Condition || '',
           'Number of Assets Purchased': item['Number of Assets Purchased'] || '',
           'Unit Price': item['Unit Price'] || '',
@@ -359,7 +398,7 @@ export default function Assets() {
                       <td className="px-6 py-4 text-slate-600">{asset['Number of Assets Purchased']}</td>
                       <td className="px-6 py-4 text-slate-600">{asset['Unit Price']}</td>
                       <td className="px-6 py-4 text-slate-600">{asset['Units']}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset['Purchase Date']}</td>
+                      <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(asset['Purchase Date'])}</td>
                       <td className="px-6 py-4 font-medium text-slate-900">{asset.Cost}</td>
                       <td className="px-6 py-4 text-slate-600">{asset.purchased_by}</td>
                       <td className="px-6 py-4 text-slate-600">{asset.Project}</td>
@@ -427,8 +466,8 @@ export default function Assets() {
                       <td className="px-6 py-4 text-slate-600">{usage['Unit Price']}</td>
                       <td className="px-6 py-4 text-slate-600">{usage['Units']}</td>
                       <td className="px-6 py-4 text-slate-600">{usage.Project}</td>
-                      <td className="px-6 py-4 text-slate-600">{usage['Issue Date']}</td>
-                      <td className="px-6 py-4 text-slate-600">{usage['Return Date']}</td>
+                      <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(usage['Issue Date'])}</td>
+                      <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(usage['Return Date'])}</td>
                       <td className="px-6 py-4 text-slate-600">{usage.Condition}</td>
                       <td className="px-6 py-4 text-right">
                         <button onClick={() => handleViewDetails(usage)} className="text-slate-400 hover:text-blue-600 mr-3" title="View Details">
@@ -470,7 +509,16 @@ export default function Assets() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Purchased By</label>
-                        <input type="text" value={commonForm.purchased_by} onChange={e => setCommonForm({...commonForm, purchased_by: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <select 
+                          value={commonForm.purchased_by} 
+                          onChange={e => setCommonForm({...commonForm, purchased_by: e.target.value})} 
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select Staff</option>
+                          {staffNames.map((name, idx) => (
+                            <option key={`${name}-${idx}`} value={name}>{name}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
@@ -522,7 +570,7 @@ export default function Assets() {
                                 setAssetItems(newItems);
                               }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Select Category</option>
-                                {assetCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                {assetCategories.map((c, idx) => <option key={`${c}-${idx}`} value={c}>{c}</option>)}
                               </select>
                             </div>
                             <div>
@@ -533,7 +581,7 @@ export default function Assets() {
                                 setAssetItems(newItems);
                               }} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Select Type</option>
-                                {assetTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                {assetTypes.map((t, idx) => <option key={`${t}-${idx}`} value={t}>{t}</option>)}
                               </select>
                             </div>
                             <div>
@@ -677,7 +725,11 @@ export default function Assets() {
                   return (
                     <div key={key} className="border-b border-slate-50 pb-2">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
-                      <p className="text-sm text-slate-700 mt-1">{String(value) || '-'}</p>
+                      <p className="text-sm text-slate-700 mt-1">
+                        {(key === 'Purchase Date' || key === 'Issue Date' || key === 'Return Date') 
+                          ? formatDateForDisplay(String(value)) 
+                          : (String(value) || '-')}
+                      </p>
                     </div>
                   );
                 })}

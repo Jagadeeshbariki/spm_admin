@@ -44,6 +44,33 @@ export default function Reports() {
     }
   };
 
+  const normalizeDate = (dateInput: any) => {
+    if (!dateInput) return null;
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return null;
+    // Add 12 hours to compensate for timezone shifts
+    return new Date(date.getTime() + 12 * 60 * 60 * 1000);
+  };
+
+  const formatDateForDisplay = (dateStr: any) => {
+    if (!dateStr) return '-';
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return String(dateStr);
+      
+      // Add 12 hours to compensate for timezone shifts
+      const adjustedDate = new Date(date.getTime() + 12 * 60 * 60 * 1000);
+      
+      const y = adjustedDate.getUTCFullYear();
+      const m = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(adjustedDate.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    } catch (e) {
+      return String(dateStr);
+    }
+  };
+
   const generateReport = async () => {
     setLoading(true);
     try {
@@ -60,8 +87,12 @@ export default function Reports() {
         if (filters.expenseType !== 'All Types' && e.Expense_type !== filters.expenseType) return;
         if (filters.project !== 'All Projects') return; // Expenses don't have projects in this schema, so if a project is selected, exclude generic expenses or adjust logic. For now, exclude if project is selected.
         
-        if (filters.startDate && new Date(e.date) < new Date(filters.startDate)) return;
-        if (filters.endDate && new Date(e.date) > new Date(filters.endDate)) return;
+        const eDate = normalizeDate(e.date);
+        const sDate = normalizeDate(filters.startDate);
+        const enDate = normalizeDate(filters.endDate);
+
+        if (sDate && eDate && eDate < sDate) return;
+        if (enDate && eDate && eDate > enDate) return;
 
         combinedData.push({
           Date: e.date,
@@ -78,8 +109,12 @@ export default function Reports() {
         if (filters.expenseType !== 'All Types') return; // Assets aren't expenses
         if (filters.project !== 'All Projects' && a.Project !== filters.project) return;
         
-        if (filters.startDate && new Date(a['Purchase Date']) < new Date(filters.startDate)) return;
-        if (filters.endDate && new Date(a['Purchase Date']) > new Date(filters.endDate)) return;
+        const aDate = normalizeDate(a['Purchase Date']);
+        const sDate = normalizeDate(filters.startDate);
+        const enDate = normalizeDate(filters.endDate);
+
+        if (sDate && aDate && aDate < sDate) return;
+        if (enDate && aDate && aDate > enDate) return;
 
         combinedData.push({
           Date: a['Purchase Date'],
@@ -96,8 +131,12 @@ export default function Reports() {
         if (filters.expenseType !== 'All Types') return; // Rentals aren't standard expenses
         if (filters.project !== 'All Projects' && r.Project !== filters.project) return;
         
-        if (filters.startDate && new Date(r.Date) < new Date(filters.startDate)) return;
-        if (filters.endDate && new Date(r.Date) > new Date(filters.endDate)) return;
+        const rDate = normalizeDate(r.Date);
+        const sDate = normalizeDate(filters.startDate);
+        const enDate = normalizeDate(filters.endDate);
+
+        if (sDate && rDate && rDate < sDate) return;
+        if (enDate && rDate && rDate > enDate) return;
 
         combinedData.push({
           Date: r.Date,
@@ -251,7 +290,7 @@ export default function Reports() {
               <tbody className="divide-y divide-slate-100">
                 {reportData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 text-slate-600">{row.Date}</td>
+                    <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(row.Date)}</td>
                     <td className="px-6 py-4 font-medium text-slate-900">{row.Type}</td>
                     <td className="px-6 py-4 text-slate-600">{row.Category}</td>
                     <td className="px-6 py-4 text-slate-600">{row.Description}</td>

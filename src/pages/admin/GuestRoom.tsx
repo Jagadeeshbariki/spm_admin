@@ -73,9 +73,36 @@ export default function GuestRoom() {
     }
   };
 
+  const formatDateForDisplay = (dateStr: any) => {
+    if (!dateStr) return '-';
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return String(dateStr);
+      
+      // Add 12 hours to compensate for timezone shifts
+      const adjustedDate = new Date(date.getTime() + 12 * 60 * 60 * 1000);
+      
+      const y = adjustedDate.getUTCFullYear();
+      const m = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(adjustedDate.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    } catch (e) {
+      return String(dateStr);
+    }
+  };
+
   const handleOpenModal = (entry?: GuestRoomEntry) => {
     if (entry) {
-      setFormData(entry);
+      const checkInDate = entry['Check-in Date'] ? formatDateForDisplay(entry['Check-in Date']) : '';
+      const checkOutDate = entry['Check-out Date'] ? formatDateForDisplay(entry['Check-out Date']) : '';
+      
+      const formattedEntry = { 
+        ...entry, 
+        'Check-in Date': checkInDate,
+        'Check-out Date': checkOutDate
+      };
+      setFormData(formattedEntry);
       setEditingRow(entry._rowIndex || null);
       setGuestList([entry['Guest Names']]);
     } else {
@@ -234,8 +261,8 @@ export default function GuestRoom() {
                     <td className="px-6 py-4 font-medium text-blue-600">{entry.Guest_id}</td>
                     <td className="px-6 py-4 text-slate-900 font-medium truncate max-w-xs">{entry['Guest Names']}</td>
                     <td className="px-6 py-4 text-slate-600">{entry['Room Number']}</td>
-                    <td className="px-6 py-4 text-slate-600">{entry['Check-in Date']}</td>
-                    <td className="px-6 py-4 text-slate-600">{entry['Check-out Date']}</td>
+                    <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(entry['Check-in Date'])}</td>
+                    <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(entry['Check-out Date'])}</td>
                     <td className="px-6 py-4 text-slate-600">{entry['Days Stayed']}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -432,7 +459,11 @@ export default function GuestRoom() {
                   return (
                     <div key={key} className="border-b border-slate-50 pb-2">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
-                      <p className="text-sm text-slate-700 mt-1">{String(value) || '-'}</p>
+                      <p className="text-sm text-slate-700 mt-1">
+                        {(key === 'Check-in Date' || key === 'Check-out Date') 
+                          ? formatDateForDisplay(String(value)) 
+                          : (String(value) || '-')}
+                      </p>
                     </div>
                   );
                 })}

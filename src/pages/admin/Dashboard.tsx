@@ -5,7 +5,8 @@ import {
   CalendarDays, 
   Car, 
   Users,
-  Loader2
+  Loader2,
+  Filter
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -38,11 +39,70 @@ export default function Dashboard() {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
+  const months = [
+    'April', 'May', 'June', 'July', 'August', 'September', 
+    'October', 'November', 'December', 'January', 'February', 'March'
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth(); // 0-11
+  
+  // Default FY logic
+  const defaultFY = currentMonth >= 3 ? `${currentYear}-${(currentYear + 1).toString().slice(-2)}` : `${currentYear - 1}-${currentYear.toString().slice(-2)}`;
+  const defaultMonth = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date());
+
+  const [selectedMonth, setSelectedMonth] = useState('All Months');
+  const [selectedFY, setSelectedFY] = useState(defaultFY);
+
+  // Generate FY options (last 5 years + next year)
+  const fyOptions = [];
+  for (let i = -3; i <= 1; i++) {
+    const year = currentYear + i;
+    fyOptions.push(`${year}-${(year + 1).toString().slice(-2)}`);
+  }
+
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [selectedMonth, selectedFY]);
 
   const loadDashboardData = async () => {
+    // Helper to normalize date for consistent comparison across timezones
+    const normalizeDate = (dateStr: string) => {
+      if (!dateStr) return null;
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return null;
+      // Add 12 hours to compensate for timezone shifts
+      return new Date(date.getTime() + 12 * 60 * 60 * 1000);
+    };
+
+    // Helper to check if a date matches selected FY
+    const isDateInFY = (dateStr: string) => {
+      const date = normalizeDate(dateStr);
+      if (!date) return false;
+      const month = date.getUTCMonth();
+      const year = date.getUTCFullYear();
+      const [startYearStr] = selectedFY.split('-');
+      const startYear = parseInt(startYearStr);
+      if (month >= 3) return year === startYear;
+      return year === startYear + 1;
+    };
+
+    // Helper to check if a date matches selected FY and Month
+    const isDateInRange = (dateStr: string) => {
+      const date = normalizeDate(dateStr);
+      if (!date) return false;
+
+      const monthName = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(date);
+
+      // Check FY first
+      if (!isDateInFY(dateStr)) return false;
+
+      // Check Month
+      if (selectedMonth !== 'All Months' && monthName !== selectedMonth) return false;
+
+      return true;
+    };
+
     try {
       setLoading(true);
       const [expenses, assets, meetings, rentals, vendors] = await Promise.all([
@@ -53,10 +113,6 @@ export default function Dashboard() {
         fetchSheet('Vendor_Management')
       ]);
 
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-
       // Calculate Metrics
       let monthlyExp = 0;
       const expByMonth: Record<string, number> = {};
@@ -64,32 +120,31 @@ export default function Dashboard() {
 
       expenses.forEach((e: any) => {
         const amt = parseFloat(e.Amount) || 0;
-        const date = new Date(e.date);
+        const date = normalizeDate(e.date);
         
-        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+        if (isDateInRange(e.date)) {
           monthlyExp += amt;
+          const cat = e.Expense_type || 'Others';
+          expByCategory[cat] = (expByCategory[cat] || 0) + amt;
         }
 
-        const monthName = date.toLocaleString('default', { month: 'short' });
-        expByMonth[monthName] = (expByMonth[monthName] || 0) + amt;
-
-        const cat = e.Expense_type || 'Others';
-        expByCategory[cat] = (expByCategory[cat] || 0) + amt;
+        if (isDateInFY(e.date) && date) {
+          const monthName = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' }).format(date);
+          expByMonth[monthName] = (expByMonth[monthName] || 0) + amt;
+        }
       });
 
       let travelExp = 0;
       rentals.forEach((r: any) => {
         const amt = parseFloat(r.Amount) || 0;
-        const date = new Date(r.Date);
-        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+        if (isDateInRange(r.Date)) {
           travelExp += amt;
         }
       });
 
       let currentMonthMeetings = 0;
       meetings.forEach((m: any) => {
-        const date = new Date(m['Meeting Date']);
-        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+        if (isDateInRange(m['Meeting Date'])) {
           currentMonthMeetings++;
         }
       });
@@ -103,12 +158,13 @@ export default function Dashboard() {
       });
 
       // Format Chart Data
-      const monthsOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const formattedExpenseData = Object.keys(expByMonth)
-        .map(name => ({ name, amount: expByMonth[name] }))
-        .sort((a, b) => monthsOrder.indexOf(a.name) - monthsOrder.indexOf(b.name));
+      const monthsOrder = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+      const formattedExpenseData = monthsOrder.map(name => ({
+        name,
+        amount: expByMonth[name] || 0
+      }));
       
-      setExpenseData(formattedExpenseData.length > 0 ? formattedExpenseData : [{ name: 'No Data', amount: 0 }]);
+      setExpenseData(formattedExpenseData);
 
       const formattedCategoryData = Object.keys(expByCategory).map(name => ({
         name, value: expByCategory[name]
@@ -185,6 +241,25 @@ export default function Dashboard() {
     }
   };
 
+  const formatDateForDisplay = (dateStr: any) => {
+    if (!dateStr) return '-';
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return String(dateStr);
+      
+      // Add 12 hours to compensate for timezone shifts
+      const adjustedDate = new Date(date.getTime() + 12 * 60 * 60 * 1000);
+      
+      const y = adjustedDate.getUTCFullYear();
+      const m = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(adjustedDate.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    } catch (e) {
+      return String(dateStr);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
@@ -195,14 +270,41 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
+        
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
+          <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
+            <CalendarDays className="w-4 h-4 text-slate-400 mr-2" />
+            <select 
+              value={selectedFY} 
+              onChange={(e) => setSelectedFY(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm font-medium text-slate-600 cursor-pointer"
+            >
+              {fyOptions.map(fy => <option key={fy} value={fy}>{fy}</option>)}
+            </select>
+          </div>
+
+          <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
+            <Filter className="w-4 h-4 text-slate-400 mr-2" />
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm font-medium text-slate-600 cursor-pointer"
+            >
+              <option value="All Months">All Months</option>
+              {months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
       
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <SummaryCard title="Monthly Expenses" value={`₹${metrics.monthlyExpenses.toLocaleString()}`} subtext="This Month" icon={IndianRupee} color="bg-blue-100 text-blue-600" />
+        <SummaryCard title="Expenses" value={`₹${metrics.monthlyExpenses.toLocaleString()}`} subtext={selectedMonth === 'All Months' ? `FY ${selectedFY}` : `${selectedMonth} ${selectedFY}`} icon={IndianRupee} color="bg-blue-100 text-blue-600" />
         <SummaryCard title="Total Assets" value={metrics.totalAssets} subtext="Active" icon={Box} color="bg-emerald-100 text-emerald-600" />
-        <SummaryCard title="Total Meetings" value={metrics.totalMeetings} subtext="This Month" icon={CalendarDays} color="bg-purple-100 text-purple-600" />
-        <SummaryCard title="Travel Expenses" value={`₹${metrics.travelExpenses.toLocaleString()}`} subtext="This Month" icon={Car} color="bg-orange-100 text-orange-600" />
+        <SummaryCard title="Meetings" value={metrics.totalMeetings} subtext={selectedMonth === 'All Months' ? `FY ${selectedFY}` : `${selectedMonth} ${selectedFY}`} icon={CalendarDays} color="bg-purple-100 text-purple-600" />
+        <SummaryCard title="Travel Expenses" value={`₹${metrics.travelExpenses.toLocaleString()}`} subtext={selectedMonth === 'All Months' ? `FY ${selectedFY}` : `${selectedMonth} ${selectedFY}`} icon={Car} color="bg-orange-100 text-orange-600" />
         <SummaryCard title="Active Vendors" value={metrics.activeVendors} subtext="Registered" icon={Users} color="bg-pink-100 text-pink-600" />
       </div>
 
@@ -270,7 +372,7 @@ export default function Dashboard() {
             <tbody className="divide-y divide-slate-100">
               {recentActivity.length > 0 ? recentActivity.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 text-slate-600">{item.date}</td>
+                  <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(item.date)}</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
                       {item.module}

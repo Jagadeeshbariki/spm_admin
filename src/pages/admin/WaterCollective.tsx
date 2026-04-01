@@ -245,6 +245,12 @@ export default function WaterCollective() {
             <p className="text-xs text-slate-400 leading-relaxed">
               GeoJSON files allow you to visualize geographic data like points, lines, and polygons on the map.
             </p>
+            <div className="mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+              <p className="text-[10px] text-blue-600 font-medium uppercase tracking-wider mb-1">GIS Tip</p>
+              <p className="text-[10px] text-blue-700 leading-normal">
+                To show custom colors from your GIS export, ensure your GeoJSON features have a <code className="bg-blue-100 px-1 rounded">color</code> or <code className="bg-blue-100 px-1 rounded">fill</code> property.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -266,12 +272,18 @@ export default function WaterCollective() {
                   key={`${item.filename}-${isFocused}`} 
                   data={item.data} 
                   onEachFeature={onEachFeature}
-                  style={{
-                    color: isFocused ? '#f59e0b' : (idx % 2 === 0 ? '#3b82f6' : '#10b981'),
-                    weight: isFocused ? 5 : 3,
-                    opacity: isFocused ? 1 : 0.7,
-                    fillOpacity: isFocused ? 0.4 : 0.2,
-                    className: isFocused ? 'animate-pulse' : ''
+                  style={(feature) => {
+                    const props = feature?.properties || {};
+                    const customColor = props.color || props.fill || props.stroke || props['marker-color'];
+                    
+                    return {
+                      color: isFocused ? '#f59e0b' : (customColor || (idx % 2 === 0 ? '#3b82f6' : '#10b981')),
+                      weight: isFocused ? 5 : 3,
+                      opacity: isFocused ? 1 : 0.7,
+                      fillOpacity: isFocused ? 0.4 : 0.2,
+                      fillColor: customColor || (isFocused ? '#f59e0b' : (idx % 2 === 0 ? '#3b82f6' : '#10b981')),
+                      className: isFocused ? 'animate-pulse' : ''
+                    };
                   }}
                 />
               );

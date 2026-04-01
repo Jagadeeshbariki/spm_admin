@@ -61,7 +61,10 @@ export default function Vendors() {
   const loadMasterData = async () => {
     try {
       const data = await fetchSheet('MasterData');
-      const types = data.filter((item: any) => item['dropdwon catagorty'] === 'Service Type').map((item: any) => item['dropdwon options']);
+      const types = Array.from(new Set(data
+        .filter((item: any) => item['dropdwon catagorty'] === 'Service Type')
+        .map((item: any) => item['dropdwon options'])
+        .filter(Boolean)));
       setServiceTypes(types);
     } catch (error) {
       console.error('Failed to load master data:', error);
@@ -182,8 +185,8 @@ export default function Vendors() {
               onChange={(e) => setFilterService(e.target.value)}
             >
               <option value="All Services">All Services</option>
-              {uniqueServiceTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
+              {uniqueServiceTypes.map((type, idx) => (
+                <option key={`${type}-${idx}`} value={type}>{type}</option>
               ))}
             </select>
           </div>
@@ -304,7 +307,7 @@ export default function Vendors() {
                     onChange={(e) => setFormData({...formData, 'Service Type': e.target.value})}
                   >
                     <option value="">Select Service Type</option>
-                    {serviceTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                    {serviceTypes.map((t, idx) => <option key={`${t}-${idx}`} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>

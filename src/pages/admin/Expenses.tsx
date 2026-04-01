@@ -22,14 +22,12 @@ export default function Expenses() {
     Amount: '',
     Description: '',
     Paid_by: '',
-    'Number of Assets Purchased': '',
-    'Unit Price': '',
-    'Units': '',
   });
   const [file, setFile] = useState<File | null>(null);
 
   const [expenseTypes, setExpenseTypes] = useState<string[]>([]);
   const [farmNames, setFarmNames] = useState<string[]>([]);
+  const [filterType, setFilterType] = useState('All Types');
 
   const userRole = user?.role?.toLowerCase();
   const canEdit = userRole === 'admin' || userRole === 'office admin';
@@ -42,8 +40,14 @@ export default function Expenses() {
   const loadMasterData = async () => {
     try {
       const data = await fetchSheet('MasterData');
-      const types = data.filter((item: any) => item['dropdwon catagorty'] === 'Expense Type').map((item: any) => item['dropdwon options']);
-      setExpenseTypes(types.length > 0 ? types : ['Electricity', 'Internet', 'Kitchen', 'Courier', 'Guest Room', 'Others']);
+      const types = data
+        .filter((item: any) => item['dropdwon catagorty'] === 'Expense Type')
+        .map((item: any) => item['dropdwon options'])
+        .filter(Boolean);
+      
+      const uniqueTypes = Array.from(new Set(types));
+      const defaultTypes = ['Electricity', 'Internet', 'Kitchen', 'Courier', 'Guest Room', 'Others'];
+      setExpenseTypes(uniqueTypes.length > 0 ? uniqueTypes : defaultTypes);
     } catch (error) {
       setExpenseTypes(['Electricity', 'Internet', 'Kitchen', 'Courier', 'Guest Room', 'Others']);
     }
@@ -60,19 +64,36 @@ export default function Expenses() {
     }
   };
 
+  const formatDateForDisplay = (dateStr: any) => {
+    if (!dateStr) return '-';
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return String(dateStr);
+      
+      // Add 12 hours to compensate for timezone shifts
+      const adjustedDate = new Date(date.getTime() + 12 * 60 * 60 * 1000);
+      
+      const y = adjustedDate.getUTCFullYear();
+      const m = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(adjustedDate.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    } catch (e) {
+      return String(dateStr);
+    }
+  };
+
   const handleOpenModal = (expense?: any) => {
     if (expense) {
       setEditingRow(expense._rowIndex);
+      const formattedDate = expense.date ? formatDateForDisplay(expense.date) : '';
       setFormData({
         Bill_id: expense.Bill_id || '',
-        date: expense.date || '',
+        date: formattedDate,
         Expense_type: expense.Expense_type || 'Electricity',
         Amount: expense.Amount || '',
         Description: expense.Description || '',
         Paid_by: expense.Paid_by || '',
-        'Number of Assets Purchased': expense['Number of Assets Purchased'] || '',
-        'Unit Price': expense['Unit Price'] || '',
-        'Units': expense['Units'] || '',
       });
     } else {
       setEditingRow(null);
@@ -83,9 +104,6 @@ export default function Expenses() {
         Amount: '',
         Description: '',
         Paid_by: '',
-        'Number of Assets Purchased': '',
-        'Unit Price': '',
-        'Units': '',
       });
     }
     setFile(null);
@@ -149,6 +167,10 @@ export default function Expenses() {
     }
   };
 
+  const filteredExpenses = expenses.filter(expense => {
+    return filterType === 'All Types' || expense.Expense_type === filterType;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -167,11 +189,15 @@ export default function Expenses() {
         <div className="flex gap-4 flex-wrap">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
             <Filter className="w-4 h-4 text-slate-400 mr-2" />
-            <select className="bg-transparent border-none outline-none text-sm text-slate-600">
-              <option>All Types</option>
-              <option>Electricity</option>
-              <option>Internet</option>
-              <option>Kitchen</option>
+            <select 
+              className="bg-transparent border-none outline-none text-sm text-slate-600"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+            >
+              <option value="All Types">All Types</option>
+              {expenseTypes.map((type, idx) => (
+                <option key={`${type}-${idx}`} value={type}>{type}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -189,9 +215,6 @@ export default function Expenses() {
                 <th className="px-6 py-4">Bill ID</th>
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4">Expense Type</th>
-                <th className="px-6 py-4">Qty</th>
-                <th className="px-6 py-4">Unit Price</th>
-                <th className="px-6 py-4">Units</th>
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4">Description</th>
                 <th className="px-6 py-4">Bill URL</th>
@@ -202,21 +225,18 @@ export default function Expenses() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan={9} className="text-center py-8 text-slate-500">Loading...</td></tr>
-              ) : expenses.length === 0 ? (
+              ) : filteredExpenses.length === 0 ? (
                 <tr><td colSpan={9} className="text-center py-8 text-slate-500">No expenses found</td></tr>
               ) : (
-                expenses.map((expense, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                filteredExpenses.map((expense, idx) => (
+                  <tr key={expense.Bill_id || idx} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-blue-600">{expense.Bill_id}</td>
-                    <td className="px-6 py-4 text-slate-600">{expense.date}</td>
+                    <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(expense.date)}</td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
                         {expense.Expense_type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{expense['Number of Assets Purchased']}</td>
-                    <td className="px-6 py-4 text-slate-600">{expense['Unit Price']}</td>
-                    <td className="px-6 py-4 text-slate-600">{expense['Units']}</td>
                     <td className="px-6 py-4 font-medium text-slate-900">{expense.Amount}</td>
                     <td className="px-6 py-4 text-slate-600">{expense.Description}</td>
                     <td className="px-6 py-4">
@@ -265,33 +285,13 @@ export default function Expenses() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Expense Type</label>
                 <select value={formData.Expense_type} onChange={e => setFormData({...formData, Expense_type: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  {expenseTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                  <option value="">Select Type</option>
+                  {expenseTypes.map((type, idx) => <option key={`${type}-${idx}`} value={type}>{type}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Amount</label>
                 <input type="number" value={formData.Amount} onChange={e => setFormData({...formData, Amount: e.target.value})} placeholder="Enter amount" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Number of Assets Purchased</label>
-                  <input type="number" step="0.01" value={formData['Number of Assets Purchased']} onChange={e => setFormData({...formData, 'Number of Assets Purchased': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price</label>
-                  <input type="number" step="0.01" value={formData['Unit Price']} onChange={e => setFormData({...formData, 'Unit Price': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Units</label>
-                <select value={formData['Units']} onChange={e => setFormData({...formData, 'Units': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Select Unit</option>
-                  <option value="kg">kg</option>
-                  <option value="no">no</option>
-                  <option value="lit">lit</option>
-                  <option value="mtr">mtr</option>
-                  <option value="pkt">pkt</option>
-                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
@@ -329,7 +329,9 @@ export default function Expenses() {
                   return (
                     <div key={key} className="border-b border-slate-50 pb-2">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
-                      <p className="text-sm text-slate-700 mt-1">{String(value) || '-'}</p>
+                      <p className="text-sm text-slate-700 mt-1">
+                        {key === 'date' ? formatDateForDisplay(String(value)) : (String(value) || '-')}
+                      </p>
                     </div>
                   );
                 })}

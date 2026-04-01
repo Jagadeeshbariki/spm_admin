@@ -58,7 +58,10 @@ export default function Meetings() {
   const loadMasterData = async () => {
     try {
       const data = await fetchSheet('MasterData');
-      const projects = data.filter((item: any) => item['dropdwon catagorty'] === 'Project').map((item: any) => item['dropdwon options']);
+      const projects = Array.from(new Set(data
+        .filter((item: any) => item['dropdwon catagorty'] === 'Project')
+        .map((item: any) => item['dropdwon options'])
+        .filter(Boolean)));
       
       setProjectNames(projects.length > 0 ? projects : ['Project A', 'Project B']);
     } catch (error) {
@@ -79,9 +82,34 @@ export default function Meetings() {
     }
   };
 
+  const formatDateForDisplay = (dateStr: any) => {
+    if (!dateStr) return '-';
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return String(dateStr);
+      
+      // Add 12 hours to compensate for timezone shifts that might have pushed
+      // a midnight date to the previous day in UTC.
+      const adjustedDate = new Date(date.getTime() + 12 * 60 * 60 * 1000);
+      
+      const y = adjustedDate.getUTCFullYear();
+      const m = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(adjustedDate.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    } catch (e) {
+      return String(dateStr);
+    }
+  };
+
   const handleOpenModal = (meeting?: Meeting) => {
     if (meeting) {
-      setFormData(meeting);
+      const formattedMeeting = { ...meeting };
+      // Ensure date is in YYYY-MM-DD format for the input field
+      if (formattedMeeting['Meeting Date']) {
+        formattedMeeting['Meeting Date'] = formatDateForDisplay(formattedMeeting['Meeting Date']);
+      }
+      setFormData(formattedMeeting);
       setEditingRow(meeting._rowIndex || null);
     } else {
       setFormData(initialFormState);
@@ -249,7 +277,7 @@ export default function Meetings() {
               ) : (
                 filteredMeetings.map((meeting, index) => (
                   <tr key={meeting._rowIndex || index} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 text-slate-600">{meeting['Meeting Date']}</td>
+                    <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(meeting['Meeting Date'])}</td>
                     <td className="px-6 py-4 font-medium text-slate-900">{meeting['Project Name']}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -336,7 +364,7 @@ export default function Meetings() {
                     onChange={(e) => setFormData({...formData, 'Project Name': e.target.value})}
                   >
                     <option value="">Select Project</option>
-                    {projectNames.map(proj => <option key={proj} value={proj}>{proj}</option>)}
+                    {projectNames.map((proj, idx) => <option key={`${proj}-${idx}`} value={proj}>{proj}</option>)}
                   </select>
                 </div>
                 <div>
@@ -449,7 +477,9 @@ export default function Meetings() {
                   return (
                     <div key={key} className="border-b border-slate-50 pb-2">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
-                      <p className="text-sm text-slate-700 mt-1">{String(value) || '-'}</p>
+                      <p className="text-sm text-slate-700 mt-1">
+                        {key === 'Meeting Date' ? formatDateForDisplay(String(value)) : (String(value) || '-')}
+                      </p>
                     </div>
                   );
                 })}

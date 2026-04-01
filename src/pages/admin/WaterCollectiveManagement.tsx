@@ -27,7 +27,7 @@ const initialFormState: WaterCollectiveSite = {
 export default function WaterCollectiveManagement() {
   const { user } = useAuth();
   const userRole = user?.role?.toLowerCase();
-  const canEdit = userRole === 'admin'; // Only admin can edit this now
+  const canEdit = userRole === 'admin' || userRole === 'office admin'; // Only admin and office admin can edit this now
 
   const [sites, setSites] = useState<WaterCollectiveSite[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);

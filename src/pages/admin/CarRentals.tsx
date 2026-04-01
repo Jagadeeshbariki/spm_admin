@@ -64,9 +64,18 @@ export default function CarRentals() {
   const loadMasterData = async () => {
     try {
       const data = await fetchSheet('MasterData');
-      const projectOptions = data.filter((row: any) => row['dropdwon catagorty'] === 'Project').map((row: any) => row['dropdwon options']);
-      const vehicleTypeOptions = data.filter((row: any) => row['dropdwon catagorty'] === 'Vehicle Type').map((row: any) => row['dropdwon options']);
-      const employeeOptions = data.filter((row: any) => row['dropdwon catagorty'] === 'Employee Name').map((row: any) => row['dropdwon options']);
+      const projectOptions = Array.from(new Set(data
+        .filter((row: any) => row['dropdwon catagorty'] === 'Project')
+        .map((row: any) => row['dropdwon options'])
+        .filter(Boolean)));
+      const vehicleTypeOptions = Array.from(new Set(data
+        .filter((row: any) => row['dropdwon catagorty'] === 'Vehicle Type')
+        .map((row: any) => row['dropdwon options'])
+        .filter(Boolean)));
+      const employeeOptions = Array.from(new Set(data
+        .filter((row: any) => row['dropdwon catagorty'] === 'Staff Name' || row['dropdwon catagorty'] === 'Employee Name')
+        .map((row: any) => row['dropdwon options'])
+        .filter(Boolean)));
       
       setProjects(projectOptions);
       setVehicleTypes(vehicleTypeOptions);
@@ -89,12 +98,33 @@ export default function CarRentals() {
     }
   };
 
+  const formatDateForDisplay = (dateStr: any) => {
+    if (!dateStr) return '-';
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return String(dateStr);
+      
+      // Add 12 hours to compensate for timezone shifts
+      const adjustedDate = new Date(date.getTime() + 12 * 60 * 60 * 1000);
+      
+      const y = adjustedDate.getUTCFullYear();
+      const m = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(adjustedDate.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    } catch (e) {
+      return String(dateStr);
+    }
+  };
+
   const handleOpenModal = (rental?: CarRental) => {
     if (rental) {
-      setFormData(rental);
+      const formattedDate = rental.Date ? formatDateForDisplay(rental.Date) : '';
+      const formattedRental = { ...rental, Date: formattedDate };
+      setFormData(formattedRental);
       setEditingRow(rental._rowIndex || null);
       // Check if "Others" was used
-      const selectedUsers = rental.users.split(', ');
+      const selectedUsers = formattedRental.users.split(', ');
       const knownEmployees = employeeNames.filter(e => e !== 'Others');
       const hasOthers = selectedUsers.some(u => !knownEmployees.includes(u));
       if (hasOthers) {
@@ -154,8 +184,10 @@ export default function CarRentals() {
 
       let finalUsers = formData.users;
       if (showOtherInput && otherName) {
-        const usersList = formData.users.split(', ').filter(u => u !== 'Others');
-        finalUsers = [...usersList, otherName].join(', ');
+        const usersList = formData.users.split(', ').filter(u => u !== 'Others' && u.trim() !== '');
+        // Combine selected staff and other names
+        const otherNames = otherName.split(',').map(n => n.trim()).filter(n => n !== '');
+        finalUsers = [...usersList, ...otherNames].join(', ');
       }
 
       const dataToSave = {
@@ -226,8 +258,8 @@ export default function CarRentals() {
               onChange={(e) => setFilterProject(e.target.value)}
             >
               <option value="All Projects">All Projects</option>
-              {projects.map(p => (
-                <option key={p} value={p}>{p}</option>
+              {projects.map((p, idx) => (
+                <option key={`${p}-${idx}`} value={p}>{p}</option>
               ))}
             </select>
           </div>
@@ -278,7 +310,7 @@ export default function CarRentals() {
               ) : (
                 filteredRentals.map((rental, index) => (
                   <tr key={rental._rowIndex || index} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 text-slate-600">{rental.Date}</td>
+                    <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(rental.Date)}</td>
                     <td className="px-6 py-4 font-medium text-slate-900">{rental.Project}</td>
                     <td className="px-6 py-4 text-slate-600">{rental.users}</td>
                     <td className="px-6 py-4 text-slate-600">{rental['Travel Route']}</td>
@@ -350,14 +382,14 @@ export default function CarRentals() {
                     onChange={(e) => setFormData({...formData, Project: e.target.value})}
                   >
                     <option value="">Select Project</option>
-                    {projects.map(p => <option key={p} value={p}>{p}</option>)}
+                    {projects.map((p, idx) => <option key={`${p}-${idx}`} value={p}>{p}</option>)}
                   </select>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Employee Name(s)</label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 border border-slate-200 rounded-lg max-h-40 overflow-y-auto">
-                    {employeeNames.map(name => (
-                      <label key={name} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                    {employeeNames.map((name, idx) => (
+                      <label key={`${name}-${idx}`} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer hover:bg-slate-50 p-1 rounded">
                         <input 
                           type="checkbox"
                           checked={formData.users.split(', ').includes(name)}
@@ -445,7 +477,7 @@ export default function CarRentals() {
                     onChange={(e) => setFormData({...formData, 'Vehicle Type': e.target.value})}
                   >
                     <option value="">Select Vehicle Type</option>
-                    {vehicleTypes.map(v => <option key={v} value={v}>{v}</option>)}
+                    {vehicleTypes.map((v, idx) => <option key={`${v}-${idx}`} value={v}>{v}</option>)}
                   </select>
                 </div>
                 <div>
@@ -505,7 +537,9 @@ export default function CarRentals() {
                   return (
                     <div key={key} className="border-b border-slate-50 pb-2">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
-                      <p className="text-sm text-slate-700 mt-1">{String(value) || '-'}</p>
+                      <p className="text-sm text-slate-700 mt-1">
+                        {key === 'Date' ? formatDateForDisplay(String(value)) : (String(value) || '-')}
+                      </p>
                     </div>
                   );
                 })}

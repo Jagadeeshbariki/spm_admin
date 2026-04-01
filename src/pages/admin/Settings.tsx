@@ -5,23 +5,27 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/AuthContext';
 import DeleteButton from '@/components/DeleteButton';
+import { cn } from '@/lib/utils';
 
 export default function Settings() {
   const { user } = useAuth();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formName, setFormName] = useState('');
   const [dropdownCategory, setDropdownCategory] = useState('');
   const [dropdownOptions, setDropdownOptions] = useState('');
   const [pendingOptions, setPendingOptions] = useState<{ 'formname': string; 'dropdwon catagorty': string; 'dropdwon options': string }[]>([]);
 
   const formConfig: Record<string, string[]> = {
-    'Asset Registry': ['Asset Category', 'Asset Type', 'Units'],
+    'Asset Registry': ['Asset Category', 'Asset Type', 'Units', 'Staff Name'],
     'Asset Usage': ['Units'],
     'Expenses Registry': ['Expense Type', 'Units'],
     'Meetings Tracker': ['Project'],
     'Vendors': ['Vendor Type'],
-    'Car Rentals': ['Vehicle Type', 'Employee Name'],
+    'Car Rentals': ['Vehicle Type', 'Employee Name', 'Staff Name'],
+    'Staff': ['Staff Name'],
+    'Mail Tracker': ['Activity', 'Approved Status'],
   };
 
   useEffect(() => {
@@ -52,6 +56,7 @@ export default function Settings() {
 
   async function handleSubmitAll() {
     if (pendingOptions.length === 0) return;
+    setIsSubmitting(true);
     try {
       for (const item of pendingOptions) {
         await addRow('MasterData', item);
@@ -61,11 +66,14 @@ export default function Settings() {
       loadData();
     } catch (error) {
       toast.error('Failed to add options');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleDelete(index: number) {
     console.log('Attempting to delete row at index:', index);
+    setIsSubmitting(true);
     try {
       await deleteRow('MasterData', index);
       toast.success('Option deleted');
@@ -73,6 +81,8 @@ export default function Settings() {
     } catch (error) {
       console.error('Delete error:', error);
       toast.error('Failed to delete option');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -84,10 +94,21 @@ export default function Settings() {
   }, {} as Record<string, any[]>);
 
   return (
-    <div className="p-4 md:p-6 overflow-x-hidden">
+    <div className={cn("p-4 md:p-6 overflow-x-hidden", isSubmitting && "blur-sm pointer-events-none")}>
+      {/* Loading Overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-md flex items-center justify-center z-[100]">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+            <p className="text-lg font-bold text-slate-800">Updating Master Data...</p>
+            <p className="text-sm text-slate-500">Please wait while we sync with the spreadsheet</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Master Data Settings</h1>
-        {user?.role?.toLowerCase() === 'admin' && (
+        {(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'office admin') && (
           <Link 
             to="/admin/water-collective-management"
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
@@ -167,11 +188,9 @@ export default function Settings() {
               <h3 className="font-semibold text-slate-800 mb-4">{groupKey}</h3>
               <ul className="space-y-2">
                 {(items as any[]).map((item: any, idx: number) => (
-                  <li key={idx} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg text-sm">
+                  <li key={`${groupKey}-${item['dropdwon options']}-${idx}`} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg text-sm">
                     <span>{item['dropdwon options']}</span>
-                    {user?.role === 'Admin' && (
-                      <DeleteButton onClick={() => handleDelete(item._rowIndex)} className="text-red-500 hover:text-red-700" />
-                    )}
+                    <DeleteButton onClick={() => handleDelete(item._rowIndex)} className="text-red-500 hover:text-red-700" />
                   </li>
                 ))}
               </ul>
