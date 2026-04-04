@@ -111,13 +111,19 @@ export default function WaterCollectiveManagement() {
   };
 
   const handleDelete = async (rowIndex: number) => {
-    if (!window.confirm('Are you sure you want to delete this site?')) return;
+    const confirmed = window.confirm('Are you sure you want to delete this site?');
+    if (!confirmed) return;
+
     try {
+      setIsLoading(true);
       await deleteRow('water_collectives', rowIndex);
       toast.success('Site deleted successfully');
-      loadSites();
-    } catch (error) {
-      toast.error('Failed to delete site');
+      await loadSites();
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast.error(error.message || 'Failed to delete site');
+    } finally {
+      setIsLoading(false);
     }
   };
 

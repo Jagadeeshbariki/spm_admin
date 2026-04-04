@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, User, LogOut, LogIn, ChevronDown } from 'lucide-react';
+import { Bell, User, LogOut, LogIn, ChevronDown, Menu, X } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,9 @@ export default function Topbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showProfile, setShowProfile] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = () => {
     logout();
@@ -20,6 +22,9 @@ export default function Topbar() {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowProfile(false);
+      }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setShowMobileMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -56,9 +61,16 @@ export default function Topbar() {
   });
 
   return (
-    <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-50">
-      <div className="flex items-center gap-8">
-        <Link to="/" className="text-xl font-bold text-blue-600 tracking-tight">
+    <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-6 shrink-0 sticky top-0 z-50">
+      <div className="flex items-center gap-4 md:gap-8">
+        <button 
+          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          className="md:hidden p-2 hover:bg-slate-100 rounded-lg text-slate-600"
+        >
+          {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+
+        <Link to="/" className="text-lg md:text-xl font-bold text-blue-600 tracking-tight whitespace-nowrap">
           Seethampeta Wassan
         </Link>
         
@@ -87,7 +99,35 @@ export default function Topbar() {
         </nav>
       </div>
 
-      <div className="flex items-center gap-4">
+      {/* Mobile Menu Overlay */}
+      {showMobileMenu && (
+        <div className="md:hidden fixed inset-0 top-16 bg-slate-900/50 z-40" onClick={() => setShowMobileMenu(false)}>
+          <div 
+            ref={mobileMenuRef}
+            className="bg-white w-64 h-full shadow-xl py-4 flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {filteredLinks.map((link) => {
+              const isActive = location.pathname === link.path;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setShowMobileMenu(false)}
+                  className={cn(
+                    "px-6 py-3 text-sm font-medium transition-colors",
+                    isActive ? "bg-blue-50 text-blue-600 border-r-4 border-blue-600" : "text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 md:gap-4">
         <button className="p-2 hover:bg-slate-100 rounded-full relative">
           <Bell className="w-5 h-5 text-slate-600" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>

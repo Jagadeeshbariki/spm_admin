@@ -18,15 +18,38 @@ function getSpreadsheetId(sheetName: string) {
 }
 
 async function fetchWithFallback(url: string, options: RequestInit = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+
   try {
-    const res = await fetch(url, options);
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
     return res;
   } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your internet connection or Apps Script performance.');
+    }
+
     console.warn('Direct fetch failed, attempting via proxy...', error);
-    // Fallback to a CORS proxy if the browser blocks the direct connection (common in iframes/incognito)
+    
+    // Fallback to a CORS proxy if the browser blocks the direct connection
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl, options);
-    return res;
+    const proxyController = new AbortController();
+    const proxyTimeoutId = setTimeout(() => proxyController.abort(), 25000); // Slightly longer for proxy
+    
+    try {
+      const res = await fetch(proxyUrl, { ...options, signal: proxyController.signal });
+      clearTimeout(proxyTimeoutId);
+      return res;
+    } catch (proxyError: any) {
+      clearTimeout(proxyTimeoutId);
+      if (proxyError.name === 'AbortError') {
+        throw new Error('Proxy request timed out.');
+      }
+      throw proxyError;
+    }
   }
 }
 

@@ -72,15 +72,23 @@ export default function Settings() {
   }
 
   async function handleDelete(index: number) {
+    if (!index) {
+      toast.error('Invalid row index. Please refresh and try again.');
+      return;
+    }
+
+    const confirmed = window.confirm('Are you sure you want to delete this option?');
+    if (!confirmed) return;
+
     console.log('Attempting to delete row at index:', index);
     setIsSubmitting(true);
     try {
       await deleteRow('MasterData', index);
       toast.success('Option deleted');
-      loadData();
-    } catch (error) {
+      await loadData();
+    } catch (error: any) {
       console.error('Delete error:', error);
-      toast.error('Failed to delete option');
+      toast.error(error.message || 'Failed to delete option');
     } finally {
       setIsSubmitting(false);
     }
@@ -190,7 +198,13 @@ export default function Settings() {
                 {(items as any[]).map((item: any, idx: number) => (
                   <li key={`${groupKey}-${item['dropdwon options']}-${idx}`} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg text-sm">
                     <span>{item['dropdwon options']}</span>
-                    <DeleteButton onClick={() => handleDelete(item._rowIndex)} className="text-red-500 hover:text-red-700" />
+                    <DeleteButton 
+                      onClick={() => {
+                        console.log('Deleting item:', item);
+                        handleDelete(item._rowIndex);
+                      }} 
+                      className="text-red-500 hover:text-red-700" 
+                    />
                   </li>
                 ))}
               </ul>
