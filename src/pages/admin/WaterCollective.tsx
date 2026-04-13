@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
-import { Loader2, Map as MapIcon, Layers, Info, Settings, Filter, X } from 'lucide-react';
+import { Loader2, Map as MapIcon, Layers, Info, Settings, Filter, X, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
-import { fetchSheet, fetchGeoJson } from '../../lib/api';
+import Papa from 'papaparse';
+import { fetchSheet, fetchGeoJson, fetchFileContent } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 
 // Fix for default marker icons in Leaflet with Webpack/Vite
@@ -20,6 +21,17 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+const CROP_COLORS = [
+  { label: 'Paddy', color: '#10b981', keywords: ['paddy'] },
+  { label: 'Maize', color: '#f59e0b', keywords: ['maize'] },
+  { label: 'Cotton', color: '#6366f1', keywords: ['cotton'] },
+  { label: 'Chilli', color: '#ef4444', keywords: ['chilli'] },
+  { label: 'Groundnut', color: '#8b5cf6', keywords: ['groundnut'] },
+  { label: 'Pulses/Black Gram', color: '#ec4899', keywords: ['black gram', 'pulse'] },
+  { label: 'Other Crops', color: '#3b82f6', keywords: [] },
+  { label: 'No Data', color: '#cbd5e1', keywords: [] },
+];
+
 export default function WaterCollective() {
   const [loadingFile, setLoadingFile] = useState<string | null>(null);
   const [geoJsonData, setGeoJsonData] = useState<any[]>([]);
@@ -28,6 +40,9 @@ export default function WaterCollective() {
   const [availableSites, setAvailableSites] = useState<any[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
+  const [csvData, setCsvData] = useState<Record<string, any[]>>({}); // filename -> rows
+  const [selectedSeason, setSelectedSeason] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
 
   const [selectedMandal, setSelectedMandal] = useState<string>('');
   const [selectedGP, setSelectedGP] = useState<string>('');
@@ -77,10 +92,16 @@ export default function WaterCollective() {
   const toggleFile = async (site: any) => {
     const filename = site['File Name'] || site['Water Collective Name'];
     const url = site['GeoJSON URL'];
+    const csvUrl = site['CSV URL'];
 
     if (selectedFiles.includes(filename)) {
       setSelectedFiles(prev => prev.filter(f => f !== filename));
       setGeoJsonData(prev => prev.filter(d => d.filename !== filename));
+      setCsvData(prev => {
+        const newData = { ...prev };
+        delete newData[filename];
+        return newData;
+      });
       if (focusedFile === filename) setFocusedFile(null);
     } else {
       if (!url) {
@@ -89,17 +110,31 @@ export default function WaterCollective() {
       }
 
       try {
-        // Extract the file ID from the Google Drive URL
-        const urlObj = new URL(url);
-        const fileId = urlObj.searchParams.get('id');
-        
-        if (!fileId) {
-          throw new Error('Invalid Google Drive URL format');
-        }
-
         setLoadingFile(filename);
-        // Fetch the file content directly via Apps Script
-        const data = await fetchGeoJson(fileId);
+        
+        // Fetch GeoJSON
+        const geoJsonUrlObj = new URL(url);
+        const geoJsonFileId = geoJsonUrlObj.searchParams.get('id');
+        if (!geoJsonFileId) throw new Error('Invalid GeoJSON URL');
+        const data = await fetchGeoJson(geoJsonFileId);
+
+        // Fetch CSV if available
+        if (csvUrl) {
+          try {
+            const csvUrlObj = new URL(csvUrl);
+            const csvFileId = csvUrlObj.searchParams.get('id');
+            if (csvFileId) {
+              const csvContent = await fetchFileContent(csvFileId);
+              const parsed = Papa.parse(csvContent, { header: true, skipEmptyLines: true });
+              if (parsed.data) {
+                setCsvData(prev => ({ ...prev, [filename]: parsed.data }));
+              }
+            }
+          } catch (csvErr) {
+            console.error('Failed to load CSV:', csvErr);
+            toast.error('Failed to load crop data CSV');
+          }
+        }
         
         setGeoJsonData(prev => [...prev, { filename, data }]);
         setSelectedFiles(prev => [...prev, filename]);
@@ -107,11 +142,78 @@ export default function WaterCollective() {
         toast.success(`Loaded ${filename}`);
       } catch (error) {
         console.error(error);
-        toast.error(`Error loading ${filename}. Please update your Apps Script.`);
+        toast.error(`Error loading ${filename}`);
       } finally {
         setLoadingFile(null);
       }
     }
+  };
+
+  const activeCrops = useMemo(() => {
+    const allRows = Object.values(csvData).flat();
+    const uniqueCrops = Array.from(new Set(allRows.map((r: any) => r.Crops || r.Crop).filter(Boolean)));
+    
+    return CROP_COLORS.filter(colorItem => {
+      if (colorItem.label === 'No Data') return true;
+      if (colorItem.label === 'Other Crops') {
+        // Show "Other Crops" if there are crops in the CSV that don't match any specific keywords
+        return uniqueCrops.some(crop => {
+          const c = String(crop).toLowerCase();
+          return !CROP_COLORS.some(cc => cc.keywords.some(k => c.includes(k)));
+        });
+      }
+      return uniqueCrops.some(crop => 
+        colorItem.keywords.some(k => String(crop).toLowerCase().includes(k))
+      );
+    });
+  }, [csvData]);
+
+  const seasons = useMemo(() => {
+    const allRows = Object.values(csvData).flat();
+    const uniqueSeasons = Array.from(new Set(allRows.map((r: any) => r.seasons || r.Season).filter(Boolean)));
+    return uniqueSeasons.sort() as string[];
+  }, [csvData]);
+
+  const years = useMemo(() => {
+    const allRows = Object.values(csvData).flat();
+    const uniqueYears = Array.from(new Set(allRows.map((r: any) => r.Year || r.year).filter(Boolean)));
+    return uniqueYears.sort() as string[];
+  }, [csvData]);
+
+  const getCropColor = (crop: string) => {
+    if (!crop) return '#cbd5e1'; // No Data
+    const c = crop.toLowerCase();
+    const match = CROP_COLORS.find(item => 
+      item.keywords.some(k => c.includes(k))
+    );
+    return match ? match.color : '#3b82f6'; // Other Crops
+  };
+
+  const findMatchingCsvRow = (feature: any, filename: string) => {
+    const rows = csvData[filename];
+    if (!rows) return null;
+
+    const props = feature.properties || {};
+    // Try common keys for matching, including the user's specific Plot_id
+    const keysToTry = ['Plot_id', 'Plot_Id', 'Plot_ID', 'ID', 'id', 'PlotNo', 'Farmer_Name', 'Name', 'name'];
+    
+    for (const key of keysToTry) {
+      const val = props[key];
+      if (val) {
+        const match = rows.find(r => {
+          // Match by Plot ID or Farmer Name using the CSV columns
+          const rowVal = r.Plot_Id || r.Plot_ID || r.ID || r.PlotNo || r.Farmer_Name || r.Name;
+          const rowSeason = r.seasons || r.Season;
+          const rowYear = r.Year || r.year;
+
+          return String(rowVal).toLowerCase() === String(val).toLowerCase() &&
+                 (!selectedSeason || rowSeason === selectedSeason) &&
+                 (!selectedYear || rowYear === selectedYear);
+        });
+        if (match) return match;
+      }
+    }
+    return null;
   };
 
   const onEachFeature = (feature: any, layer: any) => {
@@ -161,7 +263,7 @@ export default function WaterCollective() {
           {/* Filters */}
           <div className="flex flex-col gap-3 pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Filter className="w-4 h-4" /> Filters
+              <Filter className="w-4 h-4" /> Regional Filters
             </div>
             <div className="flex flex-col gap-2">
               <select 
@@ -182,6 +284,33 @@ export default function WaterCollective() {
               </select>
             </div>
           </div>
+
+          {/* Crop Filters */}
+          {Object.keys(csvData).length > 0 && (
+            <div className="flex flex-col gap-3 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <Calendar className="w-4 h-4" /> Crop Filters
+              </div>
+              <div className="flex flex-col gap-2">
+                <select 
+                  className="w-full text-sm border-slate-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
+                  value={selectedSeason}
+                  onChange={(e) => setSelectedSeason(e.target.value)}
+                >
+                  <option value="">All Seasons</option>
+                  {seasons.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select 
+                  className="w-full text-sm border-slate-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                >
+                  <option value="">All Years</option>
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             {filteredSites.length > 0 ? filteredSites.map(site => {
@@ -254,8 +383,39 @@ export default function WaterCollective() {
           </div>
         </div>
 
-        {/* Map Area */}
+          {/* Map Area */}
         <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative min-h-[500px]">
+          {/* Current View Indicator */}
+          {(selectedSeason || selectedYear) && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none">
+              <div className="bg-white/90 backdrop-blur-sm border border-slate-200 px-4 py-2 rounded-full shadow-lg flex items-center gap-3">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Showing: {selectedSeason || 'All Seasons'} {selectedYear ? `(${selectedYear})` : ''}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Legend Overlay */}
+          <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur-sm border border-slate-200 p-4 rounded-2xl shadow-xl max-w-[200px]">
+            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Crop Legend</h4>
+            <div className="flex flex-col gap-2">
+              {activeCrops.map((item) => (
+                <div key={item.label} className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-sm shrink-0" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-[11px] font-medium text-slate-600 truncate">{item.label}</span>
+                </div>
+              ))}
+              {activeCrops.length === 0 && (
+                <span className="text-[10px] text-slate-400 italic">No crop data loaded</span>
+              )}
+            </div>
+          </div>
+
           <MapContainer 
             center={[18.66, 83.95]} 
             zoom={10} 
@@ -269,20 +429,25 @@ export default function WaterCollective() {
               const isFocused = focusedFile === item.filename;
               return (
                 <GeoJSON 
-                  key={`${item.filename}-${isFocused}`} 
+                  key={`${item.filename}-${isFocused}-${selectedSeason}-${selectedYear}`} 
                   data={item.data} 
                   onEachFeature={onEachFeature}
                   style={(feature) => {
+                    const csvRow = findMatchingCsvRow(feature, item.filename);
+                    const crop = csvRow?.Crops || csvRow?.Crop;
+                    const cropColor = getCropColor(crop);
+
                     const props = feature?.properties || {};
                     const customColor = props.color || props.fill || props.stroke || props['marker-color'];
                     
+                    const baseColor = crop ? cropColor : (customColor || (idx % 2 === 0 ? '#3b82f6' : '#10b981'));
+
                     return {
-                      color: isFocused ? '#f59e0b' : (customColor || (idx % 2 === 0 ? '#3b82f6' : '#10b981')),
-                      weight: isFocused ? 5 : 3,
-                      opacity: isFocused ? 1 : 0.7,
-                      fillOpacity: isFocused ? 0.4 : 0.2,
-                      fillColor: customColor || (isFocused ? '#f59e0b' : (idx % 2 === 0 ? '#3b82f6' : '#10b981')),
-                      className: isFocused ? 'animate-pulse' : ''
+                      color: isFocused ? '#f59e0b' : baseColor,
+                      weight: isFocused ? 5 : 2,
+                      opacity: isFocused ? 1 : 0.8,
+                      fillOpacity: isFocused ? 0.5 : 0.3,
+                      fillColor: baseColor
                     };
                   }}
                 />
@@ -334,6 +499,37 @@ export default function WaterCollective() {
             </div>
             <div className="p-4 overflow-y-auto flex-1">
               <div className="flex flex-col gap-3">
+                {/* CSV Data if matched */}
+                {(() => {
+                  // Find which file this feature belongs to
+                  const fileItem = geoJsonData.find(item => {
+                    // This is a bit tricky since onEachFeature doesn't pass the filename
+                    // We'll try to find a match in any loaded CSV
+                    return findMatchingCsvRow(selectedFeature, item.filename);
+                  });
+                  
+                  if (fileItem) {
+                    const csvRow = findMatchingCsvRow(selectedFeature, fileItem.filename);
+                    if (csvRow) {
+                      return (
+                        <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 mb-2">
+                          <h4 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-3">Crop Information</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            {Object.entries(csvRow).map(([key, value]) => (
+                              <div key={key} className="flex flex-col">
+                                <span className="text-[10px] text-emerald-600 font-medium uppercase">{key}</span>
+                                <span className="text-sm text-emerald-900 font-semibold">{String(value)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
+
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">GeoJSON Properties</h4>
                 {Object.entries(selectedFeature.properties || {}).map(([key, value]) => (
                   <div key={key} className="flex flex-col gap-1 pb-3 border-b border-slate-50 last:border-0 last:pb-0">
                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{key}</span>

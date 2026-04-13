@@ -13,6 +13,8 @@ interface WaterCollectiveSite {
   'Village': string;
   'GeoJSON URL': string;
   'File Name': string;
+  'CSV URL'?: string;
+  'CSV File Name'?: string;
 }
 
 const initialFormState: WaterCollectiveSite = {
@@ -22,6 +24,8 @@ const initialFormState: WaterCollectiveSite = {
   'Village': '',
   'GeoJSON URL': '',
   'File Name': '',
+  'CSV URL': '',
+  'CSV File Name': '',
 };
 
 export default function WaterCollectiveManagement() {
@@ -36,6 +40,7 @@ export default function WaterCollectiveManagement() {
   const [formData, setFormData] = useState<WaterCollectiveSite>(initialFormState);
   const [editingRow, setEditingRow] = useState<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -64,6 +69,7 @@ export default function WaterCollectiveManagement() {
       setEditingRow(null);
     }
     setFile(null);
+    setCsvFile(null);
     setIsModalOpen(true);
   };
 
@@ -77,19 +83,31 @@ export default function WaterCollectiveManagement() {
       setIsSaving(true);
       let geoJsonUrl = formData['GeoJSON URL'];
       let fileName = formData['File Name'];
+      let csvUrl = formData['CSV URL'];
+      let csvFileName = formData['CSV File Name'];
 
       if (file) {
-        toast.loading('Uploading GeoJSON to Drive...', { id: 'upload' });
+        toast.loading('Uploading GeoJSON to Drive...', { id: 'upload-geojson' });
         const uploadResult = await uploadFile(file, WATER_COLLECTIVES_FOLDER_ID);
         geoJsonUrl = uploadResult.url || uploadResult.webViewLink;
         fileName = file.name;
-        toast.success('File uploaded successfully', { id: 'upload' });
+        toast.success('GeoJSON uploaded successfully', { id: 'upload-geojson' });
+      }
+
+      if (csvFile) {
+        toast.loading('Uploading CSV to Drive...', { id: 'upload-csv' });
+        const uploadResult = await uploadFile(csvFile, WATER_COLLECTIVES_FOLDER_ID);
+        csvUrl = uploadResult.url || uploadResult.webViewLink;
+        csvFileName = csvFile.name;
+        toast.success('CSV uploaded successfully', { id: 'upload-csv' });
       }
 
       const dataToSave = {
         ...formData,
         'GeoJSON URL': geoJsonUrl,
         'File Name': fileName,
+        'CSV URL': csvUrl,
+        'CSV File Name': csvFileName,
       };
 
       if (editingRow !== null) {
@@ -191,6 +209,7 @@ export default function WaterCollectiveManagement() {
                 <th className="px-6 py-4">GP</th>
                 <th className="px-6 py-4">Village</th>
                 <th className="px-6 py-4">GeoJSON File</th>
+                <th className="px-6 py-4">CSV File</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -214,6 +233,21 @@ export default function WaterCollectiveManagement() {
                       </a>
                     ) : (
                       <span className="text-slate-400">No file</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {site['CSV URL'] ? (
+                      <a 
+                        href={site['CSV URL']} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-emerald-600 hover:underline flex items-center gap-1"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {site['CSV File Name'] || 'View CSV'}
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">No CSV</span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -335,6 +369,40 @@ export default function WaterCollectiveManagement() {
                       </label>
                     </div>
                     <p className="text-[10px] text-slate-400 italic">File will be uploaded to Google Drive and linked here.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Crop Data CSV (Farmer wise data)</label>
+                  <div className="flex flex-col gap-2">
+                    {formData['CSV URL'] && (
+                      <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                        <div className="flex items-center gap-2 text-emerald-700 text-sm truncate">
+                          <Upload className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{formData['CSV File Name'] || 'Current CSV'}</span>
+                        </div>
+                        <a href={formData['CSV URL']} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 font-medium hover:underline">View</a>
+                      </div>
+                    )}
+                    <div className="relative">
+                      <input 
+                        type="file" 
+                        accept=".csv"
+                        onChange={e => setCsvFile(e.target.files?.[0] || null)}
+                        className="hidden" 
+                        id="csv-upload"
+                      />
+                      <label 
+                        htmlFor="csv-upload"
+                        className="flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-slate-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer transition-all"
+                      >
+                        <Upload className="w-5 h-5 text-slate-400" />
+                        <span className="text-sm font-medium text-slate-600">
+                          {csvFile ? csvFile.name : 'Upload crop data CSV'}
+                        </span>
+                      </label>
+                    </div>
+                    <p className="text-[10px] text-slate-400 italic">CSV should have columns like Season, Year, Crop, and a key to match GeoJSON features.</p>
                   </div>
                 </div>
               </div>

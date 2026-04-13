@@ -134,7 +134,7 @@ export async function deleteRow(sheetName: string, rowIndex: number) {
   }
 }
 
-export async function fetchGeoJson(fileId: string) {
+export async function fetchFileContent(fileId: string) {
   try {
     const url = `${API_BASE}?action=getFile&fileId=${encodeURIComponent(fileId)}&t=${Date.now()}`;
     const res = await fetchWithFallback(url);
@@ -142,8 +142,17 @@ export async function fetchGeoJson(fileId: string) {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     
-    // The content is returned as a string, parse it to JSON
-    return JSON.parse(data.content);
+    return data.content;
+  } catch (error: any) {
+    console.error('Fetch file content error:', error);
+    throw new Error('Failed to load file content.');
+  }
+}
+
+export async function fetchGeoJson(fileId: string) {
+  try {
+    const content = await fetchFileContent(fileId);
+    return JSON.parse(content);
   } catch (error: any) {
     console.error('Fetch GeoJSON error:', error);
     throw new Error('Failed to load GeoJSON. Please update your Apps Script.');
