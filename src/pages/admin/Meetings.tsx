@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Eye, Download, Edit2, Trash2, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -110,7 +111,7 @@ export default function Meetings() {
         formattedMeeting['Meeting Date'] = formatDateForDisplay(formattedMeeting['Meeting Date']);
       }
       setFormData(formattedMeeting);
-      setEditingRow(meeting._rowIndex || null);
+      setEditingRow(typeof meeting._rowIndex === 'number' ? meeting._rowIndex : null);
     } else {
       setFormData(initialFormState);
       setEditingRow(null);
@@ -136,6 +137,11 @@ export default function Meetings() {
   };
 
   const handleSave = async () => {
+    if (!formData['Meeting Date'] || !formData['Project Name']) {
+      toast.error('Please fill in Meeting Date and Project Name');
+      return;
+    }
+
     try {
       setIsSaving(true);
       let minutesUrl = formData['Minutes of Meeting'];
@@ -143,24 +149,33 @@ export default function Meetings() {
       let aquUrl = formData['Aqu_link'];
 
       if (minutesFile) {
+        toast.loading('Uploading Minutes of Meeting...', { id: 'uploading' });
         const { webViewLink } = await uploadFile(minutesFile);
         minutesUrl = webViewLink;
+        toast.dismiss('uploading');
       }
 
       if (photoFiles.length > 0) {
+        toast.loading(`Uploading ${photoFiles.length} photo(s)...`, { id: 'uploading-photos' });
         const uploadPromises = photoFiles.map(f => uploadFile(f));
         const results = await Promise.all(uploadPromises);
         const newUrls = results.map(r => r.webViewLink).join(', ');
         photoUrls = newUrls;
+        toast.dismiss('uploading-photos');
       }
 
       if (aquFile) {
+        toast.loading('Uploading Aqu file...', { id: 'uploading-aqu' });
         const { webViewLink } = await uploadFile(aquFile);
         aquUrl = webViewLink;
+        toast.dismiss('uploading-aqu');
       }
 
+      // Remove internal fields before saving
+      const { _rowIndex, ...pureFormData } = formData;
+
       const dataToSave = {
-        ...formData,
+        ...pureFormData,
         'Minutes of Meeting': minutesUrl,
         'Photo Upload (link)': photoUrls,
         'Aqu_link': aquUrl
@@ -168,17 +183,22 @@ export default function Meetings() {
 
       if (editingRow !== null) {
         await updateRow('meeting_tracker', editingRow, dataToSave);
+        toast.success('Meeting updated successfully');
       } else {
         await addRow('meeting_tracker', dataToSave);
+        toast.success('Meeting added successfully');
       }
       
       await loadMeetings();
       handleCloseModal();
     } catch (error) {
       console.error('Failed to save meeting:', error);
-      alert('Failed to save meeting');
+      toast.error('Failed to save meeting. Please try again.');
     } finally {
       setIsSaving(false);
+      toast.dismiss('uploading');
+      toast.dismiss('uploading-photos');
+      toast.dismiss('uploading-aqu');
     }
   };
 
@@ -187,10 +207,11 @@ export default function Meetings() {
       try {
         setIsLoading(true);
         await deleteRow('meeting_tracker', rowIndex);
+        toast.success('Meeting deleted successfully');
         await loadMeetings();
       } catch (error) {
         console.error('Failed to delete meeting:', error);
-        alert('Failed to delete meeting');
+        toast.error('Failed to delete meeting');
         setIsLoading(false);
       }
     }
