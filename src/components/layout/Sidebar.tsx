@@ -8,7 +8,8 @@ import {
   FileBarChart,
   ChevronLeft,
   ChevronRight,
-  Bed
+  Bed,
+  Map as MapIcon
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';

@@ -9,6 +9,8 @@ export default function AdminLayout() {
 
   const showSidebar = location.pathname.startsWith('/admin/') &&
     !location.pathname.startsWith('/admin/water-collective') &&
+    !location.pathname.startsWith('/admin/about-region') &&
+    !location.pathname.startsWith('/admin/village-gis-management') &&
     !location.pathname.startsWith('/admin/irrigation-management') &&
     !location.pathname.startsWith('/admin/mail-tracker') &&
     !location.pathname.startsWith('/admin/settings');

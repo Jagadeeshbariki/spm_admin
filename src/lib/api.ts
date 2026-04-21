@@ -8,18 +8,22 @@ export const ADMIN_FOLDER_ID = '1d_4gLeoJ84zPrUe-vPJDR-f5b4V-ksY3';
 export const WATER_COLLECTIVES_FOLDER_ID = '1gga5glk6oNlI5tRDZFMthh4B-sUa0NnG';
 
 function getSpreadsheetId(sheetName: string) {
-  if (sheetName === 'water_collectives') {
+  if (sheetName === 'water_collectives' || sheetName === 'Polygons_manyam') {
     return WATER_COLLECTIVE_SPREADSHEET_ID;
   }
   if (sheetName === 'mail_tracker' || sheetName === 'mail_tracker_batches') {
     return MAIL_TRACKER_SPREADSHEET_ID;
+  }
+  if (sheetName === 'village_assets') {
+    return WATER_COLLECTIVE_SPREADSHEET_ID;
   }
   return OFFICE_ADMIN_SPREADSHEET_ID;
 }
 
 async function fetchWithFallback(url: string, options: RequestInit = {}) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+  // Increased timeout to 60 seconds for larger GeoJSON files
+  const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
   try {
     const res = await fetch(url, { ...options, signal: controller.signal });
@@ -29,7 +33,7 @@ async function fetchWithFallback(url: string, options: RequestInit = {}) {
     clearTimeout(timeoutId);
     
     if (error.name === 'AbortError') {
-      throw new Error('Request timed out. Please check your internet connection or Apps Script performance.');
+      throw new Error('Loading is taking longer than expected. Please check your internet or retry.');
     }
 
     console.warn('Direct fetch failed, attempting via proxy...', error);
@@ -59,6 +63,12 @@ export async function fetchSheet(sheetName: string) {
     const url = `${API_BASE}?sheetName=${encodeURIComponent(sheetName)}&spreadsheetId=${encodeURIComponent(spreadsheetId)}&t=${Date.now()}`;
     const res = await fetchWithFallback(url);
     if (!res.ok) throw new Error(`Failed to fetch ${sheetName}`);
+
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      return []; // Silently fail if it's HTML, to avoid crashing component
+    }
+
     const data = await res.json();
     if (data && data.error) {
       console.warn(`Sheet error for ${sheetName}:`, data.error);
@@ -139,23 +149,45 @@ export async function fetchFileContent(fileId: string) {
     const url = `${API_BASE}?action=getFile&fileId=${encodeURIComponent(fileId)}&t=${Date.now()}`;
     const res = await fetchWithFallback(url);
     if (!res.ok) throw new Error('Failed to fetch file');
+
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Server returned HTML instead of file data. This often means the Google script or Drive link is unauthorized or incorrect.');
+    }
+
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     
-    return data.content;
+    return data.content || '';
   } catch (error: any) {
     console.error('Fetch file content error:', error);
-    throw new Error('Failed to load file content.');
+    throw error;
   }
 }
 
 export async function fetchGeoJson(fileId: string) {
   try {
     const content = await fetchFileContent(fileId);
+    if (!content) return null;
     return JSON.parse(content);
   } catch (error: any) {
-    console.error('Fetch GeoJSON error:', error);
-    throw new Error('Failed to load GeoJSON. Please update your Apps Script.');
+    console.error(`Error parsing GeoJSON ${fileId}:`, error);
+    throw new Error(`Failed to load GeoJSON (${fileId}).`);
+  }
+}
+
+export async function getSetting(category: string, key: string): Promise<string | null> {
+  try {
+    const masterData = await fetchSheet('MasterData');
+    const filtered = masterData.filter(item => 
+      item.formname === 'GIS Configuration' && 
+      item['dropdwon catagorty'] === category && 
+      item['dropdwon options'] === key
+    );
+    const setting = filtered[filtered.length - 1]; // Get the latest upload
+    return setting ? setting.value || setting['dropdwon options'] : null;
+  } catch (e) {
+    return null;
   }
 }
 

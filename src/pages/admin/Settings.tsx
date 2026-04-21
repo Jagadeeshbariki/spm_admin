@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchSheet, addRow, deleteRow } from '@/lib/api';
-import { Plus, Trash2, Loader2, MapPin } from 'lucide-react';
+import { Plus, Trash2, Loader2, MapPin, Map as MapIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/AuthContext';
@@ -117,12 +117,20 @@ export default function Settings() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Master Data Settings</h1>
         {(user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'office admin') && (
-          <Link 
-            to="/admin/water-collective-management"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
-          >
-            <MapPin className="w-4 h-4" /> Water Collective Sites
-          </Link>
+          <div className="flex gap-2">
+            <Link 
+              to="/admin/water-collective-management"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
+            >
+              <MapPin className="w-4 h-4" /> Water Collective Sites
+            </Link>
+            <Link 
+              to="/admin/village-gis-management"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
+            >
+              <MapIcon className="w-4 h-4" /> About Region Assets
+            </Link>
+          </div>
         )}
       </div>
       

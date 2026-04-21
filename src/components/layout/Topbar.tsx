@@ -39,6 +39,11 @@ export default function Topbar() {
       roles: ['Admin', 'office admin', 'TL', 'CC'] // All roles can view data
     },
     { 
+      name: 'About Region', 
+      path: '/admin/about-region',
+      roles: ['Admin', 'office admin', 'TL', 'CC']
+    },
+    { 
       name: 'Mail Tracker', 
       path: '/admin/mail-tracker',
       roles: ['Admin', 'office admin']
@@ -79,6 +84,7 @@ export default function Topbar() {
             const isActive = location.pathname === link.path || 
               (link.name === 'Office Admin' && location.pathname.startsWith('/admin/') && 
                !location.pathname.startsWith('/admin/water-collective') && 
+               !location.pathname.startsWith('/admin/about-region') && 
                !location.pathname.startsWith('/admin/irrigation-management') && 
                !location.pathname.startsWith('/admin/mail-tracker') &&
                !location.pathname.startsWith('/admin/settings'));
