@@ -6,7 +6,9 @@ import { useAuth } from '@/lib/AuthContext';
 
 interface Meeting {
   _rowIndex?: number;
-  'Meeting Date': string;
+  'Meeting Start Date': string;
+  'Meeting End Date': string;
+  'Number of Days': string;
   'Project Name': string;
   'Meeting Type (Internal/External)': string;
   'Reason': string;
@@ -17,7 +19,9 @@ interface Meeting {
 }
 
 const initialFormState: Meeting = {
-  'Meeting Date': '',
+  'Meeting Start Date': '',
+  'Meeting End Date': '',
+  'Number of Days': '',
   'Project Name': '',
   'Meeting Type (Internal/External)': 'Internal',
   'Reason': '',
@@ -55,6 +59,25 @@ export default function Meetings() {
     loadMeetings();
     loadMasterData();
   }, []);
+
+  const calculateNumberOfDays = (start: string, end: string) => {
+    if (!start || !end) return '';
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return '';
+    
+    const diffTime = endDate.getTime() - startDate.getTime();
+    if (diffTime < 0) return '0';
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return String(diffDays);
+  };
+
+  useEffect(() => {
+    if (formData['Meeting Start Date'] && formData['Meeting End Date']) {
+      const days = calculateNumberOfDays(formData['Meeting Start Date'], formData['Meeting End Date']);
+      setFormData(prev => ({ ...prev, 'Number of Days': days }));
+    }
+  }, [formData['Meeting Start Date'], formData['Meeting End Date']]);
 
   const loadMasterData = async () => {
     try {
@@ -106,9 +129,12 @@ export default function Meetings() {
   const handleOpenModal = (meeting?: Meeting) => {
     if (meeting) {
       const formattedMeeting = { ...meeting };
-      // Ensure date is in YYYY-MM-DD format for the input field
-      if (formattedMeeting['Meeting Date']) {
-        formattedMeeting['Meeting Date'] = formatDateForDisplay(formattedMeeting['Meeting Date']);
+      // Ensure dates are in YYYY-MM-DD format for input fields
+      if (formattedMeeting['Meeting Start Date']) {
+        formattedMeeting['Meeting Start Date'] = formatDateForDisplay(formattedMeeting['Meeting Start Date']);
+      }
+      if (formattedMeeting['Meeting End Date']) {
+        formattedMeeting['Meeting End Date'] = formatDateForDisplay(formattedMeeting['Meeting End Date']);
       }
       setFormData(formattedMeeting);
       setEditingRow(typeof meeting._rowIndex === 'number' ? meeting._rowIndex : null);
@@ -137,8 +163,13 @@ export default function Meetings() {
   };
 
   const handleSave = async () => {
-    if (!formData['Meeting Date'] || !formData['Project Name']) {
-      toast.error('Please fill in Meeting Date and Project Name');
+    if (!formData['Meeting Start Date'] || !formData['Meeting End Date'] || !formData['Project Name']) {
+      toast.error('Please fill in Dates and Project Name');
+      return;
+    }
+
+    if (parseInt(formData['Number of Days']) <= 0) {
+      toast.error('End date cannot be before start date');
       return;
     }
 
@@ -271,7 +302,8 @@ export default function Meetings() {
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
               <tr>
-                <th className="px-6 py-4">Meeting Date</th>
+                <th className="px-6 py-4">Dates</th>
+                <th className="px-6 py-4 text-center">Days</th>
                 <th className="px-6 py-4">Project Name</th>
                 <th className="px-6 py-4">Type</th>
                 <th className="px-6 py-4">Reason</th>
@@ -284,21 +316,31 @@ export default function Meetings() {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Loading meetings...
                   </td>
                 </tr>
               ) : filteredMeetings.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
                     No meetings found
                   </td>
                 </tr>
               ) : (
                 filteredMeetings.map((meeting, index) => (
                   <tr key={meeting._rowIndex || index} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(meeting['Meeting Date'])}</td>
+                    <td className="px-6 py-4 text-slate-600">
+                      <div className="flex flex-col text-xs">
+                        <span>{formatDateForDisplay(meeting['Meeting Start Date'])} to</span>
+                        <span>{formatDateForDisplay(meeting['Meeting End Date'])}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="px-2 py-1 bg-slate-100 rounded-md text-xs font-bold text-slate-700">
+                        {meeting['Number of Days']}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 font-medium text-slate-900">{meeting['Project Name']}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -369,13 +411,30 @@ export default function Meetings() {
             <div className="p-6 overflow-y-auto flex-1 min-h-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Meeting Date</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Starting Date</label>
                   <input 
                     type="date" 
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={formData['Meeting Date']}
-                    onChange={(e) => setFormData({...formData, 'Meeting Date': e.target.value})}
+                    value={formData['Meeting Start Date']}
+                    onChange={(e) => setFormData({...formData, 'Meeting Start Date': e.target.value})}
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Ending Date</label>
+                  <input 
+                    type="date" 
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formData['Meeting End Date']}
+                    onChange={(e) => setFormData({...formData, 'Meeting End Date': e.target.value})}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex justify-between items-center">
+                    <span className="text-sm font-semibold text-blue-800">Number of Days:</span>
+                    <span className="bg-white px-4 py-1 rounded-lg text-blue-600 font-bold border border-blue-200 shadow-sm">
+                      {formData['Number of Days'] || '0'}
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
@@ -499,7 +558,7 @@ export default function Meetings() {
                     <div key={key} className="border-b border-slate-50 pb-2">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
                       <p className="text-sm text-slate-700 mt-1">
-                        {key === 'Meeting Date' ? formatDateForDisplay(String(value)) : (String(value) || '-')}
+                        {key === 'Meeting Start Date' || key === 'Meeting End Date' ? formatDateForDisplay(String(value)) : (String(value) || '-')}
                       </p>
                     </div>
                   );

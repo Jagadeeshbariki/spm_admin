@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Filter, Box, CheckCircle2, AlertCircle, Wrench, Edit, Trash2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
@@ -11,10 +11,16 @@ export default function Assets() {
   const [assets, setAssets] = useState<any[]>([]);
   const [assetUses, setAssetUses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState('All Categories');
+  const [typeFilter, setTypeFilter] = useState('All Types');
+  const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingRow, setEditingRow] = useState<number | null>(null);
   const [editingAssetId, setEditingAssetId] = useState('');
+  const [usageCategory, setUsageCategory] = useState('');
+  const [showOtherAssignee, setShowOtherAssignee] = useState(false);
+  const [otherAssigneeName, setOtherAssigneeName] = useState('');
   
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -47,7 +53,6 @@ export default function Assets() {
     'Return Date': '',
     Condition: '',
     'Number of Assets Purchased': '',
-    'Unit Price': '',
     'Units': '',
   });
 
@@ -94,17 +99,12 @@ export default function Assets() {
   const loadData = async () => {
     setLoading(true);
     try {
-      if (activeTab === 'registry') {
-        const data = await fetchSheet('asset_registry');
-        setAssets(data);
-      } else {
-        const [usageData, assetsData] = await Promise.all([
-          fetchSheet('asset_uses'),
-          fetchSheet('asset_registry')
-        ]);
-        setAssetUses(usageData);
-        setAssets(assetsData);
-      }
+      const [assetsData, usageData] = await Promise.all([
+        fetchSheet('asset_registry'),
+        fetchSheet('asset_uses')
+      ]);
+      setAssets(assetsData);
+      setAssetUses(usageData);
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
@@ -194,11 +194,25 @@ export default function Assets() {
           'Return Date': returnDate,
           Condition: item.Condition || '',
           'Number of Assets Purchased': item['Number of Assets Purchased'] || '',
-          'Unit Price': item['Unit Price'] || '',
           'Units': item['Units'] || '',
         });
+        // Find category for the asset
+        const asset = assets.find(a => a.asset_name === item['Asset Name']);
+        if (asset) setUsageCategory(asset.Asset_Category || '');
+        
+        if (item['Assigned To'] && !staffNames.includes(item['Assigned To'])) {
+          setShowOtherAssignee(true);
+          setOtherAssigneeName(item['Assigned To']);
+          setUsageForm(prev => ({ ...prev, 'Assigned To': 'Other' }));
+        } else {
+          setShowOtherAssignee(false);
+          setOtherAssigneeName('');
+        }
       } else {
         setEditingRow(null);
+        setUsageCategory('');
+        setShowOtherAssignee(false);
+        setOtherAssigneeName('');
         setUsageForm({
           'Asset Name': '',
           'Assigned To': '',
@@ -207,7 +221,6 @@ export default function Assets() {
           'Return Date': '',
           Condition: '',
           'Number of Assets Purchased': '',
-          'Unit Price': '',
           'Units': '',
         });
       }
@@ -220,6 +233,42 @@ export default function Assets() {
     setSelectedItem(item);
     setIsViewModalOpen(true);
   };
+
+  const assetTotalUsed = useMemo(() => {
+    const map: Record<string, number> = {};
+    assetUses.forEach(use => {
+      const name = use['Asset Name'];
+      const qty = parseFloat(use['Number of Assets Purchased']) || 0;
+      map[name] = (map[name] || 0) + qty;
+    });
+    return map;
+  }, [assetUses]);
+
+  const filteredAssets = useMemo(() => {
+    return assets.filter(asset => {
+      const matchesSearch = !searchTerm || 
+        asset.asset_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        asset.asset_id?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === 'All Categories' || asset.Asset_Category === categoryFilter;
+      const matchesType = typeFilter === 'All Types' || asset.Asset_type === typeFilter;
+      return matchesSearch && matchesCategory && matchesType;
+    });
+  }, [assets, searchTerm, categoryFilter, typeFilter]);
+
+  const filteredAssetUses = useMemo(() => {
+    return assetUses.filter(usage => {
+      const matchesSearch = !searchTerm || 
+        usage['Asset Name']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        usage['Assigned To']?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // For usage, we can still filter by asset properties if we link them
+      const asset = assets.find(a => a.asset_name === usage['Asset Name']);
+      const matchesCategory = categoryFilter === 'All Categories' || (asset && asset.Asset_Category === categoryFilter);
+      const matchesType = typeFilter === 'All Types' || (asset && asset.Asset_type === typeFilter);
+      
+      return matchesSearch && matchesCategory && matchesType;
+    });
+  }, [assetUses, assets, searchTerm, categoryFilter, typeFilter]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -258,11 +307,16 @@ export default function Assets() {
           toast.success(`${assetItems.length} Asset(s) added successfully!`);
         }
       } else {
+        const finalUsageForm = { ...usageForm };
+        if (showOtherAssignee) {
+          finalUsageForm['Assigned To'] = otherAssigneeName;
+        }
+
         if (editingRow) {
-          await updateRow('asset_uses', editingRow, usageForm);
+          await updateRow('asset_uses', editingRow, finalUsageForm);
           toast.success('Asset usage updated successfully!');
         } else {
-          await addRow('asset_uses', usageForm);
+          await addRow('asset_uses', finalUsageForm);
           toast.success('Asset assigned successfully!');
         }
       }
@@ -345,16 +399,36 @@ export default function Assets() {
         <div className="flex gap-4 flex-wrap">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
             <Filter className="w-4 h-4 text-slate-400 mr-2" />
-            <select className="bg-transparent border-none outline-none text-sm text-slate-600">
+            <select 
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm text-slate-600"
+            >
               <option>All Categories</option>
-              <option>Electronics</option>
-              <option>Furniture</option>
+              {assetCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+            <Filter className="w-4 h-4 text-slate-400 mr-2" />
+            <select 
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm text-slate-600"
+            >
+              <option>All Types</option>
+              {assetTypes.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         </div>
         <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-64">
           <Search className="w-4 h-4 text-slate-400 mr-2" />
-          <input type="text" placeholder="Search assets..." className="bg-transparent border-none outline-none text-sm w-full" />
+          <input 
+            type="text" 
+            placeholder="Search assets..." 
+            className="bg-transparent border-none outline-none text-sm w-full" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
       </div>
 
@@ -369,15 +443,14 @@ export default function Assets() {
                   <th className="px-6 py-4">Asset Name</th>
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Type</th>
-                  <th className="px-6 py-4">Qty</th>
+                  <th className="px-6 py-4">Total Qty</th>
                   <th className="px-6 py-4">Unit Price</th>
                   <th className="px-6 py-4">Units</th>
                   <th className="px-6 py-4">Purchase Date</th>
                   <th className="px-6 py-4">Cost</th>
                   <th className="px-6 py-4">Purchased By</th>
                   <th className="px-6 py-4">Project</th>
-                  <th className="px-6 py-4">Vendor</th>
-                  <th className="px-6 py-4">Warranty</th>
+                  <th className="px-6 py-4">Availability Status</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Bill</th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -386,25 +459,32 @@ export default function Assets() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr><td colSpan={13} className="text-center py-8 text-slate-500">Loading...</td></tr>
-                ) : assets.length === 0 ? (
+                ) : filteredAssets.length === 0 ? (
                   <tr><td colSpan={13} className="text-center py-8 text-slate-500">No assets found</td></tr>
                 ) : (
-                  assets.map((asset, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-blue-600">{asset.asset_id}</td>
-                      <td className="px-6 py-4 font-medium text-slate-900">{asset.asset_name}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset.Asset_Category}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset.Asset_type}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset['Number of Assets Purchased']}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset['Unit Price']}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset['Units']}</td>
-                      <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(asset['Purchase Date'])}</td>
-                      <td className="px-6 py-4 font-medium text-slate-900">{asset.Cost}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset.purchased_by}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset.Project}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset.Vendor}</td>
-                      <td className="px-6 py-4 text-slate-600">{asset.Warranty}</td>
-                      <td className="px-6 py-4">
+                  filteredAssets.map((asset, idx) => {
+                    const totalPurchased = parseFloat(asset['Number of Assets Purchased']) || 0;
+                    const totalUsed = assetTotalUsed[asset.asset_name] || 0;
+                    const available = totalPurchased - totalUsed;
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-medium text-blue-600">{asset.asset_id}</td>
+                        <td className="px-6 py-4 font-medium text-slate-900">{asset.asset_name}</td>
+                        <td className="px-6 py-4 text-slate-600">{asset.Asset_Category}</td>
+                        <td className="px-6 py-4 text-slate-600">{asset.Asset_type}</td>
+                        <td className="px-6 py-4 text-slate-600 font-bold">{totalPurchased}</td>
+                        <td className="px-6 py-4 text-slate-600">{asset['Unit Price']}</td>
+                        <td className="px-6 py-4 text-slate-600">{asset['Units']}</td>
+                        <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(asset['Purchase Date'])}</td>
+                        <td className="px-6 py-4 font-medium text-slate-900">{asset.Cost}</td>
+                        <td className="px-6 py-4 text-slate-600">{asset.purchased_by}</td>
+                        <td className="px-6 py-4 text-slate-600">{asset.Project}</td>
+                        <td className="px-6 py-4 font-medium">
+                          <span className={`${available > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                            {available} / {totalPurchased} available
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                           asset.Status === 'In Use' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                         }`}>
@@ -432,9 +512,10 @@ export default function Assets() {
                         )}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
+                  );
+                })
+              )}
+            </tbody>
             </table>
           ) : (
             <table className="w-full text-left text-sm whitespace-nowrap">
@@ -455,10 +536,10 @@ export default function Assets() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr><td colSpan={7} className="text-center py-8 text-slate-500">Loading...</td></tr>
-                ) : assetUses.length === 0 ? (
+                ) : filteredAssetUses.length === 0 ? (
                   <tr><td colSpan={7} className="text-center py-8 text-slate-500">No asset usage found</td></tr>
                 ) : (
-                  assetUses.map((usage, idx) => (
+                  filteredAssetUses.map((usage, idx) => (
                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-medium text-slate-900">{usage['Asset Name']}</td>
                       <td className="px-6 py-4 text-slate-600">{usage['Assigned To']}</td>
@@ -652,19 +733,71 @@ export default function Assets() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Asset Category</label>
+                    <select 
+                      value={usageCategory} 
+                      onChange={e => {
+                        setUsageCategory(e.target.value);
+                        setUsageForm({ ...usageForm, 'Asset Name': '' });
+                      }} 
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Category</option>
+                      {assetCategories.map((c, idx) => <option key={`${c}-${idx}`} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Asset Name</label>
-                    <select value={usageForm['Asset Name']} onChange={e => setUsageForm({...usageForm, 'Asset Name': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select 
+                      value={usageForm['Asset Name']} 
+                      onChange={e => setUsageForm({...usageForm, 'Asset Name': e.target.value})} 
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={!usageCategory}
+                    >
                       <option value="">Select an Asset</option>
-                      {assets.map((asset, idx) => (
-                        <option key={idx} value={asset.asset_name}>{asset.asset_name} ({asset.asset_id})</option>
-                      ))}
+                      {assets
+                        .filter(a => !usageCategory || a.Asset_Category === usageCategory)
+                        .map((asset, idx) => (
+                          <option key={idx} value={asset.asset_name}>{asset.asset_name} ({asset.asset_id})</option>
+                        ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
-                    <input type="text" value={usageForm['Assigned To']} onChange={e => setUsageForm({...usageForm, 'Assigned To': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <select 
+                      value={usageForm['Assigned To']} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        setUsageForm({...usageForm, 'Assigned To': val});
+                        if (val === 'Other') {
+                          setShowOtherAssignee(true);
+                        } else {
+                          setShowOtherAssignee(false);
+                          setOtherAssigneeName('');
+                        }
+                      }} 
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Staff</option>
+                      {staffNames.map((name, idx) => (
+                        <option key={`${name}-${idx}`} value={name}>{name}</option>
+                      ))}
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
-                  <div>
+                  {showOtherAssignee && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Enter Name</label>
+                      <input 
+                        type="text" 
+                        value={otherAssigneeName} 
+                        onChange={e => setOtherAssigneeName(e.target.value)} 
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="Enter other name"
+                      />
+                    </div>
+                  )}
+                  <div className={showOtherAssignee ? "md:col-span-2" : ""}>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Project</label>
                     <input type="text" value={usageForm.Project} onChange={e => setUsageForm({...usageForm, Project: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
@@ -672,21 +805,21 @@ export default function Assets() {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Issue Date</label>
                     <input type="date" value={usageForm['Issue Date']} onChange={e => setUsageForm({...usageForm, 'Issue Date': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Return Date</label>
-                    <input type="date" value={usageForm['Return Date']} onChange={e => setUsageForm({...usageForm, 'Return Date': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Condition</label>
-                    <input type="text" value={usageForm.Condition} onChange={e => setUsageForm({...usageForm, Condition: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
+                  {usageCategory !== 'Consumable' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Return Date</label>
+                        <input type="date" value={usageForm['Return Date']} onChange={e => setUsageForm({...usageForm, 'Return Date': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Condition</label>
+                        <input type="text" value={usageForm.Condition} onChange={e => setUsageForm({...usageForm, Condition: e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                    </>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Quantity Used</label>
                     <input type="number" step="0.01" value={usageForm['Number of Assets Purchased']} onChange={e => setUsageForm({...usageForm, 'Number of Assets Purchased': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Unit Price</label>
-                    <input type="number" step="0.01" value={usageForm['Unit Price']} onChange={e => setUsageForm({...usageForm, 'Unit Price': e.target.value})} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Units</label>
