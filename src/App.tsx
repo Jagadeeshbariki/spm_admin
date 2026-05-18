@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './lib/AuthContext';
@@ -11,6 +12,7 @@ import AdminLayout from './components/layout/AdminLayout';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/admin/Dashboard';
+import IdExplorer from './pages/admin/IdExplorer';
 import Expenses from './pages/admin/Expenses';
 import Assets from './pages/admin/Assets';
 import Meetings from './pages/admin/Meetings';
@@ -26,6 +28,14 @@ import VillageGIS from './pages/admin/VillageGIS';
 import VillageGISManagement from './pages/admin/VillageGISManagement';
 
 export default function App() {
+  useEffect(() => {
+    // Small delay to ensure everything is rendered
+    const timer = setTimeout(() => {
+      document.body.classList.add('loaded');
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <AuthProvider>
       <Router>
@@ -37,6 +47,7 @@ export default function App() {
             <Route element={<AdminLayout />}>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="id-explorer" element={<IdExplorer />} />
               
               {/* Data pages accessible to all roles */}
               <Route path="expenses" element={<Expenses />} />

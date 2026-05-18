@@ -20,7 +20,7 @@ function getSpreadsheetId(sheetName: string) {
   return OFFICE_ADMIN_SPREADSHEET_ID;
 }
 
-async function fetchWithFallback(url: string, options: RequestInit = {}) {
+export async function fetchWithFallback(url: string, options: RequestInit = {}) {
   const controller = new AbortController();
   // Increased timeout to 60 seconds for larger GeoJSON files
   const timeoutId = setTimeout(() => controller.abort(), 60000); 

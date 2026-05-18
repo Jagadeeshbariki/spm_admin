@@ -34,14 +34,19 @@ export default function Topbar() {
   const navLinks = [
     { name: 'Home', path: '/' },
     { 
+      name: 'ID Explorer', 
+      path: '/admin/id-explorer',
+      roles: ['Admin', 'office admin', 'TL', 'CC', 'field']
+    },
+    { 
       name: 'Office Admin', 
       path: '/admin/dashboard',
-      roles: ['Admin', 'office admin', 'TL', 'CC'] // All roles can view data
+      roles: ['Admin', 'office admin']
     },
     { 
       name: 'About Region', 
       path: '/admin/about-region',
-      roles: ['Admin', 'office admin', 'TL', 'CC']
+      roles: ['Admin', 'office admin', 'TL', 'CC', 'field']
     },
     { 
       name: 'Mail Tracker', 
@@ -62,7 +67,8 @@ export default function Topbar() {
 
   const filteredLinks = navLinks.filter(link => {
     if (!link.roles) return true;
-    return link.roles.some(role => role.toLowerCase() === user?.role?.toLowerCase());
+    const userRole = user?.role?.toLowerCase().trim();
+    return link.roles.some(role => role.toLowerCase().trim() === userRole);
   });
 
   return (
@@ -81,13 +87,15 @@ export default function Topbar() {
         
         <nav className="hidden md:flex items-center gap-6">
           {filteredLinks.map((link) => {
+            const isOfficeSection = location.pathname.startsWith('/admin/') && 
+              location.pathname !== '/admin/id-explorer' &&
+              location.pathname !== '/admin/water-collective' && 
+              location.pathname !== '/admin/about-region' && 
+              location.pathname !== '/admin/settings' &&
+              !location.pathname.startsWith('/admin/mail-tracker');
+
             const isActive = location.pathname === link.path || 
-              (link.name === 'Office Admin' && location.pathname.startsWith('/admin/') && 
-               !location.pathname.startsWith('/admin/water-collective') && 
-               !location.pathname.startsWith('/admin/about-region') && 
-               !location.pathname.startsWith('/admin/irrigation-management') && 
-               !location.pathname.startsWith('/admin/mail-tracker') &&
-               !location.pathname.startsWith('/admin/settings'));
+              (link.name === 'Office Admin' && isOfficeSection);
             
             return (
               <Link

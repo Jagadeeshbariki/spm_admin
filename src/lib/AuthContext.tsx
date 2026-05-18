@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { fetchSheet } from './api';
 
-type Role = 'Admin' | 'office admin' | 'TL' | 'CC';
+type Role = 'Admin' | 'office admin' | 'TL' | 'CC' | 'field';
 
 export interface User {
   user_name: string;
   role: Role;
+  region?: string;
 }
 
 interface AuthContextType {
@@ -56,10 +57,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const users = await fetchSheet('Users');
       const foundUser = users.find(
-        (u: any) => u.user_name === username && u.Password === password
+        (u: any) => String(u.user_name).trim().toLowerCase() === username.trim().toLowerCase() && 
+                   String(u.Password).trim() === password.trim()
       );
       if (foundUser) {
-        const loggedInUser = { user_name: foundUser.user_name, role: foundUser.role as Role };
+        // Handle variations in role naming (Case-insensitive check)
+        let normalizedRole: Role = 'field';
+        const rawRole = String(foundUser.role).toLowerCase();
+        
+        if (rawRole === 'admin') normalizedRole = 'Admin';
+        else if (rawRole === 'office admin' || rawRole === 'officeadmin') normalizedRole = 'office admin';
+        else if (rawRole === 'tl') normalizedRole = 'TL';
+        else if (rawRole === 'cc') normalizedRole = 'CC';
+        else if (rawRole === 'field' || rawRole === 'field staff' || rawRole === 'field user') normalizedRole = 'field';
+
+        const loggedInUser: User = { 
+          user_name: foundUser.user_name, 
+          role: normalizedRole,
+          region: foundUser.region || foundUser.Region // Try both lowercase and capitalized
+        };
         const currentTime = new Date().getTime();
         
         setUser(loggedInUser);
