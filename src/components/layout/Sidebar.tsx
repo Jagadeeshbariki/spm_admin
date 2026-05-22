@@ -11,7 +11,8 @@ import {
   Bed,
   Map as MapIcon,
   Database,
-  Droplets
+  Droplets,
+  Plane
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ const officeAdminItems = [
   { name: 'Car Rentals', path: '/admin/car-rentals', icon: Car },
   { name: 'Vendors', path: '/admin/vendors', icon: Users },
   { name: 'Guest Room', path: '/admin/guest-room', icon: Bed },
+  { name: 'Team Travel', path: '/admin/team-travel', icon: Plane },
   { name: 'GIS Management', path: '/admin/village-gis-management', icon: Database },
   { name: 'Water Management', path: '/admin/water-collective-management', icon: Droplets },
   { name: 'Reports', path: '/admin/reports', icon: FileBarChart },
