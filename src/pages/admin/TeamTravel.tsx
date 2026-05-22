@@ -23,21 +23,9 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-const DEFAULT_PROJECTS = [
-  'Water Management Project',
-  'Village GIS Development',
-  'Silt Application Project',
-  'Integrated Watershed Management',
-  'Community Borewell Collective'
-];
+const DEFAULT_PROJECTS: string[] = [];
 
-const DEFAULT_STAFF = [
-  'Vyomesh Jagadeesh',
-  'Rajesh Kumar',
-  'Srinivas Rao',
-  'Anjali Sharma',
-  'K. Satish Babu'
-];
+const DEFAULT_STAFF: string[] = [];
 
 const currentYear = new Date().getFullYear();
 const currentMonth = new Date().getMonth(); // 0-11
@@ -63,7 +51,6 @@ export default function TeamTravel() {
     project: '',
     travelAmount: '',
     financialYear: DEFAULT_FY,
-    softCopyUrl: '',
   });
 
   // Soft Copy Attachment State
@@ -121,20 +108,13 @@ export default function TeamTravel() {
       // Prime default selection
       if (loadedProjects.length > 0) {
         setFormData(prev => ({ ...prev, project: loadedProjects[0] }));
-      } else {
-        setFormData(prev => ({ ...prev, project: DEFAULT_PROJECTS[0] }));
       }
       
       if (loadedStaff.length > 0) {
         setFormData(prev => ({ ...prev, staffName: loadedStaff[0] }));
-      } else {
-        setFormData(prev => ({ ...prev, staffName: DEFAULT_STAFF[0] }));
       }
     } catch (error) {
       console.error('Failed to load master data dropdowns:', error);
-      setProjects(DEFAULT_PROJECTS);
-      setStaffNames(DEFAULT_STAFF);
-      setFormData(prev => ({ ...prev, project: DEFAULT_PROJECTS[0], staffName: DEFAULT_STAFF[0] }));
     }
   };
 
@@ -232,7 +212,6 @@ export default function TeamTravel() {
         project: entry.Project || projects[0] || '',
         travelAmount: entry['Travel Amount']?.toString() || '',
         financialYear: entry['Financial Year'] || DEFAULT_FY,
-        softCopyUrl: entry['Soft Copy URL'] || '',
       });
     } else {
       setEditingRow(null);
@@ -242,7 +221,6 @@ export default function TeamTravel() {
         project: projects[0] || '',
         travelAmount: '',
         financialYear: DEFAULT_FY,
-        softCopyUrl: '',
       });
     }
     setIsModalOpen(true);
@@ -296,10 +274,10 @@ export default function TeamTravel() {
 
     setIsSaving(true);
     try {
-      let softCopyUrl = formData.softCopyUrl || '';
+      let softCopyUrl = '';
       
       // If editing, preserve old file url unless modified or manually set
-      if (editingRow !== null && !formData.softCopyUrl) {
+      if (editingRow !== null) {
         const oldEntry = entries.find(item => item._rowIndex === editingRow);
         softCopyUrl = oldEntry?.['Soft Copy URL'] || '';
       }
@@ -351,14 +329,10 @@ export default function TeamTravel() {
       };
 
       // 1. Try Google Sheets add/update
-      try {
-        if (editingRow !== null) {
-          await updateRow('team_travel', editingRow, entryPayload);
-        } else {
-          await addRow('team_travel', entryPayload);
-        }
-      } catch (sheetErr) {
-        console.warn('Google Sheet write failed. Saving locally.', sheetErr);
+      if (editingRow !== null) {
+        await updateRow('team_travel', editingRow, entryPayload);
+      } else {
+        await addRow('team_travel', entryPayload);
       }
 
       // 2. Always persist locally for flawless recovery
@@ -374,9 +348,9 @@ export default function TeamTravel() {
       toast.success(editingRow !== null ? 'Travel entry updated successfully!' : 'Travel receipt saved perfectly!');
       setIsModalOpen(false);
       loadData();
-    } catch (saveError) {
+    } catch (saveError: any) {
       console.error(saveError);
-      toast.error('An error occurred while saving.');
+      toast.error(`An error occurred while saving: ${saveError.message || saveError}`);
     } finally {
       setIsSaving(false);
     }
@@ -389,11 +363,7 @@ export default function TeamTravel() {
     try {
       // Delete from sheets
       if (entry._rowIndex !== undefined) {
-        try {
-          await deleteRow('team_travel', entry._rowIndex);
-        } catch (sheetErr) {
-          console.warn('Google sheet deletion failed. Removing locally.', sheetErr);
-        }
+        await deleteRow('team_travel', entry._rowIndex);
       }
 
       // Delete from local storage
@@ -679,8 +649,8 @@ export default function TeamTravel() {
       {/* Edit/Add Receipt Drawer Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <dialog open className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 flex flex-col gap-6">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+          <dialog open className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 flex flex-col gap-6 max-h-[95vh]">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4 shrink-0">
               <h2 className="text-xl font-bold text-slate-800">
                 {editingRow !== null ? 'Modify Travel Entry' : 'Log Team Travel Receipt'}
               </h2>
@@ -692,7 +662,8 @@ export default function TeamTravel() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSave} className="flex flex-col gap-4 overflow-hidden">
+              <div className="space-y-4 overflow-y-auto pr-2 pb-2">
               {/* Staff Name Dropdown */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Staff Name *</label>
@@ -769,18 +740,6 @@ export default function TeamTravel() {
                 />
               </div>
 
-              {/* Soft Copy URL Paste Option */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Soft Copy Hyperlink (Alternative/Optional)</label>
-                <input 
-                  type="text" 
-                  placeholder="Paste direct Drive URL, Dropbox path or site URL" 
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  value={formData.softCopyUrl}
-                  onChange={(e) => setFormData(prev => ({ ...prev, softCopyUrl: e.target.value }))}
-                />
-              </div>
-
               {/* File Attachment Upload with Automatic Compression HUD */}
               <div className="border border-dashed border-slate-200 bg-slate-50/50 rounded-2xl p-4">
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Soft Copy Bill Upload (PDF/Image)</label>
@@ -789,7 +748,7 @@ export default function TeamTravel() {
                   accept="application/pdf,image/*"
                   onChange={handleFileChange}
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 file:cursor-pointer hover:file:bg-blue-100 transition-colors"
-                  required={editingRow === null && !formData.softCopyUrl}
+                  required={editingRow === null}
                 />
                 
                 {/* Compression Analytics */}
@@ -821,8 +780,10 @@ export default function TeamTravel() {
                 <p className="text-[11px] text-slate-400 mt-2 font-medium">Any uploaded files are processed and compressed on-the-fly inside the browser to guarantee low sizes on Drive/Sheet uploads.</p>
               </div>
 
+              </div>
+
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 shrink-0">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
