@@ -16,13 +16,17 @@ export default function AdminLayout() {
   const isGeneralPage = 
     location.pathname === '/admin/id-explorer' || 
     location.pathname === '/admin/water-collective' || 
-    location.pathname === '/admin/about-region' || 
     location.pathname === '/admin/settings';
 
-  const showSidebar = canSeeSidebar && 
+  const isAboutRegion = location.pathname.startsWith('/admin/about-region');
+
+  const isOfficeSection = canSeeSidebar && 
     location.pathname.startsWith('/admin/') &&
     !isGeneralPage &&
+    !isAboutRegion &&
     !location.pathname.startsWith('/admin/mail-tracker');
+
+  const showSidebar = isOfficeSection || isAboutRegion;
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] flex flex-col font-sans text-slate-800">

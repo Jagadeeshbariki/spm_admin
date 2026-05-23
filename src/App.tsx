@@ -61,7 +61,9 @@ export default function App() {
               <Route path="mail-tracker" element={<MailTracker />} />
               <Route path="water-collective" element={<WaterCollective />} />
               <Route path="water-collective-management" element={<WaterCollectiveManagement />} />
-              <Route path="about-region" element={<VillageGIS />} />
+              <Route path="about-region" element={<Navigate to="/admin/about-region/working-villages" replace />} />
+              <Route path="about-region/working-villages" element={<VillageGIS tab="assets" />} />
+              <Route path="about-region/processing-hubs" element={<VillageGIS tab="hubs" />} />
               <Route path="village-gis-management" element={<VillageGISManagement />} />
               <Route path="team-travel" element={<TeamTravel />} />
 

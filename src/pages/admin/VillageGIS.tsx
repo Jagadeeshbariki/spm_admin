@@ -88,19 +88,239 @@ function MapController({ center, zoom, bounds }: { center: [number, number], zoo
   return null;
 }
 
-export default function VillageGIS() {
+export function ProcessingHubsDashboard({
+  hubs,
+  hubClusters,
+  hubGPs,
+  hubVillages,
+  hubUnits,
+  selectedHubCluster,
+  setSelectedHubCluster,
+  selectedHubGP,
+  setSelectedHubGP,
+  selectedHubVillage,
+  setSelectedHubVillage,
+  selectedHubUnit,
+  setSelectedHubUnit,
+  searchTerm,
+  setSearchTerm,
+  totalHubUnits,
+  totalHubVillagesCovered,
+}: {
+  hubs: any[];
+  hubClusters: string[];
+  hubGPs: string[];
+  hubVillages: string[];
+  hubUnits: string[];
+  selectedHubCluster: string; setSelectedHubCluster: (s: string) => void;
+  selectedHubGP: string; setSelectedHubGP: (s: string) => void;
+  selectedHubVillage: string; setSelectedHubVillage: (s: string) => void;
+  selectedHubUnit: string; setSelectedHubUnit: (s: string) => void;
+  searchTerm: string; setSearchTerm: (s: string) => void;
+  totalHubUnits: number;
+  totalHubVillagesCovered: number;
+}) {
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [mapType, setMapType] = useState<'streets' | 'satellite'>('satellite');
+  
+  const center = hubs.length > 0 && !isNaN(parseFloat(hubs[0].lat)) && !isNaN(parseFloat(hubs[0].long)) 
+    ? [parseFloat(hubs[0].lat), parseFloat(hubs[0].long)] 
+    : [18.9103, 83.8252];
+  
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-white w-full rounded-2xl border border-slate-200 shadow-sm relative z-[0]">
+      <div className="p-4 md:p-6 pb-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row gap-4 justify-between md:items-center">
+        <div>
+           <h2 className="text-xl font-bold text-slate-800">Processing Hubs Dashboard</h2>
+           <p className="text-sm text-slate-500">Overview of established units across the region</p>
+        </div>
+        <div className="flex gap-4">
+           <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm min-w-[120px]">
+             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Units</p>
+             <p className="text-2xl font-black text-slate-800">{totalHubUnits}</p>
+           </div>
+           <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm min-w-[120px]">
+             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Villages Covered</p>
+             <p className="text-2xl font-black text-emerald-600">{totalHubVillagesCovered}</p>
+           </div>
+        </div>
+      </div>
+      
+      <div className="p-4 border-b border-slate-100 bg-white grid grid-cols-2 lg:grid-cols-5 gap-3">
+         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubCluster} onChange={(e) => setSelectedHubCluster(e.target.value)}>
+           <option>All Clusters</option>
+           {hubClusters.map(c => <option key={c} value={c}>{c}</option>)}
+         </select>
+         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubGP} onChange={(e) => setSelectedHubGP(e.target.value)}>
+           <option>All GPs</option>
+           {hubGPs.map(c => <option key={c} value={c}>{c}</option>)}
+         </select>
+         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubVillage} onChange={(e) => setSelectedHubVillage(e.target.value)}>
+           <option>All Villages</option>
+           {hubVillages.map(c => <option key={c} value={c}>{c}</option>)}
+         </select>
+         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubUnit} onChange={(e) => setSelectedHubUnit(e.target.value)}>
+           <option>All Units</option>
+           {hubUnits.map(c => <option key={c} value={c}>{c}</option>)}
+         </select>
+         <div className="relative">
+           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+           <input type="text" placeholder="Search entity..." className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+         </div>
+      </div>
+
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative z-[0]">
+         <div className="w-full md:w-1/2 overflow-y-auto p-4 space-y-3 bg-slate-50/50 isolate">
+           {hubs.map(hub => {
+             const isExpanded = expandedId === hub._rowIndex;
+             return (
+               <div key={hub._rowIndex} className={cn("bg-white rounded-xl border transition-all overflow-hidden", isExpanded ? "border-blue-300 shadow-md ring-1 ring-blue-100" : "border-slate-200 shadow-sm hover:border-slate-300")}>
+                  <button onClick={() => setExpandedId(isExpanded ? null : hub._rowIndex)} className="w-full p-4 flex justify-between items-center text-left hover:bg-slate-50/50 transition-colors">
+                     <div>
+                        <div className="text-sm font-bold text-slate-800">{hub['entr_name']}</div>
+                        <div className="text-[11px] font-medium text-slate-500 mt-0.5">{hub['Unit name']} &bull; {hub['Village']}</div>
+                     </div>
+                     <ChevronRight className={cn("w-4 h-4 text-slate-400 transition-transform", isExpanded && "rotate-90")} />
+                  </button>
+                  {isExpanded && (
+                    <div className="px-4 pb-4 border-t border-slate-100 pt-4 bg-slate-50/30">
+                      <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-4">
+                        <div>
+                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Village & GP</span>
+                           <span className="font-semibold text-slate-700 text-xs">{hub.Village} / {hub.GP || 'N/A'}</span>
+                        </div>
+                        <div>
+                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Cluster</span>
+                           <span className="font-semibold text-slate-700 text-xs">{hub.Cluster || 'N/A'}</span>
+                        </div>
+                        <div>
+                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Father/Husband</span>
+                           <span className="font-semibold text-slate-700 text-xs">{hub['Father/husband Name'] || 'N/A'}</span>
+                        </div>
+                        <div>
+                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Phone Number</span>
+                           <span className="font-semibold text-blue-600 text-xs">{hub['Phone Number'] || 'N/A'}</span>
+                        </div>
+                        <div>
+                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">HH ID</span>
+                           <span className="font-semibold text-slate-700 text-xs">{hub['HH_id'] || 'N/A'}</span>
+                        </div>
+                        <div>
+                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Unit Name</span>
+                           <span className="font-semibold text-slate-700 text-xs">{hub['Unit name'] || 'N/A'}</span>
+                        </div>
+                        <div>
+                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Unit Issued Date</span>
+                           <span className="font-semibold text-slate-700 text-xs">{hub['Unit issued date'] || 'N/A'}</span>
+                        </div>
+                        <div>
+                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Contribution Paid</span>
+                           <span className="font-semibold text-emerald-600 text-xs font-mono">{hub['Contribution paid'] || 'N/A'}</span>
+                        </div>
+                      </div>
+                      
+                      {hub['Photo'] && (
+                        <div className="rounded-lg overflow-hidden border border-slate-200 shadow-sm ring-1 ring-slate-100 mt-2">
+                          <img 
+                            src={`/api/odk/image?submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`} 
+                            alt="Hub photo" 
+                            className="w-full h-auto max-h-64 object-cover bg-slate-100"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+               </div>
+             )
+           })}
+           {hubs.length === 0 && <div className="text-center p-8 text-slate-400 font-medium">No hubs found for current filters</div>}
+         </div>
+         
+         <div className="w-full md:w-1/2 h-[300px] md:h-auto border-t md:border-t-0 md:border-l border-slate-200 relative z-[0]">
+            <button 
+               onClick={() => setMapType(mapType === 'streets' ? 'satellite' : 'streets')}
+               className="absolute top-4 right-4 z-[1000] p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-xs font-bold text-slate-700 hover:bg-white transition-colors"
+            >
+              Toggle Map
+            </button>
+            <MapContainer center={center as [number, number]} zoom={11} className="w-full h-full" zoomControl={true}>
+              {mapType === 'streets' ? (
+                <TileLayer
+                  attribution='&copy; OpenStreetMap'
+                  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                />
+              ) : (
+                <TileLayer
+                  attribution='&copy; Google Maps'
+                  url="https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}"
+                  subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+                />
+              )}
+              {hubs.map((hub) => {
+                  const lat = parseFloat(hub.lat);
+                  const lng = parseFloat(hub.long);
+                  if (isNaN(lat) || isNaN(lng)) return null;
+                  
+                  return (
+                    <Marker key={hub._rowIndex} position={[lat, lng]} icon={L.divIcon({
+                      className: 'custom-dot-orange',
+                      html: `<div class="${cn("rounded-full border-1.5 border-white shadow-sm bg-orange-500 transition-all", expandedId === hub._rowIndex ? "w-4 h-4 -mt-0.5 -ml-0.5 ring-4 ring-orange-200 bg-orange-600 animate-pulse" : "w-3 h-3 hover:scale-110")}"></div>`,
+                      iconSize: [20, 20],
+                      iconAnchor: [10, 10],
+                      popupAnchor: [0, -10]
+                    })}>
+                      <Popup className="custom-popup">
+                        <div className="p-1 min-w-[200px]">
+                           <div className="flex items-center gap-2 mb-2">
+                             <div className="w-2 h-2 rounded-full bg-orange-500" />
+                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{hub['Village']} Village</span>
+                           </div>
+                           <div className="font-bold text-sm text-slate-800 leading-tight mb-1">{hub['entr_name']}</div>
+                           <div className="text-[10px] text-slate-500 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">{hub['Unit name']}</div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  )
+              })}
+            </MapContainer>
+         </div>
+      </div>
+    </div>
+  )
+}
+
+export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs' }) {
   const [loading, setLoading] = useState(true);
   const [villageAssets, setVillageAssets] = useState<ActivityAsset[]>([]);
+  const [processingHubs, setProcessingHubs] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'assets' | 'hubs'>(tab);
+
+  useEffect(() => {
+    setActiveTab(tab);
+    setSelectedAssetId(null);
+  }, [tab]);
   const [boundaryDataList, setBoundaryDataList] = useState<any[]>([]);
   const [geoVillages, setGeoVillages] = useState<GeoVillage[]>([]);
   const [loadingBoundary, setLoadingBoundary] = useState(false);
   const [selectedMandal, setSelectedMandal] = useState('All Mandals');
   const [selectedActivity, setSelectedActivity] = useState('All Activities');
+  const [selectedHubUnit, setSelectedHubUnit] = useState('All Units');
+  const [selectedHubCluster, setSelectedHubCluster] = useState('All Clusters');
+  const [selectedHubGP, setSelectedHubGP] = useState('All GPs');
+  const [selectedHubVillage, setSelectedHubVillage] = useState('All Villages');
   const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
   const [showActivityLayer, setShowActivityLayer] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default to false on mobile, will expand initially
   const [mapCenter, setMapCenter] = useState<[number, number]>([18.85, 83.8]); // Centered on Manyam area
+
+  // Check screen size
+  useEffect(() => {
+    if (window.innerWidth >= 768) {
+      setIsSidebarOpen(true);
+    }
+  }, []);
   const [mapZoom, setMapZoom] = useState(10);
   const [mapType, setMapType] = useState<'streets' | 'satellite'>('satellite');
 
@@ -186,12 +406,16 @@ export default function VillageGIS() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await fetchSheet('village_assets');
-      setVillageAssets(data);
+      const [assetsData, hubsData] = await Promise.all([
+        fetchSheet('village_assets').catch(() => []),
+        fetchSheet('Processing Hubs').catch(() => [])
+      ]);
+      setVillageAssets(assetsData);
+      setProcessingHubs(hubsData);
       
       // Auto-center if we have data AND no boundary is present
-      if (data.length > 0 && boundaryDataList.length === 0) {
-        const first = data[0];
+      if (assetsData.length > 0 && boundaryDataList.length === 0) {
+        const first = assetsData[0];
         const lat = parseFloat(first.Latitude);
         const lng = parseFloat(first.Longitude);
         if (!isNaN(lat) && !isNaN(lng)) {
@@ -200,7 +424,7 @@ export default function VillageGIS() {
         }
       }
     } catch (error) {
-      console.error('Failed to load village assets:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
@@ -237,6 +461,22 @@ export default function VillageGIS() {
     return Array.from(new Set(villageAssets.map(a => a['Activity Name']).filter(Boolean)));
   }, [villageAssets]);
 
+  const hubUnits = useMemo(() => {
+    return Array.from(new Set(processingHubs.map(h => h['Unit name']).filter(Boolean))).sort();
+  }, [processingHubs]);
+
+  const hubClusters = useMemo(() => {
+    return Array.from(new Set(processingHubs.map(h => h['Cluster']).filter(Boolean))).sort();
+  }, [processingHubs]);
+
+  const hubGPs = useMemo(() => {
+    return Array.from(new Set(processingHubs.map(h => h['GP']).filter(Boolean))).sort();
+  }, [processingHubs]);
+
+  const hubVillages = useMemo(() => {
+    return Array.from(new Set(processingHubs.map(h => h['Village']).filter(Boolean))).sort();
+  }, [processingHubs]);
+
   const filteredAssets = useMemo(() => {
     return villageAssets.filter(asset => {
       const matchesMandal = selectedMandal === 'All Mandals' || asset.Mandal === selectedMandal;
@@ -249,6 +489,25 @@ export default function VillageGIS() {
       return matchesMandal && matchesActivity && matchesSearch && hasCoords;
     });
   }, [villageAssets, selectedMandal, selectedActivity, searchTerm]);
+
+  const filteredHubs = useMemo(() => {
+    return processingHubs.filter(hub => {
+      const matchesUnit = selectedHubUnit === 'All Units' || hub['Unit name'] === selectedHubUnit;
+      const matchesCluster = selectedHubCluster === 'All Clusters' || hub['Cluster'] === selectedHubCluster;
+      const matchesGP = selectedHubGP === 'All GPs' || hub['GP'] === selectedHubGP;
+      const matchesVillage = selectedHubVillage === 'All Villages' || hub['Village'] === selectedHubVillage;
+      const matchesSearch = !searchTerm || 
+        hub['Village']?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        hub['entr_name']?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const hasCoords = !isNaN(parseFloat(hub.lat)) && !isNaN(parseFloat(hub.long));
+      return matchesUnit && matchesCluster && matchesGP && matchesVillage && matchesSearch && hasCoords;
+    });
+  }, [processingHubs, selectedHubUnit, selectedHubCluster, selectedHubGP, selectedHubVillage, searchTerm]);
+
+  // Derived dashboard stats
+  const totalHubVillagesCovered = useMemo(() => new Set(filteredHubs.map(h => h['Village']).filter(Boolean)).size, [filteredHubs]);
+  const totalHubUnits = filteredHubs.length;
 
   // Final filtered list of village points for marker rendering
   const filteredGeoVillages = useMemo(() => {
@@ -292,11 +551,33 @@ export default function VillageGIS() {
 
   return (
     <div className="h-[calc(100vh-140px)] md:h-[calc(100vh-140px)] flex flex-col md:flex-row bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 relative">
-      {/* Sidebar Filters - Mobile Overlay / Desktop Sidebar */}
-      <div className={cn(
-        "fixed inset-0 z-[3000] md:relative md:inset-auto md:z-auto transition-all duration-300 md:duration-300 flex flex-col bg-white",
-        isSidebarOpen ? "translate-x-0 w-full md:w-80" : "-translate-x-full md:translate-x-0 md:w-0 overflow-hidden"
-      )}>
+      {activeTab === 'hubs' ? (
+        <ProcessingHubsDashboard
+          hubs={filteredHubs}
+          hubClusters={hubClusters}
+          hubGPs={hubGPs}
+          hubVillages={hubVillages}
+          hubUnits={hubUnits}
+          selectedHubCluster={selectedHubCluster}
+          setSelectedHubCluster={setSelectedHubCluster}
+          selectedHubGP={selectedHubGP}
+          setSelectedHubGP={setSelectedHubGP}
+          selectedHubVillage={selectedHubVillage}
+          setSelectedHubVillage={setSelectedHubVillage}
+          selectedHubUnit={selectedHubUnit}
+          setSelectedHubUnit={setSelectedHubUnit}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          totalHubUnits={totalHubUnits}
+          totalHubVillagesCovered={totalHubVillagesCovered}
+        />
+      ) : (
+        <>
+          {/* Sidebar Filters - Mobile Overlay / Desktop Sidebar */}
+          <div className={cn(
+            "absolute inset-0 z-[5000] md:relative md:inset-auto md:z-auto transition-all duration-300 md:duration-300 flex flex-col bg-white",
+            isSidebarOpen ? "translate-x-0 w-full md:w-80" : "-translate-x-full md:translate-x-0 md:w-0 overflow-hidden"
+          )}>
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
             <h2 className="text-lg font-bold text-slate-800">Region Insights</h2>
@@ -496,7 +777,7 @@ export default function VillageGIS() {
       )}
 
       {/* Map Content */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative z-0">
         {loading && (
           <div className="absolute inset-0 z-[2000] bg-white/60 backdrop-blur-sm flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
@@ -558,7 +839,7 @@ export default function VillageGIS() {
           ))}
 
           {/* Sheet Assets - Visible only when toggled */}
-          {showActivityLayer && filteredAssets.map((asset, idx) => {
+          {activeTab === 'assets' && showActivityLayer && filteredAssets.map((asset, idx) => {
             const lat = parseFloat(asset.Latitude as any);
             const lng = parseFloat(asset.Longitude as any);
             if (isNaN(lat) || isNaN(lng)) return null;
@@ -776,6 +1057,8 @@ export default function VillageGIS() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

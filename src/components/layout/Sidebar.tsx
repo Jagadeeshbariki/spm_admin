@@ -14,7 +14,7 @@ import {
   Droplets,
   Plane
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -32,10 +32,18 @@ const officeAdminItems = [
   { name: 'Reports', path: '/admin/reports', icon: FileBarChart },
 ];
 
+const aboutRegionItems = [
+  { name: 'Working Villages', path: '/admin/about-region/working-villages', icon: MapIcon },
+  { name: 'Processing Hubs', path: '/admin/about-region/processing-hubs', icon: Database },
+];
+
 export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCollapsed: (val: boolean) => void }) {
   const { user } = useAuth();
+  const location = useLocation();
   const role = user?.role?.toLowerCase().trim();
   const isOfficeAccess = role === 'admin' || role === 'office admin';
+  
+  const isAboutRegion = location.pathname.startsWith('/admin/about-region');
 
   return (
     <aside 
@@ -45,10 +53,33 @@ export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolea
       )}
     >
       <div className="flex-1 py-6 flex flex-col gap-6 px-3">
-        {isOfficeAccess && (
+        {isOfficeAccess && !isAboutRegion && (
           <div className="flex flex-col gap-2">
             {!collapsed && <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Office Admin</p>}
             {officeAdminItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors font-medium text-sm",
+                  isActive 
+                    ? "bg-blue-50 text-blue-600" 
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                  collapsed && "justify-center px-0"
+                )}
+                title={collapsed ? item.name : undefined}
+              >
+                <item.icon className={cn("w-5 h-5 shrink-0", collapsed ? "mx-auto" : "")} />
+                {!collapsed && <span>{item.name}</span>}
+              </NavLink>
+            ))}
+          </div>
+        )}
+
+        {isAboutRegion && (
+          <div className="flex flex-col gap-2">
+            {!collapsed && <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">About Region</p>}
+            {aboutRegionItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}

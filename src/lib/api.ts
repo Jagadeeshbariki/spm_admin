@@ -69,6 +69,8 @@ export async function fetchWithFallback(
   }
 }
 
+const PROCESSING_HUBS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTmXCBpa6shu6HG0groD4a5VZwtwpnkrpb8_epyjxauOm_35o0jyWl3IwbxVm7m4unV29ZTu2GkW45-/pub?gid=0&single=true&output=csv";
+
 function getWriteApiBase(sheetName: string) {
   if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
     return TEAM_TRAVEL_API_BASE;
@@ -78,6 +80,26 @@ function getWriteApiBase(sheetName: string) {
 
 export async function fetchSheet(sheetName: string) {
   try {
+    if (sheetName === "Processing Hubs") {
+      const res = await fetchWithFallback(`${PROCESSING_HUBS_CSV_URL}&t=${Date.now()}`);
+      if (!res.ok) throw new Error("Failed to fetch Processing Hubs CSV");
+      const text = await res.text();
+      return new Promise<any[]>((resolve, reject) => {
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const data = results.data.map((row: any, index: number) => ({
+              ...row,
+              _rowIndex: index + 2,
+            }));
+            resolve(data);
+          },
+          error: (err: any) => reject(err),
+        });
+      });
+    }
+
     if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
       const res = await fetchWithFallback(`${TEAM_TRAVEL_CSV_URL}&t=${Date.now()}`);
       if (!res.ok) throw new Error("Failed to fetch Team Travel CSV");

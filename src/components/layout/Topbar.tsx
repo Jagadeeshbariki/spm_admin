@@ -72,7 +72,7 @@ export default function Topbar() {
   });
 
   return (
-    <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-6 shrink-0 sticky top-0 z-50">
+    <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-6 shrink-0 sticky top-0 z-[9999]">
       <div className="flex items-center gap-4 md:gap-8">
         <button 
           onClick={() => setShowMobileMenu(!showMobileMenu)}
@@ -90,12 +90,15 @@ export default function Topbar() {
             const isOfficeSection = location.pathname.startsWith('/admin/') && 
               location.pathname !== '/admin/id-explorer' &&
               location.pathname !== '/admin/water-collective' && 
-              location.pathname !== '/admin/about-region' && 
+              !location.pathname.startsWith('/admin/about-region') && 
               location.pathname !== '/admin/settings' &&
               !location.pathname.startsWith('/admin/mail-tracker');
 
+            const isAboutRegionSection = location.pathname.startsWith('/admin/about-region');
+
             const isActive = location.pathname === link.path || 
-              (link.name === 'Office Admin' && isOfficeSection);
+              (link.name === 'Office Admin' && isOfficeSection) ||
+              (link.name === 'About Region' && isAboutRegionSection);
             
             return (
               <Link
@@ -115,7 +118,7 @@ export default function Topbar() {
 
       {/* Mobile Menu Overlay */}
       {showMobileMenu && (
-        <div className="md:hidden fixed inset-0 top-16 bg-slate-900/50 z-40" onClick={() => setShowMobileMenu(false)}>
+        <div className="md:hidden fixed inset-0 top-16 bg-slate-900/50 z-[9998]" onClick={() => setShowMobileMenu(false)}>
           <div 
             ref={mobileMenuRef}
             className="bg-white w-64 h-full shadow-xl py-4 flex flex-col"
@@ -160,7 +163,7 @@ export default function Topbar() {
             </button>
 
             {showProfile && (
-              <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-50">
+              <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-[9999]">
                 <div className="px-4 py-3 border-b border-slate-100">
                   <p className="text-sm font-bold text-slate-900">{user.user_name}</p>
                   <p className="text-xs text-slate-500 capitalize">{user.role}</p>
