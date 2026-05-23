@@ -222,7 +222,7 @@ export function ProcessingHubsDashboard({
                       {hub['Photo'] && (
                         <div className="rounded-lg overflow-hidden border border-slate-200 shadow-sm ring-1 ring-slate-100 mt-2">
                           <img 
-                            src={`https://bhamini-p1198.vercel.app/api/odk/image?submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`} 
+                            src={`/api/odk/image?submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`} 
                             alt="Hub photo" 
                             className="w-full h-auto max-h-64 object-cover bg-slate-100"
                             loading="lazy"
@@ -406,11 +406,10 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
   const loadData = async () => {
     try {
       setLoading(true);
-      const [assetsData, hubsData] = await Promise.all([
-        fetchSheet('village_assets').catch(() => []),
+      const [hubsData] = await Promise.all([
         fetchSheet('Master').catch(() => [])
       ]);
-      setVillageAssets(assetsData);
+      setVillageAssets([]);
       setProcessingHubs(hubsData);
       
       // Auto-center if we have data AND no boundary is present

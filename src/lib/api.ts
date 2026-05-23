@@ -87,6 +87,7 @@ const MASTER_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/13inc1LrMAj
 
 export async function fetchSheet(sheetName: string) {
   try {
+    if (sheetName === "village_assets") return [];
     if (sheetName === "Processing Hubs" || sheetName === "Master") {
       // Use the explicit Master sheet URL to avoid Google Apps Script permission issues
       const res = await fetchWithFallback(`${MASTER_SHEET_CSV_URL}&t=${Date.now()}`);
