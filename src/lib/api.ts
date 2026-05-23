@@ -14,9 +14,14 @@ const MAIL_TRACKER_SPREADSHEET_ID =
 export const ADMIN_FOLDER_ID = "1d_4gLeoJ84zPrUe-vPJDR-f5b4V-ksY3";
 export const WATER_COLLECTIVES_FOLDER_ID = "1gga5glk6oNlI5tRDZFMthh4B-sUa0NnG";
 
+const MASTER_SPREADSHEET_ID = "13inc1LrMAjqTVCjDiEaIOwqSO39dUzQwFWbZbpypSrA";
+
 function getSpreadsheetId(sheetName: string) {
-  if (sheetName === "water_collectives" || sheetName === "Polygons_manyam" || sheetName === "village_assets") {
+  if (sheetName === "water_collectives" || sheetName === "Polygons_manyam") {
     return WATER_COLLECTIVE_SPREADSHEET_ID;
+  }
+  if (sheetName === "Processing Hubs" || sheetName === "village_assets" || sheetName === "Master") {
+    return MASTER_SPREADSHEET_ID;
   }
   if (sheetName === "mail_tracker" || sheetName === "mail_tracker_batches") {
     return MAIL_TRACKER_SPREADSHEET_ID;
@@ -78,11 +83,14 @@ function getWriteApiBase(sheetName: string) {
   return API_BASE;
 }
 
+const MASTER_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/13inc1LrMAjqTVCjDiEaIOwqSO39dUzQwFWbZbpypSrA/gviz/tq?tqx=out:csv&sheet=Master";
+
 export async function fetchSheet(sheetName: string) {
   try {
-    if (sheetName === "Processing Hubs") {
-      const res = await fetchWithFallback(`${PROCESSING_HUBS_CSV_URL}&t=${Date.now()}`);
-      if (!res.ok) throw new Error("Failed to fetch Processing Hubs CSV");
+    if (sheetName === "Processing Hubs" || sheetName === "Master") {
+      // Use the explicit Master sheet URL to avoid Google Apps Script permission issues
+      const res = await fetchWithFallback(`${MASTER_SHEET_CSV_URL}&t=${Date.now()}`);
+      if (!res.ok) throw new Error("Failed to fetch Master CSV");
       const text = await res.text();
       return new Promise<any[]>((resolve, reject) => {
         Papa.parse(text, {
