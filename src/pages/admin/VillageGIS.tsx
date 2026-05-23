@@ -1,4 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { 
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip 
+} from 'recharts';
 import { 
   MapContainer, 
   TileLayer, 
@@ -19,7 +23,8 @@ import {
   Maximize2,
   Navigation,
   Globe,
-  MapPin
+  MapPin,
+  X
 } from 'lucide-react';
 import { fetchSheet, getSetting, fetchGeoJson } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -122,36 +127,119 @@ export function ProcessingHubsDashboard({
 }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [mapType, setMapType] = useState<'streets' | 'satellite'>('satellite');
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
   const center = hubs.length > 0 && !isNaN(parseFloat(hubs[0].lat)) && !isNaN(parseFloat(hubs[0].long)) 
     ? [parseFloat(hubs[0].lat), parseFloat(hubs[0].long)] 
     : [18.9103, 83.8252];
   
+  const statusData = useMemo(() => {
+    let working = 0;
+    let notUsing = 0;
+    let others = 0;
+    hubs.forEach(h => {
+      const st = (h['status '] || h['status_of_unit-status'] || h['Status'] || '').toString().toLowerCase();
+      if (st.includes('working')) working++;
+      else if (st.includes('not_using') || st.includes('not using')) notUsing++;
+      else others++;
+    });
+    return [
+      { name: 'Working', value: working, color: '#10b981' },
+      { name: 'Not Using', value: notUsing, color: '#f43f5e' },
+      { name: 'Others', value: others, color: '#f59e0b' }
+    ].filter(d => d.value > 0);
+  }, [hubs]);
+
+  const filteredLocalHubs = useMemo(() => {
+     if (!statusFilter) return hubs;
+     return hubs.filter(hub => {
+        const st = (hub['status '] || hub['status_of_unit-status'] || hub['Status'] || '').toLowerCase();
+        if (statusFilter === 'Working') {
+          return st.includes('working');
+        } else if (statusFilter === 'Not Using') {
+          return st.includes('not_using') || st.includes('not using');
+        } else {
+          return !st.includes('working') && !st.includes('not_using') && !st.includes('not using');
+        }
+     });
+  }, [hubs, statusFilter]);
+
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-white w-full rounded-2xl border border-slate-200 shadow-sm relative z-[0]">
-      <div className="p-4 md:p-6 pb-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row gap-4 justify-between md:items-center">
+    <div className="flex-1 flex flex-col overflow-auto md:overflow-hidden bg-white w-full rounded-2xl border border-slate-200 shadow-sm relative z-[0]">
+      <div className="p-4 md:p-6 pb-4 border-b border-slate-200 bg-slate-50 flex flex-col xl:flex-row gap-4 justify-between xl:items-start shrink-0">
         <div>
            <h2 className="text-xl font-bold text-slate-800">Processing Hubs Dashboard</h2>
            <p className="text-sm text-slate-500">Overview of established units across the region</p>
         </div>
-        <div className="flex gap-4">
-           <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm min-w-[120px]">
+        <div className="flex flex-wrap md:flex-nowrap gap-4 items-stretch">
+           <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm min-w-[120px] flex flex-col justify-center">
              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Units</p>
-             <p className="text-2xl font-black text-slate-800">{totalHubUnits}</p>
+             <p className="text-2xl font-black text-slate-800">{filteredLocalHubs.length}</p>
            </div>
-           <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm min-w-[120px]">
+           <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm min-w-[120px] flex flex-col justify-center">
              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Villages Covered</p>
-             <p className="text-2xl font-black text-emerald-600">{totalHubVillagesCovered}</p>
+             <p className="text-2xl font-black text-emerald-600">{new Set(filteredLocalHubs.map(h => h.Village || h.village || h['Village']).filter(Boolean)).size}</p>
            </div>
+           {statusData.length > 0 && (
+             <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 min-w-[300px]">
+               <div className="flex-1">
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Status Breakdown (Click to filter)</p>
+                 <div className="flex flex-col gap-1.5">
+                   {statusData.map(d => (
+                     <div 
+                        key={d.name} 
+                        className={cn(
+                          "flex items-center gap-2 cursor-pointer transition-all p-1 -m-1 rounded-md", 
+                          statusFilter === d.name ? "bg-slate-50 ring-1 ring-slate-200" : "hover:bg-slate-50 opacity-80 hover:opacity-100"
+                        )}
+                        onClick={() => setStatusFilter(statusFilter === d.name ? null : d.name)}
+                     >
+                       <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: d.color}}></div>
+                       <span className={cn("text-[11px] whitespace-nowrap", statusFilter === d.name ? "font-black text-slate-800" : "font-bold text-slate-600")}>{d.name} <span className="opacity-70">({d.value})</span></span>
+                     </div>
+                   ))}
+                   {statusFilter && (
+                     <button onClick={() => setStatusFilter(null)} className="text-[10px] text-blue-600 hover:text-blue-800 text-left font-semibold mt-1">
+                       Clear Filter
+                     </button>
+                   )}
+                 </div>
+               </div>
+               <div className="w-[120px] h-[120px]">
+                 <ResponsiveContainer width="100%" height="100%">
+                   <PieChart>
+                     <Pie 
+                        data={statusData} 
+                        dataKey="value" 
+                        innerRadius={30} 
+                        outerRadius={55} 
+                        paddingAngle={2} 
+                        stroke="none"
+                        onClick={(data) => {
+                           setStatusFilter(statusFilter === data.name ? null : data.name);
+                        }}
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                     >
+                       {statusData.map((entry, index) => (
+                         <Cell key={`cell-${index}`} fill={entry.color} opacity={statusFilter && statusFilter !== entry.name ? 0.3 : 1} />
+                       ))}
+                     </Pie>
+                     <RechartsTooltip contentStyle={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px' }} itemStyle={{ color: '#333' }} />
+                   </PieChart>
+                 </ResponsiveContainer>
+               </div>
+             </div>
+           )}
         </div>
       </div>
       
-      <div className="p-4 border-b border-slate-100 bg-white grid grid-cols-2 lg:grid-cols-5 gap-3">
-         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubCluster} onChange={(e) => setSelectedHubCluster(e.target.value)}>
+      <div className="p-4 border-b border-slate-100 bg-white grid grid-cols-2 lg:grid-cols-4 gap-3">
+         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubCluster} onChange={(e) => { setSelectedHubCluster(e.target.value); setSelectedHubGP('All GPs'); setSelectedHubVillage('All Villages'); }}>
            <option>All Clusters</option>
            {hubClusters.map(c => <option key={c} value={c}>{c}</option>)}
          </select>
-         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubGP} onChange={(e) => setSelectedHubGP(e.target.value)}>
+         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubGP} onChange={(e) => { setSelectedHubGP(e.target.value); setSelectedHubVillage('All Villages'); }}>
            <option>All GPs</option>
            {hubGPs.map(c => <option key={c} value={c}>{c}</option>)}
          </select>
@@ -163,15 +251,34 @@ export function ProcessingHubsDashboard({
            <option>All Units</option>
            {hubUnits.map(c => <option key={c} value={c}>{c}</option>)}
          </select>
-         <div className="relative">
-           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-           <input type="text" placeholder="Search entity..." className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+         <div className="relative col-span-2 lg:col-span-4 flex gap-2">
+           <div className="relative flex-1">
+             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+             <input type="text" placeholder="Search entity..." className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+           </div>
+           {(selectedHubCluster !== 'All Clusters' || selectedHubGP !== 'All GPs' || selectedHubVillage !== 'All Villages' || selectedHubUnit !== 'All Units' || searchTerm !== '' || statusFilter !== null) && (
+             <button 
+               onClick={() => {
+                 setSelectedHubCluster('All Clusters');
+                 setSelectedHubGP('All GPs');
+                 setSelectedHubVillage('All Villages');
+                 setSelectedHubUnit('All Units');
+                 setSearchTerm('');
+                 setStatusFilter(null);
+               }}
+               className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap"
+             >
+               <X className="w-4 h-4" /> Clear Filters
+             </button>
+           )}
          </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative z-[0]">
-         <div className="w-full md:w-1/2 overflow-y-auto p-4 space-y-3 bg-slate-50/50 isolate">
-           {hubs.map(hub => {
+      <div className="flex-1 flex flex-col md:flex-row overflow-visible md:overflow-hidden relative z-[0] min-h-0">
+         <div className="w-full md:w-[35%] h-[400px] md:h-auto overflow-y-auto p-4 space-y-3 bg-slate-50/50 isolate custom-scrollbar shrink-0">
+           {filteredLocalHubs.length === 0 ? (
+             <div className="p-8 text-center text-sm font-medium text-slate-500">No processing hubs found.</div>
+           ) : filteredLocalHubs.map(hub => {
              const isExpanded = expandedId === hub._rowIndex;
              return (
                <div key={hub._rowIndex} className={cn("bg-white rounded-xl border transition-all overflow-hidden", isExpanded ? "border-blue-300 shadow-md ring-1 ring-blue-100" : "border-slate-200 shadow-sm hover:border-slate-300")}>
@@ -217,6 +324,20 @@ export function ProcessingHubsDashboard({
                            <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Contribution Paid</span>
                            <span className="font-semibold text-emerald-600 text-xs font-mono">{hub['Contribution paid'] || 'N/A'}</span>
                         </div>
+                        <div>
+                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Status</span>
+                           <span className={cn("font-semibold text-xs", (hub['status '] || hub['status_of_unit-status'] || hub['Status'] || '').toLowerCase().includes('working') ? "text-emerald-600" : "text-slate-700")}>
+                             {hub['status '] || hub['status_of_unit-status'] || hub['Status'] || 'N/A'}
+                           </span>
+                        </div>
+                        {(hub['Reason for not working/using'] || hub['status_of_unit-reason_not_using'] || hub['status_of_unit-reason_repair']) && (
+                          <div className="col-span-2">
+                             <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Reason If Not Working</span>
+                             <span className="font-semibold text-rose-600 text-xs">
+                               {hub['Reason for not working/using'] || hub['status_of_unit-reason_not_using'] || hub['status_of_unit-reason_repair']}
+                             </span>
+                          </div>
+                        )}
                       </div>
                       
                       {hub['Photo'] && (
@@ -224,8 +345,9 @@ export function ProcessingHubsDashboard({
                           <img 
                             src={`/api/odk/image?submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`} 
                             alt="Hub photo" 
-                            className="w-full h-auto max-h-64 object-cover bg-slate-100"
+                            className="w-full h-auto max-h-64 object-cover bg-slate-100 cursor-pointer hover:opacity-90 transition-opacity"
                             loading="lazy"
+                            onClick={() => setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`)}
                           />
                         </div>
                       )}
@@ -234,10 +356,9 @@ export function ProcessingHubsDashboard({
                </div>
              )
            })}
-           {hubs.length === 0 && <div className="text-center p-8 text-slate-400 font-medium">No hubs found for current filters</div>}
          </div>
          
-         <div className="w-full md:w-1/2 h-[300px] md:h-auto border-t md:border-t-0 md:border-l border-slate-200 relative z-[0]">
+         <div className="w-full md:w-[65%] h-[400px] md:h-auto border-t md:border-t-0 md:border-l border-slate-200 relative z-[0] shrink-0">
             <button 
                onClick={() => setMapType(mapType === 'streets' ? 'satellite' : 'streets')}
                className="absolute top-4 right-4 z-[1000] p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-xs font-bold text-slate-700 hover:bg-white transition-colors"
@@ -257,23 +378,39 @@ export function ProcessingHubsDashboard({
                   subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
                 />
               )}
-              {hubs.map((hub) => {
+              {filteredLocalHubs.map((hub) => {
                   const lat = parseFloat(hub.lat);
                   const lng = parseFloat(hub.long);
                   if (isNaN(lat) || isNaN(lng)) return null;
                   
-                  return (
-                    <Marker key={hub._rowIndex} position={[lat, lng]} icon={L.divIcon({
-                      className: 'custom-dot-orange',
-                      html: `<div class="${cn("rounded-full border-1.5 border-white shadow-sm bg-orange-500 transition-all", expandedId === hub._rowIndex ? "w-4 h-4 -mt-0.5 -ml-0.5 ring-4 ring-orange-200 bg-orange-600 animate-pulse" : "w-3 h-3 hover:scale-110")}"></div>`,
-                      iconSize: [20, 20],
-                      iconAnchor: [10, 10],
+                  const hubStatus = (hub['status '] || hub['status_of_unit-status'] || hub['Status'] || '').toLowerCase();
+                  let colorClass = 'bg-amber-500';
+                  let pulseClass = 'ring-amber-200 bg-amber-600';
+                  
+                  if (hubStatus.includes('working')) {
+                    colorClass = 'bg-emerald-500';
+                    pulseClass = 'ring-emerald-200 bg-emerald-600';
+                  } else if (hubStatus.includes('not_using') || hubStatus.includes('not using')) {
+                    colorClass = 'bg-rose-500';
+                    pulseClass = 'ring-rose-200 bg-rose-600';
+                  }
+
+                  const isExpanded = expandedId === hub._rowIndex;
+                  // Avoid recreating L.divIcon on every render to prevent _leaflet_pos crash
+                  const hubIcon = L.divIcon({
+                      className: 'custom-dot',
+                      html: `<div class="${cn("rounded-full border-1.5 border-white shadow-sm transition-all", colorClass, isExpanded ? `w-4 h-4 -mt-0.5 -ml-0.5 ring-4 animate-pulse ${pulseClass}` : "w-3 h-3 hover:scale-110")}"></div>`,
+                      iconSize: isExpanded ? [24, 24] : [20, 20],
+                      iconAnchor: isExpanded ? [12, 12] : [10, 10],
                       popupAnchor: [0, -10]
-                    })}>
+                  });
+
+                  return (
+                    <Marker key={`${hub.KEY || hub.Key || hub._rowIndex}-${isExpanded ? 'exp' : 'col'}-${colorClass}`} position={[lat, lng]} icon={hubIcon}>
                       <Popup className="custom-popup">
                         <div className="p-1 min-w-[200px]">
                            <div className="flex items-center gap-2 mb-2">
-                             <div className="w-2 h-2 rounded-full bg-orange-500" />
+                             <div className={cn("w-2 h-2 rounded-full", colorClass)} />
                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{hub['Village']} Village</span>
                            </div>
                            <div className="font-bold text-sm text-slate-800 leading-tight mb-1">{hub['entr_name']}</div>
@@ -286,6 +423,24 @@ export function ProcessingHubsDashboard({
             </MapContainer>
          </div>
       </div>
+      {previewImage && createPortal(
+        <div className="fixed inset-0 z-[99999] bg-slate-900/95 flex items-center justify-center p-4 backdrop-blur-md" onClick={() => setPreviewImage(null)}>
+          <button 
+            className="absolute top-6 right-6 md:top-10 md:right-10 z-[100000] bg-slate-800 hover:bg-slate-700 text-white rounded-full p-3 transition-all border border-slate-600 shadow-xl"
+            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+            title="Close image"
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img 
+            src={previewImage} 
+            className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl ring-1 ring-white/10" 
+            alt="Full size preview"
+            onClick={(e) => e.stopPropagation()} 
+          />
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
@@ -471,12 +626,23 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
   }, [processingHubs]);
 
   const hubGPs = useMemo(() => {
-    return Array.from(new Set(processingHubs.map(h => h['GP']).filter(Boolean))).sort();
-  }, [processingHubs]);
+    let hubs = processingHubs;
+    if (selectedHubCluster !== 'All Clusters') {
+      hubs = hubs.filter(h => h['Cluster'] === selectedHubCluster);
+    }
+    return Array.from(new Set(hubs.map(h => h['GP']).filter(Boolean))).sort();
+  }, [processingHubs, selectedHubCluster]);
 
   const hubVillages = useMemo(() => {
-    return Array.from(new Set(processingHubs.map(h => h['Village']).filter(Boolean))).sort();
-  }, [processingHubs]);
+    let hubs = processingHubs;
+    if (selectedHubCluster !== 'All Clusters') {
+      hubs = hubs.filter(h => h['Cluster'] === selectedHubCluster);
+    }
+    if (selectedHubGP !== 'All GPs') {
+      hubs = hubs.filter(h => h['GP'] === selectedHubGP);
+    }
+    return Array.from(new Set(hubs.map(h => h['Village']).filter(Boolean))).sort();
+  }, [processingHubs, selectedHubCluster, selectedHubGP]);
 
   const filteredAssets = useMemo(() => {
     return villageAssets.filter(asset => {
@@ -497,6 +663,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
       const matchesCluster = selectedHubCluster === 'All Clusters' || hub['Cluster'] === selectedHubCluster;
       const matchesGP = selectedHubGP === 'All GPs' || hub['GP'] === selectedHubGP;
       const matchesVillage = selectedHubVillage === 'All Villages' || hub['Village'] === selectedHubVillage;
+
       const matchesSearch = !searchTerm || 
         hub['Village']?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         hub['entr_name']?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -551,7 +718,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
   }, [selectedMandal, combinedBounds, boundaryDataList]);
 
   return (
-    <div className="h-[calc(100vh-140px)] md:h-[calc(100vh-140px)] flex flex-col md:flex-row bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 relative">
+    <div className="h-auto md:h-[calc(100vh-140px)] flex flex-col md:flex-row bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 relative">
       {activeTab === 'hubs' ? (
         <ProcessingHubsDashboard
           hubs={filteredHubs}
@@ -845,21 +1012,25 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
             const lng = parseFloat(asset.Longitude as any);
             if (isNaN(lat) || isNaN(lng)) return null;
 
-            return (
-              <Marker 
-                key={`asset-${asset._rowIndex || idx}`} 
-                position={[lat, lng]}
-                icon={L.divIcon({
+            const isSelected = selectedAssetId === asset._rowIndex;
+            // Prevent _leaflet_pos crash by avoiding recreation on same key
+            const assetIcon = L.divIcon({
                   className: 'custom-dot-blue',
                   html: `<div class="${cn(
                     "rounded-full border-1.5 border-white shadow-sm transition-all duration-300",
-                    selectedAssetId === asset._rowIndex ? "bg-blue-600 w-4 h-4 -mt-0.5 -ml-0.5 ring-4 ring-blue-200 animate-pulse-blue" : "bg-blue-500 w-2.5 h-2.5"
+                    isSelected ? "bg-blue-600 w-4 h-4 -mt-0.5 -ml-0.5 ring-4 ring-blue-200 animate-pulse-blue" : "bg-blue-500 w-2.5 h-2.5"
                   )}"></div>`,
-                  iconSize: [20, 20],
-                  iconAnchor: [10, 10],
+                  iconSize: isSelected ? [24, 24] : [20, 20],
+                  iconAnchor: isSelected ? [12, 12] : [10, 10],
                   popupAnchor: [0, -8]
-                })}
-                zIndexOffset={selectedAssetId === asset._rowIndex ? 2000 : 1000}
+                });
+
+            return (
+              <Marker 
+                key={`asset-${asset._rowIndex || idx}-${isSelected ? 'sel' : 'nosel'}`} 
+                position={[lat, lng]}
+                icon={assetIcon}
+                zIndexOffset={isSelected ? 2000 : 1000}
                 eventHandlers={{
                   click: () => {
                     if (asset._rowIndex) {
