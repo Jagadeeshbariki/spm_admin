@@ -413,13 +413,15 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
       setProcessingHubs(hubsData);
       
       // Auto-center if we have data AND no boundary is present
-      if (assetsData.length > 0 && boundaryDataList.length === 0) {
-        const first = assetsData[0];
-        const lat = parseFloat(first.Latitude);
-        const lng = parseFloat(first.Longitude);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          setMapCenter([lat, lng]);
-          setMapZoom(11);
+      if (hubsData.length > 0 && boundaryDataList.length === 0) {
+        const first = hubsData.find((h: any) => h.lat && h.long);
+        if (first) {
+          const lat = parseFloat(first.lat);
+          const lng = parseFloat(first.long);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            setMapCenter([lat, lng]);
+            setMapZoom(11);
+          }
         }
       }
     } catch (error) {
