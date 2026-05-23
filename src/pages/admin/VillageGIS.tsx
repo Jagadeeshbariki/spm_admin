@@ -21,6 +21,7 @@ import {
   Info,
   ChevronRight,
   Maximize2,
+  Minimize2,
   Navigation,
   Globe,
   MapPin,
@@ -129,6 +130,7 @@ export function ProcessingHubsDashboard({
   const [mapType, setMapType] = useState<'streets' | 'satellite'>('satellite');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [isFullscreenMap, setIsFullscreenMap] = useState(false);
   
   const center = hubs.length > 0 && !isNaN(parseFloat(hubs[0].lat)) && !isNaN(parseFloat(hubs[0].long)) 
     ? [parseFloat(hubs[0].lat), parseFloat(hubs[0].long)] 
@@ -166,205 +168,146 @@ export function ProcessingHubsDashboard({
   }, [hubs, statusFilter]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-auto md:overflow-hidden bg-white w-full rounded-2xl border border-slate-200 shadow-sm relative z-[0]">
-      <div className="p-4 md:p-6 pb-4 border-b border-slate-200 bg-slate-50 flex flex-col xl:flex-row gap-4 justify-between xl:items-start shrink-0">
-        <div>
-           <h2 className="text-xl font-bold text-slate-800">Processing Hubs Dashboard</h2>
-           <p className="text-sm text-slate-500">Overview of established units across the region</p>
-        </div>
-        <div className="flex flex-wrap md:flex-nowrap gap-4 items-stretch">
-           <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm min-w-[120px] flex flex-col justify-center">
-             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Units</p>
-             <p className="text-2xl font-black text-slate-800">{filteredLocalHubs.length}</p>
-           </div>
-           <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm min-w-[120px] flex flex-col justify-center">
-             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Villages Covered</p>
-             <p className="text-2xl font-black text-emerald-600">{new Set(filteredLocalHubs.map(h => h.Village || h.village || h['Village']).filter(Boolean)).size}</p>
-           </div>
-           {statusData.length > 0 && (
-             <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 min-w-[300px]">
-               <div className="flex-1">
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Status Breakdown (Click to filter)</p>
-                 <div className="flex flex-col gap-1.5">
-                   {statusData.map(d => (
-                     <div 
-                        key={d.name} 
-                        className={cn(
-                          "flex items-center gap-2 cursor-pointer transition-all p-1 -m-1 rounded-md", 
-                          statusFilter === d.name ? "bg-slate-50 ring-1 ring-slate-200" : "hover:bg-slate-50 opacity-80 hover:opacity-100"
-                        )}
-                        onClick={() => setStatusFilter(statusFilter === d.name ? null : d.name)}
-                     >
-                       <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: d.color}}></div>
-                       <span className={cn("text-[11px] whitespace-nowrap", statusFilter === d.name ? "font-black text-slate-800" : "font-bold text-slate-600")}>{d.name} <span className="opacity-70">({d.value})</span></span>
-                     </div>
-                   ))}
-                   {statusFilter && (
-                     <button onClick={() => setStatusFilter(null)} className="text-[10px] text-blue-600 hover:text-blue-800 text-left font-semibold mt-1">
-                       Clear Filter
-                     </button>
-                   )}
-                 </div>
+    <div className="flex-1 overflow-y-auto w-full custom-scrollbar bg-slate-50 relative">
+      <div className="flex flex-col space-y-4 p-4 md:p-6 pb-20">
+        
+        {/* Header & Stats area */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col lg:flex-row gap-4 justify-between lg:items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div>
+               <h2 className="text-xl font-bold text-slate-800">Processing Hubs Dashboard</h2>
+               <p className="text-sm text-slate-500">Overview of established units across the region</p>
+            </div>
+            <div className="flex gap-4 items-stretch">
+               <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 min-w-[120px] flex flex-col justify-center">
+                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Units</p>
+                 <p className="text-2xl font-black text-slate-800">{filteredLocalHubs.length}</p>
                </div>
-               <div className="w-[120px] h-[120px]">
-                 <ResponsiveContainer width="100%" height="100%">
-                   <PieChart>
-                     <Pie 
-                        data={statusData} 
-                        dataKey="value" 
-                        innerRadius={30} 
-                        outerRadius={55} 
-                        paddingAngle={2} 
-                        stroke="none"
-                        onClick={(data) => {
-                           setStatusFilter(statusFilter === data.name ? null : data.name);
-                        }}
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
-                     >
-                       {statusData.map((entry, index) => (
-                         <Cell key={`cell-${index}`} fill={entry.color} opacity={statusFilter && statusFilter !== entry.name ? 0.3 : 1} />
-                       ))}
-                     </Pie>
-                     <RechartsTooltip contentStyle={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px' }} itemStyle={{ color: '#333' }} />
-                   </PieChart>
-                 </ResponsiveContainer>
+               <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 min-w-[120px] flex flex-col justify-center">
+                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Villages Covered</p>
+                 <p className="text-2xl font-black text-emerald-600">{new Set(filteredLocalHubs.map(h => h.Village || h.village || h['Village']).filter(Boolean)).size}</p>
                </div>
+            </div>
+          </div>
+          {/* Filters */}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-2 lg:grid-cols-4 gap-3">
+             <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubCluster} onChange={(e) => { setSelectedHubCluster(e.target.value); setSelectedHubGP('All GPs'); setSelectedHubVillage('All Villages'); }}>
+               <option>All Clusters</option>
+               {hubClusters.map(c => <option key={c} value={c}>{c}</option>)}
+             </select>
+             <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubGP} onChange={(e) => { setSelectedHubGP(e.target.value); setSelectedHubVillage('All Villages'); }}>
+               <option>All GPs</option>
+               {hubGPs.map(c => <option key={c} value={c}>{c}</option>)}
+             </select>
+             <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubVillage} onChange={(e) => setSelectedHubVillage(e.target.value)}>
+               <option>All Villages</option>
+               {hubVillages.map(c => <option key={c} value={c}>{c}</option>)}
+             </select>
+             <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubUnit} onChange={(e) => setSelectedHubUnit(e.target.value)}>
+               <option>All Units</option>
+               {hubUnits.map(c => <option key={c} value={c}>{c}</option>)}
+             </select>
+             <div className="relative col-span-2 lg:col-span-4 flex flex-wrap sm:flex-nowrap gap-2">
+               <div className="relative flex-1">
+                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                 <input type="text" placeholder="Search entity..." className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+               </div>
+               {(selectedHubCluster !== 'All Clusters' || selectedHubGP !== 'All GPs' || selectedHubVillage !== 'All Villages' || selectedHubUnit !== 'All Units' || searchTerm !== '' || statusFilter !== null) && (
+                 <button 
+                   onClick={() => {
+                     setSelectedHubCluster('All Clusters');
+                     setSelectedHubGP('All GPs');
+                     setSelectedHubVillage('All Villages');
+                     setSelectedHubUnit('All Units');
+                     setSearchTerm('');
+                     setStatusFilter(null);
+                   }}
+                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap"
+                 >
+                   <X className="w-4 h-4" /> Clear Filters
+                 </button>
+               )}
              </div>
-           )}
+          </div>
         </div>
-      </div>
-      
-      <div className="p-4 border-b border-slate-100 bg-white grid grid-cols-2 lg:grid-cols-4 gap-3">
-         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubCluster} onChange={(e) => { setSelectedHubCluster(e.target.value); setSelectedHubGP('All GPs'); setSelectedHubVillage('All Villages'); }}>
-           <option>All Clusters</option>
-           {hubClusters.map(c => <option key={c} value={c}>{c}</option>)}
-         </select>
-         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubGP} onChange={(e) => { setSelectedHubGP(e.target.value); setSelectedHubVillage('All Villages'); }}>
-           <option>All GPs</option>
-           {hubGPs.map(c => <option key={c} value={c}>{c}</option>)}
-         </select>
-         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubVillage} onChange={(e) => setSelectedHubVillage(e.target.value)}>
-           <option>All Villages</option>
-           {hubVillages.map(c => <option key={c} value={c}>{c}</option>)}
-         </select>
-         <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubUnit} onChange={(e) => setSelectedHubUnit(e.target.value)}>
-           <option>All Units</option>
-           {hubUnits.map(c => <option key={c} value={c}>{c}</option>)}
-         </select>
-         <div className="relative col-span-2 lg:col-span-4 flex gap-2">
-           <div className="relative flex-1">
-             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-             <input type="text" placeholder="Search entity..." className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-           </div>
-           {(selectedHubCluster !== 'All Clusters' || selectedHubGP !== 'All GPs' || selectedHubVillage !== 'All Villages' || selectedHubUnit !== 'All Units' || searchTerm !== '' || statusFilter !== null) && (
-             <button 
-               onClick={() => {
-                 setSelectedHubCluster('All Clusters');
-                 setSelectedHubGP('All GPs');
-                 setSelectedHubVillage('All Villages');
-                 setSelectedHubUnit('All Units');
-                 setSearchTerm('');
-                 setStatusFilter(null);
-               }}
-               className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap"
-             >
-               <X className="w-4 h-4" /> Clear Filters
-             </button>
-           )}
-         </div>
-      </div>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-visible md:overflow-hidden relative z-[0] min-h-0">
-         <div className="w-full md:w-[35%] h-[400px] md:h-auto overflow-y-auto p-4 space-y-3 bg-slate-50/50 isolate custom-scrollbar shrink-0">
-           {filteredLocalHubs.length === 0 ? (
-             <div className="p-8 text-center text-sm font-medium text-slate-500">No processing hubs found.</div>
-           ) : filteredLocalHubs.map(hub => {
-             const isExpanded = expandedId === hub._rowIndex;
-             return (
-               <div key={hub._rowIndex} className={cn("bg-white rounded-xl border transition-all overflow-hidden", isExpanded ? "border-blue-300 shadow-md ring-1 ring-blue-100" : "border-slate-200 shadow-sm hover:border-slate-300")}>
-                  <button onClick={() => setExpandedId(isExpanded ? null : hub._rowIndex)} className="w-full p-4 flex justify-between items-center text-left hover:bg-slate-50/50 transition-colors">
-                     <div>
-                        <div className="text-sm font-bold text-slate-800">{hub['entr_name']}</div>
-                        <div className="text-[11px] font-medium text-slate-500 mt-0.5">{hub['Unit name']} &bull; {hub['Village']}</div>
-                     </div>
-                     <ChevronRight className={cn("w-4 h-4 text-slate-400 transition-transform", isExpanded && "rotate-90")} />
-                  </button>
-                  {isExpanded && (
-                    <div className="px-4 pb-4 border-t border-slate-100 pt-4 bg-slate-50/30">
-                      <div className="grid grid-cols-2 gap-y-4 gap-x-4 mb-4">
-                        <div>
-                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Village & GP</span>
-                           <span className="font-semibold text-slate-700 text-xs">{hub.Village} / {hub.GP || 'N/A'}</span>
-                        </div>
-                        <div>
-                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Cluster</span>
-                           <span className="font-semibold text-slate-700 text-xs">{hub.Cluster || 'N/A'}</span>
-                        </div>
-                        <div>
-                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Father/Husband</span>
-                           <span className="font-semibold text-slate-700 text-xs">{hub['Father/husband Name'] || 'N/A'}</span>
-                        </div>
-                        <div>
-                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Phone Number</span>
-                           <span className="font-semibold text-blue-600 text-xs">{hub['Phone Number'] || 'N/A'}</span>
-                        </div>
-                        <div>
-                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">HH ID</span>
-                           <span className="font-semibold text-slate-700 text-xs">{hub['HH_id'] || 'N/A'}</span>
-                        </div>
-                        <div>
-                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Unit Name</span>
-                           <span className="font-semibold text-slate-700 text-xs">{hub['Unit name'] || 'N/A'}</span>
-                        </div>
-                        <div>
-                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Unit Issued Date</span>
-                           <span className="font-semibold text-slate-700 text-xs">{hub['Unit issued date'] || 'N/A'}</span>
-                        </div>
-                        <div>
-                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Contribution Paid</span>
-                           <span className="font-semibold text-emerald-600 text-xs font-mono">{hub['Contribution paid'] || 'N/A'}</span>
-                        </div>
-                        <div>
-                           <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Status</span>
-                           <span className={cn("font-semibold text-xs", (hub['status '] || hub['status_of_unit-status'] || hub['Status'] || '').toLowerCase().includes('working') ? "text-emerald-600" : "text-slate-700")}>
-                             {hub['status '] || hub['status_of_unit-status'] || hub['Status'] || 'N/A'}
-                           </span>
-                        </div>
-                        {(hub['Reason for not working/using'] || hub['status_of_unit-reason_not_using'] || hub['status_of_unit-reason_repair']) && (
-                          <div className="col-span-2">
-                             <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Reason If Not Working</span>
-                             <span className="font-semibold text-rose-600 text-xs">
-                               {hub['Reason for not working/using'] || hub['status_of_unit-reason_not_using'] || hub['status_of_unit-reason_repair']}
-                             </span>
-                          </div>
-                        )}
+        {/* Map and Pie Chart side-by-side or stacked */}
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Pie Chart Card */}
+          {statusData.length > 0 && (
+            <div className="w-full lg:w-1/3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col lg:order-last">
+              <p className="text-sm font-bold text-slate-800 mb-4">Status Breakdown <span className="text-[10px] font-normal text-slate-400 ml-1">(Click to filter)</span></p>
+              
+              <div className="flex sm:flex-row lg:flex-col items-center justify-center gap-6 flex-1">
+                {/* Pie Chart */}
+                <div className="w-[180px] h-[180px] shrink-0 relative flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie 
+                         data={statusData} 
+                         dataKey="value" 
+                         innerRadius={50} 
+                         outerRadius={85} 
+                         paddingAngle={2} 
+                         stroke="none"
+                         onClick={(data) => {
+                            setStatusFilter(statusFilter === data.name ? null : data.name);
+                         }}
+                         className="cursor-pointer hover:opacity-80 transition-opacity"
+                      >
+                        {statusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} opacity={statusFilter && statusFilter !== entry.name ? 0.3 : 1} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px' }} itemStyle={{ color: '#333' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Legend */}
+                <div className="flex flex-col gap-2.5 flex-1 w-full max-w-[200px]">
+                  {statusData.map(d => (
+                    <div 
+                       key={d.name} 
+                       className={cn(
+                         "flex items-center gap-3 cursor-pointer transition-all p-2 -mx-2 rounded-lg", 
+                         statusFilter === d.name ? "bg-slate-100 ring-1 ring-slate-200" : "hover:bg-slate-50 opacity-80 hover:opacity-100"
+                       )}
+                       onClick={() => setStatusFilter(statusFilter === d.name ? null : d.name)}
+                    >
+                      <div className="w-3.5 h-3.5 rounded-full shadow-inner shrink-0" style={{backgroundColor: d.color}}></div>
+                      <div className="flex flex-col w-full">
+                        <span className={cn("text-xs whitespace-nowrap", statusFilter === d.name ? "font-black text-slate-800" : "font-semibold text-slate-600")}>{d.name}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">{d.value} Units</span>
                       </div>
-                      
-                      {hub['Photo'] && (
-                        <div className="rounded-lg overflow-hidden border border-slate-200 shadow-sm ring-1 ring-slate-100 mt-2">
-                          <img 
-                            src={`/api/odk/image?submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`} 
-                            alt="Hub photo" 
-                            className="w-full h-auto max-h-64 object-cover bg-slate-100 cursor-pointer hover:opacity-90 transition-opacity"
-                            loading="lazy"
-                            onClick={() => setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`)}
-                          />
-                        </div>
-                      )}
                     </div>
-                  )}
-               </div>
-             )
-           })}
-         </div>
-         
-         <div className="w-full md:w-[65%] h-[400px] md:h-auto border-t md:border-t-0 md:border-l border-slate-200 relative z-[0] shrink-0">
-            <button 
-               onClick={() => setMapType(mapType === 'streets' ? 'satellite' : 'streets')}
-               className="absolute top-4 right-4 z-[1000] p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-xs font-bold text-slate-700 hover:bg-white transition-colors"
-            >
-              Toggle Map
-            </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Map Container */}
+          <div className={cn(
+             "bg-slate-100 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden transition-all duration-300 z-10 isolate flex flex-col",
+             isFullscreenMap ? "fixed inset-0 z-[1000] m-0 rounded-none h-[100dvh] w-[100vw]" : "w-full lg:flex-1 aspect-square lg:aspect-auto lg:h-[600px] min-h-[400px]"
+          )}>
+            <div className="absolute top-4 right-4 z-[1000] flex gap-2">
+              <button 
+                 onClick={() => setMapType(mapType === 'streets' ? 'satellite' : 'streets')}
+                 className="px-3 py-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-[10px] uppercase font-bold text-slate-700 hover:bg-white transition-colors"
+                 title="Toggle Map Base Layer"
+              >
+                Toggle Map
+              </button>
+              <button 
+                 onClick={() => setIsFullscreenMap(!isFullscreenMap)}
+                 className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 hover:bg-white transition-colors flex items-center justify-center p-2.5"
+                 title={isFullscreenMap ? "Exit Fullscreen" : "Fullscreen Map"}
+              >
+                {isFullscreenMap ? <Minimize2 className="w-4 h-4 text-slate-700" /> : <Maximize2 className="w-4 h-4 text-slate-700" />}
+              </button>
+            </div>
             <MapContainer center={center as [number, number]} zoom={11} className="w-full h-full" zoomControl={true}>
               {mapType === 'streets' ? (
                 <TileLayer
@@ -421,7 +364,97 @@ export function ProcessingHubsDashboard({
                   )
               })}
             </MapContainer>
-         </div>
+          </div>
+        </div>
+
+        {/* Full width List Accordion */}
+        <div className="w-full space-y-3 pt-6">
+          <h3 className="font-bold text-slate-800 text-lg mb-2 pl-1 flex gap-2 items-center"><Layers className="w-5 h-5 text-blue-600" /> Processing Hubs List</h3>
+          {filteredLocalHubs.length === 0 ? (
+            <div className="p-8 text-center text-sm font-medium text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">No processing hubs found.</div>
+          ) : filteredLocalHubs.map(hub => {
+            const isExpanded = expandedId === hub._rowIndex;
+            return (
+              <div key={hub._rowIndex} className={cn("bg-white rounded-xl border transition-all overflow-hidden", isExpanded ? "border-blue-300 shadow-md ring-1 ring-blue-100 bg-slate-50/30" : "border-slate-200 shadow-sm hover:border-slate-300")}>
+                 <button onClick={() => setExpandedId(isExpanded ? null : hub._rowIndex)} className="w-full p-4 flex flex-col md:flex-row md:items-center justify-between text-left hover:bg-slate-50/50 transition-colors gap-2">
+                    <div>
+                       <div className="text-sm font-bold text-slate-800">{hub['entr_name']}</div>
+                       <div className="text-[11px] font-medium text-slate-500 mt-0.5">{hub['Unit name']} &bull; <span className="text-slate-700">{hub['Village']}</span></div>
+                    </div>
+                    <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto mt-2 md:mt-0">
+                       <span className={cn("text-[10px] font-bold px-2 py-1 rounded-md capitalize", 
+                          (hub['status '] || hub['status_of_unit-status'] || hub['Status'] || '').toLowerCase().includes('working') ? "bg-emerald-100 text-emerald-700" : 
+                          (hub['status '] || hub['status_of_unit-status'] || hub['Status'] || '').toLowerCase().includes('not') ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-700"
+                        )}>
+                          {(hub['status '] || hub['status_of_unit-status'] || hub['Status'] || 'N/A').replace(/_/g, ' ')}
+                       </span>
+                       <ChevronRight className={cn("w-5 h-5 text-slate-400 transition-transform", isExpanded && "rotate-90")} />
+                    </div>
+                 </button>
+                 {isExpanded && (
+                   <div className="px-4 pb-4 border-t border-slate-100 pt-4 bg-slate-50/30">
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-y-5 gap-x-4 mb-4">
+                       <div>
+                          <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Village & GP</span>
+                          <span className="font-semibold text-slate-700 text-xs">{hub.Village} / {hub.GP || 'N/A'}</span>
+                       </div>
+                       <div>
+                          <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Cluster</span>
+                          <span className="font-semibold text-slate-700 text-xs">{hub.Cluster || 'N/A'}</span>
+                       </div>
+                       <div>
+                          <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Father/Husband</span>
+                          <span className="font-semibold text-slate-700 text-xs">{hub['Father/husband Name'] || 'N/A'}</span>
+                       </div>
+                       <div>
+                          <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Phone Number</span>
+                          <span className="font-semibold text-blue-600 text-xs">{hub['Phone Number'] || 'N/A'}</span>
+                       </div>
+                       <div>
+                          <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">HH ID</span>
+                          <span className="font-semibold text-slate-700 text-xs">{hub['HH_id'] || 'N/A'}</span>
+                       </div>
+                       <div>
+                          <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Unit Name</span>
+                          <span className="font-semibold text-slate-700 text-xs">{hub['Unit name'] || 'N/A'}</span>
+                       </div>
+                       <div>
+                          <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Unit Issued Date</span>
+                          <span className="font-semibold text-slate-700 text-xs">{hub['Unit issued date'] || 'N/A'}</span>
+                       </div>
+                       <div>
+                          <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Contribution Paid</span>
+                          <span className="font-semibold text-emerald-600 text-xs font-mono">{hub['Contribution paid'] || 'N/A'}</span>
+                       </div>
+                       {(hub['Reason for not working/using'] || hub['status_of_unit-reason_not_using'] || hub['status_of_unit-reason_repair']) && (
+                         <div className="col-span-2 md:col-span-4 mt-2">
+                            <span className="block text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Reason If Not Working</span>
+                            <span className="font-semibold text-rose-600 text-xs">
+                              {hub['Reason for not working/using'] || hub['status_of_unit-reason_not_using'] || hub['status_of_unit-reason_repair']}
+                            </span>
+                         </div>
+                       )}
+                     </div>
+                     
+                     {hub['Photo'] && (
+                       <div className="flex justify-center md:justify-start">
+                         <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm ring-1 ring-slate-100 mt-2 w-full md:w-[320px]">
+                           <img 
+                             src={`/api/odk/image?submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`} 
+                             alt="Hub photo" 
+                             className="w-full h-auto max-h-48 object-cover bg-slate-100 cursor-pointer hover:opacity-90 transition-opacity"
+                             loading="lazy"
+                             onClick={() => setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`)}
+                           />
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 )}
+              </div>
+            )
+          })}
+        </div>
       </div>
       {previewImage && createPortal(
         <div className="fixed inset-0 z-[99999] bg-slate-900/95 flex items-center justify-center p-4 backdrop-blur-md" onClick={() => setPreviewImage(null)}>
