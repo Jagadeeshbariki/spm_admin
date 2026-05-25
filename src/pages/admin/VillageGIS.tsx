@@ -377,7 +377,7 @@ export function ProcessingHubsDashboard({
           
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
             <h3 className="text-sm font-bold text-slate-800 mb-4">Processing Unit Types</h3>
-            <div className="min-h-[200px] w-full relative">
+            <div className="w-full relative" style={{ height: Math.max(200, unitNameData.length * 40) + 'px' }}>
               {unitNameData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={unitNameData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -390,6 +390,7 @@ export function ProcessingHubsDashboard({
                       tick={<CustomYTick />} 
                       axisLine={false} 
                       tickLine={false}
+                      interval={0}
                     />
                     <RechartsTooltip 
                       cursor={{fill: '#f1f5f9'}} 
@@ -471,7 +472,7 @@ export function ProcessingHubsDashboard({
                   });
 
                   return (
-                    <Marker key={`${hub._rowIndex}-${isExpanded ? 'exp' : 'col'}-${colorClass}`} position={[lat, lng]} icon={hubIcon}>
+                    <Marker key={hub._rowIndex} position={[lat, lng]} icon={hubIcon}>
                       <Popup className="custom-popup">
                         <div className="p-1 min-w-[200px]">
                            <div className="flex items-center gap-2 mb-2">
@@ -1182,7 +1183,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
 
             return (
               <Marker 
-                key={`asset-${asset._rowIndex || idx}-${isSelected ? 'sel' : 'nosel'}`} 
+                key={`asset-${asset._rowIndex || idx}`} 
                 position={[lat, lng]}
                 icon={assetIcon}
                 zIndexOffset={isSelected ? 2000 : 1000}
