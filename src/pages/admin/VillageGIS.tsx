@@ -89,7 +89,7 @@ const CustomYTick = (props: any) => {
   const lines = [];
   let line = '';
   words.forEach((w: string) => {
-    if ((line + w).length > 20) {
+    if ((line + w).length > 15) {
       if (line) lines.push(line.trim());
       line = w + ' ';
     } else {
@@ -155,6 +155,18 @@ export function ProcessingHubsDashboard({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isFullscreenMap, setIsFullscreenMap] = useState(false);
+  const [fullscreenElement, setFullscreenElement] = useState<'map' | 'status-chart' | 'cluster-chart' | 'types-chart' | null>(null);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFullscreenMap(false);
+        setFullscreenElement(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
   
   const center = hubs.length > 0 && !isNaN(parseFloat(hubs[0].lat)) && !isNaN(parseFloat(hubs[0].long)) 
     ? [parseFloat(hubs[0].lat), parseFloat(hubs[0].long)] 
@@ -163,16 +175,19 @@ export function ProcessingHubsDashboard({
   const statusData = useMemo(() => {
     let working = 0;
     let notUsing = 0;
+    let underRepair = 0;
     let others = 0;
     hubs.forEach(h => {
       const st = (h['status '] || h['status_of_unit-status'] || h['Status'] || '').toString().toLowerCase();
       if (st.includes('working')) working++;
       else if (st.includes('not_using') || st.includes('not using')) notUsing++;
+      else if (st.includes('under_repair') || st.includes('under repair') || st.includes('repair')) underRepair++;
       else others++;
     });
     return [
       { name: 'Working', value: working, color: '#10b981' },
       { name: 'Not Using', value: notUsing, color: '#f43f5e' },
+      { name: 'Under Repair', value: underRepair, color: '#3b82f6' },
       { name: 'Others', value: others, color: '#f59e0b' }
     ].filter(d => d.value > 0);
   }, [hubs]);
@@ -185,8 +200,10 @@ export function ProcessingHubsDashboard({
           return st.includes('working');
         } else if (statusFilter === 'Not Using') {
           return st.includes('not_using') || st.includes('not using');
+        } else if (statusFilter === 'Under Repair') {
+          return st.includes('under_repair') || st.includes('under repair') || st.includes('repair');
         } else {
-          return !st.includes('working') && !st.includes('not_using') && !st.includes('not using');
+          return !st.includes('working') && !st.includes('not_using') && !st.includes('not using') && !st.includes('under_repair') && !st.includes('under repair') && !st.includes('repair');
         }
      });
   }, [hubs, statusFilter]);
@@ -289,10 +306,19 @@ export function ProcessingHubsDashboard({
           
           {/* Status Breakdown Pie Chart Card */}
           {statusData.length > 0 && (
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-              <p className="text-sm font-bold text-slate-800 mb-4">Status Breakdown <span className="text-[10px] font-normal text-slate-400 ml-1">(Click to filter)</span></p>
-              
-              <div className="min-h-[200px] w-full relative flex items-center justify-center">
+             <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate", fullscreenElement === 'status-chart' ? "fixed inset-0 z-[1001] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
+                <div className="absolute top-4 right-4 z-[1002]">
+                   <button 
+                     onClick={() => setFullscreenElement(fullscreenElement === 'status-chart' ? null : 'status-chart')}
+                     className="bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors rounded-lg flex items-center justify-center p-2"
+                     title={fullscreenElement === 'status-chart' ? "Exit Fullscreen" : "Expand Chart"}
+                   >
+                     {fullscreenElement === 'status-chart' ? <Minimize2 className="w-4 h-4 text-slate-700" /> : <Maximize2 className="w-4 h-4 text-slate-700" />}
+                   </button>
+                </div>
+               <p className="text-sm font-bold text-slate-800 mb-4">Status Breakdown <span className="text-[10px] font-normal text-slate-400 ml-1">(Click to filter)</span></p>
+               
+               <div className="min-h-[200px] w-full flex-1 relative flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie 
@@ -334,9 +360,18 @@ export function ProcessingHubsDashboard({
             </div>
           )}
 
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate", fullscreenElement === 'cluster-chart' ? "fixed inset-0 z-[1001] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
+             <div className="absolute top-4 right-4 z-[1002]">
+                <button 
+                  onClick={() => setFullscreenElement(fullscreenElement === 'cluster-chart' ? null : 'cluster-chart')}
+                  className="bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors rounded-lg flex items-center justify-center p-2"
+                  title={fullscreenElement === 'cluster-chart' ? "Exit Fullscreen" : "Expand Chart"}
+                >
+                  {fullscreenElement === 'cluster-chart' ? <Minimize2 className="w-4 h-4 text-slate-700" /> : <Maximize2 className="w-4 h-4 text-slate-700" />}
+                </button>
+             </div>
             <h3 className="text-sm font-bold text-slate-800 mb-4">Cluster-wise Hub Distribution</h3>
-            <div className="min-h-[200px] w-full relative flex items-center justify-center">
+            <div className="min-h-[200px] w-full flex-1 relative flex items-center justify-center">
               {clusterData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -375,18 +410,27 @@ export function ProcessingHubsDashboard({
             )}
           </div>
           
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate", fullscreenElement === 'types-chart' ? "fixed inset-0 z-[1001] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
+             <div className="absolute top-4 right-4 z-[1002]">
+                <button 
+                  onClick={() => setFullscreenElement(fullscreenElement === 'types-chart' ? null : 'types-chart')}
+                  className="bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors rounded-lg flex items-center justify-center p-2"
+                  title={fullscreenElement === 'types-chart' ? "Exit Fullscreen" : "Expand Chart"}
+                >
+                  {fullscreenElement === 'types-chart' ? <Minimize2 className="w-4 h-4 text-slate-700" /> : <Maximize2 className="w-4 h-4 text-slate-700" />}
+                </button>
+             </div>
             <h3 className="text-sm font-bold text-slate-800 mb-4">Processing Unit Types</h3>
-            <div className="w-full relative" style={{ height: Math.max(200, unitNameData.length * 40) + 'px' }}>
+            <div className="w-full relative" style={{ height: Math.max(fullscreenElement === 'types-chart' ? 600 : 300, unitNameData.length * 60) + 'px' }}>
               {unitNameData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={unitNameData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <BarChart data={unitNameData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }} barSize={20}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
                     <XAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <YAxis 
                       dataKey="name" 
                       type="category" 
-                      width={160} 
+                      width={200} 
                       tick={<CustomYTick />} 
                       axisLine={false} 
                       tickLine={false}
@@ -459,6 +503,9 @@ export function ProcessingHubsDashboard({
                   } else if (hubStatus.includes('not_using') || hubStatus.includes('not using')) {
                     colorClass = 'bg-rose-500';
                     pulseClass = 'ring-rose-200 bg-rose-600';
+                  } else if (hubStatus.includes('under_repair') || hubStatus.includes('under repair') || hubStatus.includes('repair')) {
+                    colorClass = 'bg-blue-500';
+                    pulseClass = 'ring-blue-200 bg-blue-600';
                   }
 
                   const isExpanded = expandedId === hub._rowIndex;
