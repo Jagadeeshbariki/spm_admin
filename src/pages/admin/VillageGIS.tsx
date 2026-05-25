@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip 
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import { 
   MapContainer, 
@@ -81,6 +82,29 @@ interface GeoVillage {
     coordinates: any;
   };
 }
+
+const CustomYTick = (props: any) => {
+  const { x, y, payload } = props;
+  const words = payload.value.replace(/_/g, ' ').split(' ');
+  const lines = [];
+  let line = '';
+  words.forEach((w: string) => {
+    if ((line + w).length > 20) {
+      if (line) lines.push(line.trim());
+      line = w + ' ';
+    } else {
+      line += w + ' ';
+    }
+  });
+  if (line) lines.push(line.trim());
+  return (
+    <text x={x - 5} y={y - (lines.length - 1) * 6} textAnchor="end" fill="#64748b" fontSize={10} fontWeight={500} dy={3}>
+      {lines.map((l, i) => (
+        <tspan key={i} x={x - 5} dy={i === 0 ? 0 : 12}>{l}</tspan>
+      ))}
+    </text>
+  );
+};
 
 function MapController({ center, zoom, bounds }: { center: [number, number], zoom: number, bounds?: L.LatLngBoundsExpression }) {
   const map = useMap();
@@ -167,6 +191,35 @@ export function ProcessingHubsDashboard({
      });
   }, [hubs, statusFilter]);
 
+  const clusterData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredLocalHubs.forEach(hub => {
+      const cluster = hub.Cluster || hub.cluster || 'Unknown';
+      counts[cluster] = (counts[cluster] || 0) + 1;
+    });
+    
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b'];
+    return Object.keys(counts).map((key, i) => ({
+      name: key,
+      value: counts[key],
+      color: colors[i % colors.length]
+    })).sort((a,b) => b.value - a.value);
+  }, [filteredLocalHubs]);
+
+  const unitNameData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredLocalHubs.forEach(hub => {
+      const unit = hub['Unit name'] || hub.unit_name || 'Unknown';
+      counts[unit] = (counts[unit] || 0) + 1;
+    });
+    
+    return Object.keys(counts).map((key) => ({
+      name: key,
+      fullName: key,
+      count: counts[key],
+    })).sort((a,b) => b.count - a.count);
+  }, [filteredLocalHubs]);
+
   return (
     <div className="flex-1 overflow-y-auto w-full custom-scrollbar bg-slate-50 relative">
       <div className="flex flex-col space-y-4 p-4 md:p-6 pb-20">
@@ -231,68 +284,137 @@ export function ProcessingHubsDashboard({
           </div>
         </div>
 
-        {/* Map and Pie Chart side-by-side or stacked */}
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Pie Chart Card */}
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
+          {/* Status Breakdown Pie Chart Card */}
           {statusData.length > 0 && (
-            <div className="w-full lg:w-1/3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col lg:order-last">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
               <p className="text-sm font-bold text-slate-800 mb-4">Status Breakdown <span className="text-[10px] font-normal text-slate-400 ml-1">(Click to filter)</span></p>
               
-              <div className="flex sm:flex-row lg:flex-col items-center justify-center gap-6 flex-1">
-                {/* Pie Chart */}
-                <div className="w-[180px] h-[180px] shrink-0 relative flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie 
-                         data={statusData} 
-                         dataKey="value" 
-                         innerRadius={50} 
-                         outerRadius={85} 
-                         paddingAngle={2} 
-                         stroke="none"
-                         onClick={(data) => {
-                            setStatusFilter(statusFilter === data.name ? null : data.name);
-                         }}
-                         className="cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        {statusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} opacity={statusFilter && statusFilter !== entry.name ? 0.3 : 1} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px' }} itemStyle={{ color: '#333' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                {/* Legend */}
-                <div className="flex flex-col gap-2.5 flex-1 w-full max-w-[200px]">
-                  {statusData.map(d => (
-                    <div 
-                       key={d.name} 
-                       className={cn(
-                         "flex items-center gap-3 cursor-pointer transition-all p-2 -mx-2 rounded-lg", 
-                         statusFilter === d.name ? "bg-slate-100 ring-1 ring-slate-200" : "hover:bg-slate-50 opacity-80 hover:opacity-100"
-                       )}
-                       onClick={() => setStatusFilter(statusFilter === d.name ? null : d.name)}
+              <div className="min-h-[200px] w-full relative flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                       data={statusData} 
+                       dataKey="value" 
+                       innerRadius={60} 
+                       outerRadius={90} 
+                       paddingAngle={2} 
+                       stroke="none"
+                       onClick={(data) => {
+                          setStatusFilter(statusFilter === data.name ? null : data.name);
+                       }}
+                       className="cursor-pointer hover:opacity-80 transition-opacity"
                     >
-                      <div className="w-3.5 h-3.5 rounded-full shadow-inner shrink-0" style={{backgroundColor: d.color}}></div>
-                      <div className="flex flex-col w-full">
-                        <span className={cn("text-xs whitespace-nowrap", statusFilter === d.name ? "font-black text-slate-800" : "font-semibold text-slate-600")}>{d.name}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{d.value} Units</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} opacity={statusFilter && statusFilter !== entry.name ? 0.3 : 1} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px' }} itemStyle={{ color: '#333' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-4 max-h-[80px] overflow-y-auto custom-scrollbar">
+                {statusData.map(d => (
+                  <div 
+                     key={d.name} 
+                     className={cn(
+                       "flex items-center gap-1.5 cursor-pointer transition-all px-2 py-1 rounded-md", 
+                       statusFilter === d.name ? "bg-slate-100 ring-1 ring-slate-200" : "hover:bg-slate-50 opacity-80 hover:opacity-100"
+                     )}
+                     onClick={() => setStatusFilter(statusFilter === d.name ? null : d.name)}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full shadow-inner shrink-0" style={{backgroundColor: d.color}}></div>
+                    <span className={cn("text-[11px] whitespace-nowrap", statusFilter === d.name ? "font-black text-slate-800" : "font-semibold text-slate-600")}>{d.name} <span className="text-slate-400 font-medium">({d.value})</span></span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Map Container */}
-          <div className={cn(
-             "bg-slate-100 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden transition-all duration-300 z-10 isolate flex flex-col",
-             isFullscreenMap ? "fixed inset-0 z-[1000] m-0 rounded-none h-[100dvh] w-[100vw]" : "w-full lg:flex-1 aspect-square lg:aspect-auto lg:h-[600px] min-h-[400px]"
-          )}>
-            <div className="absolute top-4 right-4 z-[1000] flex gap-2">
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+            <h3 className="text-sm font-bold text-slate-800 mb-4">Cluster-wise Hub Distribution</h3>
+            <div className="min-h-[200px] w-full relative flex items-center justify-center">
+              {clusterData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                      data={clusterData} 
+                      dataKey="value" 
+                      innerRadius={0} 
+                      outerRadius={90} 
+                      paddingAngle={1} 
+                      stroke="#ffffff"
+                      label={{ fontSize: 10, fill: '#475569', fontWeight: 600 }}
+                    >
+                      {clusterData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip 
+                      contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px' }} 
+                      itemStyle={{ color: '#333' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-sm text-slate-400">No clusters found</div>
+              )}
+            </div>
+            {clusterData.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-4 max-h-[80px] overflow-y-auto custom-scrollbar">
+                {clusterData.map(d => (
+                  <div key={d.name} className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: d.color}}></div>
+                    <span className="text-[11px] font-semibold text-slate-600">{d.name} <span className="text-slate-400">({d.value})</span></span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+            <h3 className="text-sm font-bold text-slate-800 mb-4">Processing Unit Types</h3>
+            <div className="min-h-[200px] w-full relative">
+              {unitNameData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={unitNameData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <YAxis 
+                      dataKey="name" 
+                      type="category" 
+                      width={160} 
+                      tick={<CustomYTick />} 
+                      axisLine={false} 
+                      tickLine={false}
+                    />
+                    <RechartsTooltip 
+                      cursor={{fill: '#f1f5f9'}} 
+                      contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                      formatter={(value) => [<span className="font-bold text-slate-800">{value} Units</span>, 'Count']}
+                      labelFormatter={(label, payload) => {
+                        return payload && payload.length > 0 ? (payload[0].payload.fullName) : label;
+                      }}
+                    />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} label={{ position: 'right', fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-slate-400">No units found</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Map Container */}
+        <div className={cn(
+           "bg-slate-100 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden transition-all duration-300 z-10 isolate flex flex-col w-full",
+           isFullscreenMap ? "fixed inset-0 z-[1000] m-0 rounded-none h-[100dvh] w-[100vw]" : "h-[400px] md:h-[450px]"
+        )}>
+          <div className="absolute top-4 right-4 z-[1000] flex gap-2">
               <button 
                  onClick={() => setMapType(mapType === 'streets' ? 'satellite' : 'streets')}
                  className="px-3 py-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-[10px] uppercase font-bold text-slate-700 hover:bg-white transition-colors"
@@ -349,7 +471,7 @@ export function ProcessingHubsDashboard({
                   });
 
                   return (
-                    <Marker key={`${hub.KEY || hub.Key || hub._rowIndex}-${isExpanded ? 'exp' : 'col'}-${colorClass}`} position={[lat, lng]} icon={hubIcon}>
+                    <Marker key={`${hub._rowIndex}-${isExpanded ? 'exp' : 'col'}-${colorClass}`} position={[lat, lng]} icon={hubIcon}>
                       <Popup className="custom-popup">
                         <div className="p-1 min-w-[200px]">
                            <div className="flex items-center gap-2 mb-2">
@@ -364,7 +486,6 @@ export function ProcessingHubsDashboard({
                   )
               })}
             </MapContainer>
-          </div>
         </div>
 
         {/* Full width List Accordion */}
@@ -598,7 +719,8 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
         fetchSheet('Master').catch(() => [])
       ]);
       setVillageAssets([]);
-      setProcessingHubs(hubsData);
+      const hubsWithIndex = hubsData.map((h: any, i: number) => ({ ...h, _rowIndex: h._rowIndex || i.toString() }));
+      setProcessingHubs(hubsWithIndex);
       
       // Auto-center if we have data AND no boundary is present
       if (hubsData.length > 0 && boundaryDataList.length === 0) {
