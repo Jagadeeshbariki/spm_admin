@@ -106,6 +106,19 @@ const CustomYTick = (props: any) => {
   );
 };
 
+const CustomXTick = (props: any) => {
+  const { x, y, payload } = props;
+  const name = payload.value.replace(/_/g, ' ');
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={16} textAnchor="end" fill="#64748b" fontSize={10} fontWeight={500} transform="rotate(-45)">
+        {name}
+      </text>
+    </g>
+  );
+};
+
 function MapController({ center, zoom, bounds }: { center: [number, number], zoom: number, bounds?: L.LatLngBoundsExpression }) {
   const map = useMap();
   useEffect(() => {
@@ -302,7 +315,7 @@ export function ProcessingHubsDashboard({
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           
           {/* Status Breakdown Pie Chart Card */}
           {statusData.length > 0 && (
@@ -410,7 +423,7 @@ export function ProcessingHubsDashboard({
             )}
           </div>
           
-          <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate", fullscreenElement === 'types-chart' ? "fixed inset-0 z-[1001] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
+          <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate lg:col-span-2", fullscreenElement === 'types-chart' ? "fixed inset-0 z-[1001] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
              <div className="absolute top-4 right-4 z-[1002]">
                 <button 
                   onClick={() => setFullscreenElement(fullscreenElement === 'types-chart' ? null : 'types-chart')}
@@ -421,21 +434,21 @@ export function ProcessingHubsDashboard({
                 </button>
              </div>
             <h3 className="text-sm font-bold text-slate-800 mb-4">Processing Unit Types</h3>
-            <div className="w-full relative" style={{ height: Math.max(fullscreenElement === 'types-chart' ? 600 : 300, unitNameData.length * 60) + 'px' }}>
+            <div className="w-full relative" style={{ height: fullscreenElement === 'types-chart' ? 'calc(100vh - 120px)' : '400px' }}>
               {unitNameData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={unitNameData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }} barSize={20}>
+                  <BarChart data={unitNameData} layout="horizontal" margin={{ top: 20, right: 10, left: 0, bottom: 60 }} barSize={32}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis 
+                    <XAxis 
                       dataKey="name" 
                       type="category" 
-                      width={200} 
-                      tick={<CustomYTick />} 
+                      tick={<CustomXTick />} 
                       axisLine={false} 
                       tickLine={false}
                       interval={0}
+                      height={90}
                     />
+                    <YAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
                     <RechartsTooltip 
                       cursor={{fill: '#f1f5f9'}} 
                       contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
@@ -444,7 +457,7 @@ export function ProcessingHubsDashboard({
                         return payload && payload.length > 0 ? (payload[0].payload.fullName) : label;
                       }}
                     />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} label={{ position: 'right', fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} label={{ position: 'top', fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
