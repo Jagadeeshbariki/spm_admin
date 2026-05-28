@@ -97,6 +97,7 @@ export async function fetchSheet(sheetName: string) {
         Papa.parse(text, {
           header: true,
           skipEmptyLines: true,
+          transformHeader: (h) => h.trim(),
           complete: (results) => {
             const data = results.data.map((row: any, index: number) => ({
               ...row,
@@ -117,6 +118,7 @@ export async function fetchSheet(sheetName: string) {
         Papa.parse(text, {
           header: true,
           skipEmptyLines: true,
+          transformHeader: (h) => h.trim(),
           complete: (results) => {
             const data = results.data.map((row: any, index: number) => ({
               ...row,

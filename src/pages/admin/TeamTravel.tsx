@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Search, Filter, Trash2, Edit, ExternalLink, Calendar, CreditCard, User, Folder, FileText, CheckCircle, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
@@ -92,18 +93,32 @@ export default function TeamTravel() {
       
       // Load projects
       const loadedProjects = Array.from(new Set(data
-        .filter((row: any) => row['dropdwon catagorty'] === 'Project')
-        .map((row: any) => row['dropdwon options'])
+        .filter((row: any) => (row['dropdwon catagorty'] || '').toString().trim() === 'Project')
+        .map((row: any) => (row['dropdwon options'] || '').toString().trim())
         .filter(Boolean))) as string[];
       
       // Load staff names
       const loadedStaff = Array.from(new Set(data
-        .filter((row: any) => row['dropdwon catagorty'] === 'Staff Name' || row['dropdwon catagorty'] === 'Employee Name')
-        .map((row: any) => row['dropdwon options'])
+        .filter((row: any) => {
+          const cat = (row['dropdwon catagorty'] || '').toString().trim();
+          return cat === 'Staff Name' || cat === 'Employee Name';
+        })
+        .map((row: any) => (row['dropdwon options'] || '').toString().trim())
         .filter(Boolean))) as string[];
 
-      if (loadedProjects.length > 0) setProjects(loadedProjects);
-      if (loadedStaff.length > 0) setStaffNames(loadedStaff);
+      if (loadedProjects.length > 0) {
+        setProjects(prev => {
+          const unique = new Set([...prev, ...loadedProjects]);
+          return Array.from(unique).sort();
+        });
+      }
+      
+      if (loadedStaff.length > 0) {
+        setStaffNames(prev => {
+          const unique = new Set([...prev, ...loadedStaff]);
+          return Array.from(unique).sort();
+        });
+      }
       
       // Prime default selection
       if (loadedProjects.length > 0) {
@@ -127,31 +142,29 @@ export default function TeamTravel() {
       const localStr = localStorage.getItem('local_team_travel');
       const locals: TeamTravelEntry[] = localStr ? JSON.parse(localStr) : [];
       
-      // Combine spreadsheet and local entries to guarantee immediate feedback
-      // Rows fetched from sheet are validated. Using a unique identifier to avoid duplicates.
-      const entriesMap = new Map<string, TeamTravelEntry>();
-      
-      locals.forEach(l => {
-        if (l.id) entriesMap.set(l.id, l);
-      });
-      
-      data.forEach((item: any) => {
-        const id = item.id || item['Entry ID'] || `cloud-${item._rowIndex}`;
-        entriesMap.set(id, {
+      // Cloud entries map strictly 1-to-1 with spreadsheet rows
+      const cloudEntries: TeamTravelEntry[] = data.map((item: any, index: number) => {
+        const entryId = (item['Entry ID'] || '').toString().trim();
+        const id = item.id || (entryId ? `${entryId}-${item._rowIndex || index}` : `cloud-${item._rowIndex || index}`);
+        return {
           _rowIndex: item._rowIndex,
           id,
-          'Entry ID': item['Entry ID'] || id,
-          'Staff Name': item['Staff Name'] || item.staffName,
-          'Month': item.Month || item.month,
-          'Project': item.Project || item.project,
+          'Entry ID': entryId || id,
+          'Staff Name': (item['Staff Name'] || item.staffName || '').toString().trim(),
+          'Month': (item.Month || item.month || '').toString().trim(),
+          'Project': (item.Project || item.project || '').toString().trim(),
           'Travel Amount': item['Travel Amount'] || item.travelAmount,
           'Soft Copy URL': item['Soft Copy URL'] || item.softCopyUrl || item.Bill_url || item.webViewLink,
           'Date': item.Date || item.date || new Date().toISOString().split('T')[0],
-          'Financial Year': item['Financial Year'] || item.financialYear || item.fy || DEFAULT_FY
-        });
+          'Financial Year': (item['Financial Year'] || item.financialYear || item.fy || DEFAULT_FY).toString().trim()
+        };
       });
 
-      const formatted = Array.from(entriesMap.values());
+      // Local entries that haven't synced yet (don't have an Entry ID match in cloud)
+      const cloudEntryIDs = new Set(cloudEntries.map(e => e['Entry ID']).filter(Boolean));
+      const unresolvedLocals = locals.filter(l => !cloudEntryIDs.has(l['Entry ID']));
+      
+      const formatted = [...cloudEntries, ...unresolvedLocals];
       
       // Sort: Newest first
       formatted.sort((a, b) => {
@@ -161,6 +174,16 @@ export default function TeamTravel() {
       });
 
       setEntries(formatted);
+      
+      // Merge staff names and projects found in data that might not be in master data
+      setStaffNames(prev => {
+        const unique = new Set([...prev, ...formatted.map(e => e['Staff Name']).filter(Boolean)]);
+        return Array.from(unique).sort() as string[];
+      });
+      setProjects(prev => {
+        const unique = new Set([...prev, ...formatted.map(e => e.Project).filter(Boolean)]);
+        return Array.from(unique).sort() as string[];
+      });
     } catch (error) {
       console.warn('Google Sheet "team_travel" fetch error, loading from local:', error);
       const localStr = localStorage.getItem('local_team_travel');
@@ -647,8 +670,8 @@ export default function TeamTravel() {
       </div>
 
       {/* Edit/Add Receipt Drawer Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <dialog open className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 flex flex-col gap-6 max-h-[95vh]">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4 shrink-0">
               <h2 className="text-xl font-bold text-slate-800">
@@ -662,8 +685,8 @@ export default function TeamTravel() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="flex flex-col gap-4 overflow-hidden">
-              <div className="space-y-4 overflow-y-auto pr-2 pb-2">
+            <form onSubmit={handleSave} className="flex flex-col min-h-0 flex-1 overflow-hidden gap-4">
+              <div className="space-y-4 overflow-y-auto flex-1 pr-2 pb-2 custom-scrollbar">
               {/* Staff Name Dropdown */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Staff Name *</label>
@@ -806,14 +829,15 @@ export default function TeamTravel() {
               </div>
             </form>
           </dialog>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* View Detail Dialog */}
-      {isViewModalOpen && selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <dialog open className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 flex flex-col gap-6">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+      {isViewModalOpen && selectedItem && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <dialog open className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 flex flex-col gap-6 max-h-[95vh]">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4 shrink-0">
               <h2 className="text-xl font-bold text-slate-800">Travel Receipt Overview</h2>
               <button 
                 onClick={() => setIsViewModalOpen(false)}
@@ -823,7 +847,7 @@ export default function TeamTravel() {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto pr-2 pb-2 custom-scrollbar">
               <div className="bg-slate-50 p-4 rounded-xl space-y-3">
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span className="text-xs text-slate-400 font-medium">Receipt ID</span>
@@ -888,7 +912,8 @@ export default function TeamTravel() {
               </button>
             </div>
           </dialog>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
