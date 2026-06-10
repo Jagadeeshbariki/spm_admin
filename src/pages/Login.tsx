@@ -19,7 +19,7 @@ export default function Login() {
     setLoading(false);
     if (success) {
       toast.success('Logged in successfully');
-      navigate('/admin/dashboard');
+      navigate('/');
     } else {
       toast.error('Invalid credentials');
     }

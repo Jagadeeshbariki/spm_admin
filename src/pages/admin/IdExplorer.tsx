@@ -17,11 +17,14 @@ export default function IdExplorer() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const [selectedRegion, setSelectedRegion] = useState<string>('All');
   const [selectedGP, setSelectedGP] = useState<string>('All');
   const [selectedVillage, setSelectedVillage] = useState<string>('All');
   const [selectedHousehold, setSelectedHousehold] = useState<any | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
+  const [displayLimit, setDisplayLimit] = useState<number>(50);
+  const [benIdToOldIdsMap, setBenIdToOldIdsMap] = useState<Record<string, { oldIds: string[], phone: string, category: string }>>({});
 
   const canSeeAll = user?.role === 'Admin' || 
                     user?.role === 'TL' || 
@@ -33,6 +36,13 @@ export default function IdExplorer() {
       loadData();
     }
   }, [user]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(inputValue);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [inputValue]);
 
   const loadData = async () => {
     setLoading(true);
@@ -105,6 +115,42 @@ export default function IdExplorer() {
         }
       }
 
+      // Fetch Old-to-New ID Map
+      try {
+        const mappingUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTOv15M_GF_4uJvmS3xcz3x89E25JNj22tewJ8O6323XYmurKukYPE-Km91ASul1w/pub?gid=1540773827&single=true&output=csv';
+        const response = await fetchWithFallback(mappingUrl);
+        if (response.ok) {
+          const csvText = await response.text();
+          const parsed = Papa.parse(csvText, {
+            header: true,
+            skipEmptyLines: true,
+            transformHeader: (header) => header.trim()
+          });
+          
+          if (parsed.data && parsed.data.length > 0) {
+            const tempMap: Record<string, { oldIds: string[], phone: string, category: string }> = {};
+            parsed.data.forEach((row: any) => {
+              const oldId = String(row.Old_id || row['Old_id'] || '').trim().toLowerCase();
+              const benId = String(row.Ben_id || row['Ben_id'] || row.ben_id || row['ben_id'] || '').trim().toLowerCase();
+              const phone = String(row.phone_number || row['phone_number'] || '').trim();
+              const category = String(row.Category || row['Category'] || '').trim();
+
+              if (oldId && benId) {
+                if (!tempMap[benId]) tempMap[benId] = { oldIds: [], phone: '', category: '' };
+                if (!tempMap[benId].oldIds.includes(oldId)) {
+                  tempMap[benId].oldIds.push(oldId);
+                }
+                if (phone && !tempMap[benId].phone) tempMap[benId].phone = phone;
+                if (category && !tempMap[benId].category) tempMap[benId].category = category;
+              }
+            });
+            setBenIdToOldIdsMap(tempMap);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch Old ID mapping:', err);
+      }
+
       setData(allData);
       if (allData.length > 0) {
         toast.success(`Loaded ${allData.length} records successfully`);
@@ -139,16 +185,24 @@ export default function IdExplorer() {
   }, [data, selectedRegion, selectedGP]);
 
   const filteredData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    const searchLower = searchTerm.toLowerCase().trim();
+
     return data.filter(item => {
-      const searchLower = searchTerm.toLowerCase();
       const name = String(item.farmer_name || item['Farmer Name'] || '').toLowerCase();
-      const aadhar = String(item['Adhar Number'] || item['Aadhar Number'] || '').toLowerCase();
+      const aadhar = String(item['Adhar Number'] || item['Aadhar Number'] || '').toLowerCase().trim();
       const id = String(item.farmer_ID || item['Farmer ID'] || '').toLowerCase();
 
-      const matchesSearch = !searchTerm || 
+      // Check if this aadhar matches any old ID the user might be searching for
+      const oldDataForAadhar = benIdToOldIdsMap[aadhar];
+      const matchesMappedBenId = oldDataForAadhar?.oldIds?.some(oldId => oldId.includes(searchLower));
+
+      const matchesSearch = !searchLower || 
         name.includes(searchLower) || 
         aadhar.includes(searchLower) || 
-        id.includes(searchLower);
+        id.includes(searchLower) ||
+        matchesMappedBenId;
       
       const matchesRegion = selectedRegion === 'All' || item.Region === selectedRegion;
       const gpValue = item.gp || item.GP || item['Gram Panchayat'];
@@ -158,7 +212,14 @@ export default function IdExplorer() {
 
       return matchesSearch && matchesRegion && matchesGP && matchesVillage;
     });
-  }, [data, searchTerm, selectedRegion, selectedGP, selectedVillage]);
+  }, [data, searchTerm, selectedRegion, selectedGP, selectedVillage, benIdToOldIdsMap]);
+
+  // Reset display limit when filter changes
+  useEffect(() => {
+    setDisplayLimit(50);
+  }, [searchTerm, selectedRegion, selectedGP, selectedVillage]);
+
+  const displayedData = filteredData.slice(0, displayLimit);
 
   const handleExport = () => {
     if (filteredData.length === 0) {
@@ -199,10 +260,10 @@ export default function IdExplorer() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search Name or Aadhar..." 
+              placeholder="Search Name, Aadhar, Old ID..." 
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
             />
           </div>
 
@@ -290,7 +351,7 @@ export default function IdExplorer() {
               <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-blue-500" />
               <p className="text-slate-500 font-medium">Loading household data...</p>
             </div>
-          ) : filteredData.length === 0 ? (
+          ) : displayedData.length === 0 ? (
             <div className="col-span-full py-12 px-6 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Database className="w-8 h-8 text-slate-300" />
@@ -327,16 +388,14 @@ export default function IdExplorer() {
               )}
             </div>
           ) : (
-            filteredData.map((row, idx) => (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                key={idx}
-                className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group"
-                onClick={() => setSelectedHousehold(row)}
-              >
-                <div className="flex justify-between items-start mb-3">
+            <>
+              {displayedData.map((row, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                  onClick={() => setSelectedHousehold(row)}
+                >
+                  <div className="flex justify-between items-start mb-3">
                   <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     <UserIcon className="w-5 h-5" />
                   </div>
@@ -355,22 +414,39 @@ export default function IdExplorer() {
                     <span className="truncate">{row.father_husband_name || row['Father/Husband Name'] || '-'}</span>
                   </div>
                   <div className="flex items-center text-sm text-slate-500">
-                    <MapPin className="w-3.5 h-3.5 mr-1.5 text-slate-400" />
+                    <MapPin className="w-3.5 h-3.5 mr-1.5 text-slate-400 shrink-0" />
                     <span className="truncate">{row.village || row.Village || '-'}</span>
+                  </div>
+                  <div className="flex items-start text-sm text-slate-500 mt-2">
+                    <Fingerprint className="w-3.5 h-3.5 mr-1.5 mt-0.5 text-slate-400 shrink-0" />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium text-slate-700">ID: {row.farmer_ID || row['Farmer ID'] || row['Adhar Number'] || 'N/A'}</span>
+                      {benIdToOldIdsMap[String(row['Adhar Number'] || row['Aadhar Number']).toLowerCase().trim()]?.oldIds?.length > 0 && (
+                        <span className="text-xs text-slate-400 font-mono">Old ID: {benIdToOldIdsMap[String(row['Adhar Number'] || row['Aadhar Number']).toLowerCase().trim()].oldIds.join(', ')}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-slate-400">
-                    ID: {row.farmer_ID || row['Farmer ID'] || 'N/A'}
-                  </span>
+                <div className="pt-3 border-t border-slate-50 flex justify-end">
                   <div className="flex items-center text-blue-600 text-xs font-bold gap-1">
                     <span>View More</span>
                     <ChevronRight className="w-3 h-3" />
                   </div>
                 </div>
-              </motion.div>
-            ))
+                </div>
+              ))}
+              {filteredData.length > displayLimit && (
+                <div className="col-span-full flex justify-center mt-6">
+                  <button
+                    onClick={() => setDisplayLimit(prev => prev + 50)}
+                    className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-bold shadow-sm transition-colors"
+                  >
+                    Load More ({filteredData.length - displayLimit} remaining)
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -407,9 +483,13 @@ export default function IdExplorer() {
                 <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                   <DetailItem icon={<UserIcon className="w-4 h-4"/>} label="Father/Husband" value={selectedHousehold.father_husband_name || selectedHousehold['Father/Husband Name']} />
                   <DetailItem icon={<Fingerprint className="w-4 h-4"/>} label="Aadhar Number" value={selectedHousehold['Adhar Number'] || selectedHousehold['Aadhar Number']} />
-                  <DetailItem icon={<Phone className="w-4 h-4"/>} label="Phone" value={selectedHousehold.phone_number || selectedHousehold['Phone Number']} />
+                  
+                  <DetailItem icon={<Fingerprint className="w-4 h-4"/>} label="Farmer ID (New)" value={selectedHousehold.farmer_ID || selectedHousehold['Farmer ID'] || selectedHousehold['Adhar Number']} />
+                  <DetailItem icon={<Fingerprint className="w-4 h-4"/>} label="Old ID" value={benIdToOldIdsMap[String(selectedHousehold['Adhar Number'] || selectedHousehold['Aadhar Number']).toLowerCase().trim()]?.oldIds?.join(', ')} />
+                  
+                  <DetailItem icon={<Phone className="w-4 h-4"/>} label="Phone" value={selectedHousehold.phone_number || selectedHousehold['Phone Number'] || benIdToOldIdsMap[String(selectedHousehold['Adhar Number'] || selectedHousehold['Aadhar Number']).toLowerCase().trim()]?.phone} />
                   <DetailItem icon={<Info className="w-4 h-4"/>} label="Age / Gender" value={`${selectedHousehold.age || '-'} / ${selectedHousehold.gender || '-'}`} />
-                  <DetailItem icon={<Database className="w-4 h-4"/>} label="Category" value={selectedHousehold.category} />
+                  <DetailItem icon={<Database className="w-4 h-4"/>} label="Category" value={selectedHousehold.category || selectedHousehold.Category || benIdToOldIdsMap[String(selectedHousehold['Adhar Number'] || selectedHousehold['Aadhar Number']).toLowerCase().trim()]?.category} />
                   <DetailItem icon={<Filter className="w-4 h-4"/>} label="Sub Classification" value={selectedHousehold.sub_classification} />
                   <DetailItem icon={<MapPin className="w-4 h-4"/>} label="Gram Panchayat (GP)" value={selectedHousehold.gp || selectedHousehold.GP || selectedHousehold['Gram Panchayat']} />
                   <DetailItem icon={<MapPin className="w-4 h-4"/>} label="Village CD" value={selectedHousehold['vill-cd']} />
