@@ -22,12 +22,10 @@ export default function Reports() {
 
   const loadFilterOptions = async () => {
     try {
-      const [assets, expenses, rentals, meetings] = await Promise.all([
-        fetchSheet('asset_registry'),
-        fetchSheet('expenses'),
-        fetchSheet('Car_Rental'),
-        fetchSheet('meeting_tracker')
-      ]);
+      const assets = await fetchSheet('asset_registry');
+      const expenses = await fetchSheet('expenses');
+      const rentals = await fetchSheet('Car_Rental');
+      const meetings = await fetchSheet('meeting_tracker');
 
       const projSet = new Set<string>();
       assets.forEach((a: any) => a.Project && projSet.add(a.Project));
@@ -74,11 +72,9 @@ export default function Reports() {
   const generateReport = async () => {
     setLoading(true);
     try {
-      const [expenses, assets, rentals] = await Promise.all([
-        fetchSheet('expenses'),
-        fetchSheet('asset_registry'),
-        fetchSheet('Car_Rental')
-      ]);
+      const expenses = await fetchSheet('expenses');
+      const assets = await fetchSheet('asset_registry');
+      const rentals = await fetchSheet('Car_Rental');
 
       let combinedData: any[] = [];
 

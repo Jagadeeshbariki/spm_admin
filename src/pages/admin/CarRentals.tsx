@@ -57,8 +57,11 @@ export default function CarRentals() {
   const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
-    loadRentals();
-    loadMasterData();
+    const initData = async () => {
+      await loadRentals();
+      await loadMasterData();
+    };
+    initData();
   }, []);
 
   const loadMasterData = async () => {

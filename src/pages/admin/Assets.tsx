@@ -66,8 +66,11 @@ export default function Assets() {
   const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
-    loadData();
-    loadMasterData();
+    const initData = async () => {
+      await loadData();
+      await loadMasterData();
+    };
+    initData();
   }, [activeTab]);
 
   const loadMasterData = async () => {
@@ -99,10 +102,8 @@ export default function Assets() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [assetsData, usageData] = await Promise.all([
-        fetchSheet('asset_registry'),
-        fetchSheet('asset_uses')
-      ]);
+      const assetsData = await fetchSheet('asset_registry');
+      const usageData = await fetchSheet('asset_uses');
       setAssets(assetsData);
       setAssetUses(usageData);
     } catch (error) {

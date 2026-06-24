@@ -83,8 +83,11 @@ export default function TeamTravel() {
   const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
-    loadData();
-    loadMasterData();
+    const initData = async () => {
+      await loadData();
+      await loadMasterData();
+    };
+    initData();
   }, []);
 
   const loadMasterData = async () => {

@@ -1,10 +1,25 @@
 import * as fs from 'fs';
 
 async function test() {
-  const mappingUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTOv15M_GF_4uJvmS3xcz3x89E25JNj22tewJ8O6323XYmurKukYPE-Km91ASul1w/pub?gid=1540773827&single=true&output=csv';
-  const response = await fetch(mappingUrl);
-  const csvText = await response.text();
-  console.log(csvText.substring(0, 200));
+  const url = `https://script.google.com/macros/s/AKfycbwmJxHEodAZPOUN9qQ-o1Uj9mEmt3OgymdLCzCqUpPYWTaq-brr-PdPfftd5pmpBr8/exec?sheetName=meeting_tracker&spreadsheetId=18Afss-S7VLMhgGluuwm4RanzyRfew61NLa_QzmBxHz4&t=${Date.now()}`;
+  console.log("Fetching:", url);
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    const data = JSON.parse(text);
+if (data.length > 0) {
+  const keys = new Set<string>();
+  data.forEach((row: any) => {
+    Object.keys(row).forEach(k => keys.add(k));
+  });
+  console.log('All Keys:', Array.from(keys));
+}
+  } catch(e) {
+    console.error(e);
+  }
 }
 
 test();
+
+
+

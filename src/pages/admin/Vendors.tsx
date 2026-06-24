@@ -54,8 +54,11 @@ export default function Vendors() {
   const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
-    loadVendors();
-    loadMasterData();
+    const initData = async () => {
+      await loadVendors();
+      await loadMasterData();
+    };
+    initData();
   }, []);
 
   const loadMasterData = async () => {

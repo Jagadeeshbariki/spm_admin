@@ -120,8 +120,11 @@ export default function MailTracker() {
   const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
-    loadData();
-    loadMasterData();
+    const initData = async () => {
+      await loadData();
+      await loadMasterData();
+    };
+    initData();
   }, []);
 
   const loadMasterData = async () => {
@@ -153,10 +156,8 @@ export default function MailTracker() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [transData, batchData] = await Promise.all([
-        fetchSheet('mail_tracker'),
-        fetchSheet('mail_tracker_batches')
-      ]);
+      const transData = await fetchSheet('mail_tracker');
+      const batchData = await fetchSheet('mail_tracker_batches');
       setTransactions(transData);
       setBatches(batchData);
     } catch (error) {

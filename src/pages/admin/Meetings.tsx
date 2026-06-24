@@ -16,6 +16,7 @@ interface Meeting {
   'Minutes of Meeting': string;
   'Photo Upload (link)': string;
   'Aqu_link': string;
+  'Bill Upload (link)': string;
 }
 
 const initialFormState: Meeting = {
@@ -29,6 +30,7 @@ const initialFormState: Meeting = {
   'Minutes of Meeting': '',
   'Photo Upload (link)': '',
   'Aqu_link': '',
+  'Bill Upload (link)': '',
 };
 
 export default function Meetings() {
@@ -46,6 +48,7 @@ export default function Meetings() {
   const [minutesFile, setMinutesFile] = useState<File | null>(null);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [aquFile, setAquFile] = useState<File | null>(null);
+  const [billFile, setBillFile] = useState<File | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All Types');
@@ -56,8 +59,12 @@ export default function Meetings() {
   const canEdit = userRole === 'admin' || userRole === 'office admin';
 
   useEffect(() => {
-    loadMeetings();
-    loadMasterData();
+    const initData = async () => {
+      // Sequence fetch calls to avoid concurrent lockups in Google Apps Script
+      await loadMeetings();
+      await loadMasterData();
+    };
+    initData();
   }, []);
 
   const calculateNumberOfDays = (start: string, end: string) => {
@@ -145,6 +152,7 @@ export default function Meetings() {
     setMinutesFile(null);
     setPhotoFiles([]);
     setAquFile(null);
+    setBillFile(null);
     setIsModalOpen(true);
   };
 
@@ -160,6 +168,7 @@ export default function Meetings() {
     setMinutesFile(null);
     setPhotoFiles([]);
     setAquFile(null);
+    setBillFile(null);
   };
 
   const handleSave = async () => {
@@ -178,6 +187,7 @@ export default function Meetings() {
       let minutesUrl = formData['Minutes of Meeting'];
       let photoUrls = formData['Photo Upload (link)'];
       let aquUrl = formData['Aqu_link'];
+      let billUrl = formData['Bill Upload (link)'];
 
       if (minutesFile) {
         toast.loading('Uploading Minutes of Meeting...', { id: 'uploading' });
@@ -188,8 +198,10 @@ export default function Meetings() {
 
       if (photoFiles.length > 0) {
         toast.loading(`Uploading ${photoFiles.length} photo(s)...`, { id: 'uploading-photos' });
-        const uploadPromises = photoFiles.map(f => uploadFile(f));
-        const results = await Promise.all(uploadPromises);
+        const results = [];
+        for (const f of photoFiles) {
+          results.push(await uploadFile(f));
+        }
         const newUrls = results.map(r => r.webViewLink).join(', ');
         photoUrls = newUrls;
         toast.dismiss('uploading-photos');
@@ -202,6 +214,13 @@ export default function Meetings() {
         toast.dismiss('uploading-aqu');
       }
 
+      if (billFile) {
+        toast.loading('Uploading Bill file...', { id: 'uploading-bill' });
+        const { webViewLink } = await uploadFile(billFile);
+        billUrl = webViewLink;
+        toast.dismiss('uploading-bill');
+      }
+
       // Remove internal fields before saving
       const { _rowIndex, ...pureFormData } = formData;
 
@@ -209,7 +228,8 @@ export default function Meetings() {
         ...pureFormData,
         'Minutes of Meeting': minutesUrl,
         'Photo Upload (link)': photoUrls,
-        'Aqu_link': aquUrl
+        'Aqu_link': aquUrl,
+        'Bill Upload (link)': billUrl
       };
 
       if (editingRow !== null) {
@@ -222,14 +242,19 @@ export default function Meetings() {
       
       await loadMeetings();
       handleCloseModal();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save meeting:', error);
-      toast.error('Failed to save meeting. Please try again.');
+      let errorMsg = 'Failed to save meeting. Please try again.';
+      if (error && error.message) {
+        errorMsg = `Failed: ${error.message}`;
+      }
+      toast.error(errorMsg);
     } finally {
       setIsSaving(false);
       toast.dismiss('uploading');
       toast.dismiss('uploading-photos');
       toast.dismiss('uploading-aqu');
+      toast.dismiss('uploading-bill');
     }
   };
 
@@ -269,6 +294,15 @@ export default function Meetings() {
           </button>
         )}
       </div>
+
+      {!isLoading && meetings.length > 0 && !meetings.some(m => 'Bill Upload (link)' in m || 'Bill' in m) && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl flex items-center justify-between shadow-sm">
+          <div>
+            <p className="font-semibold text-sm">Action Required: Google Sheet Configuration</p>
+            <p className="text-sm mt-1">To save Bill files successfully, please ensure your "meeting_tracker" sheet has a column header named exactly <strong>Bill Upload (link)</strong>.</p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-4 items-center justify-between">
         <div className="flex gap-4 flex-wrap">
@@ -310,20 +344,21 @@ export default function Meetings() {
                 <th className="px-6 py-4">Participants</th>
                 <th className="px-6 py-4">Minutes</th>
                 <th className="px-6 py-4">Photo</th>
+                <th className="px-6 py-4">Bill</th>
                 <th className="px-6 py-4">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={10} className="px-6 py-8 text-center text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Loading meetings...
                   </td>
                 </tr>
               ) : filteredMeetings.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={10} className="px-6 py-8 text-center text-slate-500">
                     No meetings found
                   </td>
                 </tr>
@@ -362,6 +397,13 @@ export default function Meetings() {
                       {meeting['Photo Upload (link)'] ? (
                         <a href={meeting['Photo Upload (link)']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
                           <Download className="w-4 h-4" /> Photo
+                        </a>
+                      ) : <span className="text-slate-400">-</span>}
+                    </td>
+                    <td className="px-6 py-4">
+                      {meeting['Bill Upload (link)'] || meeting['Bill'] || meeting['Bill_link'] ? (
+                        <a href={meeting['Bill Upload (link)'] || meeting['Bill'] || meeting['Bill_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                          <Download className="w-4 h-4" /> View bill
                         </a>
                       ) : <span className="text-slate-400">-</span>}
                     </td>
@@ -486,7 +528,9 @@ export default function Meetings() {
                     onChange={(e) => setMinutesFile(e.target.files?.[0] || null)}
                   />
                   {formData['Minutes of Meeting'] && !minutesFile && (
-                    <p className="text-xs text-slate-500 mt-1 truncate">Current: {formData['Minutes of Meeting']}</p>
+                    <p className="text-xs text-slate-500 mt-1 truncate">
+                      Current: <a href={formData['Minutes of Meeting']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{formData['Minutes of Meeting']}</a>
+                    </p>
                   )}
                 </div>
                 <div>
@@ -518,7 +562,22 @@ export default function Meetings() {
                     onChange={(e) => setAquFile(e.target.files?.[0] || null)}
                   />
                   {formData['Aqu_link'] && !aquFile && (
-                    <p className="text-xs text-slate-500 mt-1 truncate">Current: {formData['Aqu_link']}</p>
+                    <p className="text-xs text-slate-500 mt-1 truncate">
+                      Current: <a href={formData['Aqu_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{formData['Aqu_link']}</a>
+                    </p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Bill Upload</label>
+                  <input 
+                    type="file" 
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setBillFile(e.target.files?.[0] || null)}
+                  />
+                  {(formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']) && !billFile && (
+                    <p className="text-xs text-slate-500 mt-1 truncate">
+                      Current: <a href={formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']}</a>
+                    </p>
                   )}
                 </div>
               </div>
@@ -553,7 +612,7 @@ export default function Meetings() {
             <div className="p-6 overflow-y-auto flex-1 min-h-0">
               <div className="space-y-4">
                 {Object.entries(selectedItem).map(([key, value]) => {
-                  if (key.startsWith('_') || key === 'Minutes of Meeting' || key === 'Photo Upload (link)' || key === 'Aqu_link') return null;
+                  if (key.startsWith('_') || key === 'Minutes of Meeting' || key === 'Photo Upload (link)' || key === 'Aqu_link' || key === 'Bill Upload (link)' || key === 'Bill' || key === 'Bill_link') return null;
                   return (
                     <div key={key} className="border-b border-slate-50 pb-2">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
@@ -588,6 +647,14 @@ export default function Meetings() {
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Aqu File</p>
                     <a href={selectedItem['Aqu_link']} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
                       <Download className="w-4 h-4" /> View Aqu File
+                    </a>
+                  </div>
+                )}
+                {(selectedItem['Bill Upload (link)'] || selectedItem['Bill'] || selectedItem['Bill_link']) && (
+                  <div className="pt-2">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Bill Upload</p>
+                    <a href={selectedItem['Bill Upload (link)'] || selectedItem['Bill'] || selectedItem['Bill_link']} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                      <Download className="w-4 h-4" /> View Bill File
                     </a>
                   </div>
                 )}

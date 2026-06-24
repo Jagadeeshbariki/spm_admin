@@ -314,10 +314,49 @@ export async function getSetting(
   }
 }
 
+async function compressImage(file: File, maxWidth: number = 1920): Promise<File> {
+  if (!file.type.startsWith('image/')) return file;
+  
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = (maxWidth * height) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: file.type }));
+          } else {
+            resolve(file); // Fallback to original if compression fails
+          }
+        }, file.type, 0.8); // 80% quality
+      };
+      img.onerror = () => resolve(file);
+    };
+    reader.onerror = () => resolve(file);
+  });
+}
+
 export async function uploadFile(
   file: File,
   folderId: string = ADMIN_FOLDER_ID,
 ): Promise<any> {
+  file = await compressImage(file);
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async () => {
@@ -334,7 +373,10 @@ export async function uploadFile(
             folderId: folderId,
           }),
         });
-        if (!res.ok) throw new Error("Failed to upload file");
+        if (!res.ok) {
+          const bodyText = await res.text().catch(() => '');
+          throw new Error(`Failed to upload file. status: ${res.status}, text: ${bodyText}`);
+        }
         const result = await res.json();
         if (result.error) throw new Error(result.error);
 

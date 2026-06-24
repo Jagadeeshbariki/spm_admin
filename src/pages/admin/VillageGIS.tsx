@@ -695,8 +695,11 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
   const [mapType, setMapType] = useState<'streets' | 'satellite'>('satellite');
 
   useEffect(() => {
-    loadData();
-    loadBoundaries();
+    const initData = async () => {
+      await loadData();
+      await loadBoundaries();
+    };
+    initData();
   }, []);
 
   const loadBoundaries = async () => {
@@ -704,18 +707,20 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
       setLoadingBoundary(true);
       const polygons = await fetchSheet('Polygons_manyam');
       
-      const geoResults = await Promise.all(
-        polygons.map(async (row) => {
-          if (!row['File ID']) return null;
-          try {
-            const data = await fetchGeoJson(row['File ID']);
-            return { row, data };
-          } catch (err) {
-            console.error(`Failed to load GeoJSON for ${row['File Name']}:`, err);
-            return null;
-          }
-        })
-      );
+      const geoResults = [];
+      for (const row of polygons) {
+        if (!row['File ID']) {
+          geoResults.push(null);
+          continue;
+        }
+        try {
+          const data = await fetchGeoJson(row['File ID']);
+          geoResults.push({ row, data });
+        } catch (err) {
+          console.error(`Failed to load GeoJSON for ${row['File Name']}:`, err);
+          geoResults.push(null);
+        }
+      }
 
       const loadedBoundaries: any[] = [];
       const loadedPoints: any[] = [];

@@ -105,13 +105,11 @@ export default function Dashboard() {
 
     try {
       setLoading(true);
-      const [expenses, assets, meetings, rentals, vendors] = await Promise.all([
-        fetchSheet('expenses'),
-        fetchSheet('asset_registry'),
-        fetchSheet('meeting_tracker'),
-        fetchSheet('Car_Rental'),
-        fetchSheet('Vendor_Management')
-      ]);
+      const expenses = await fetchSheet('expenses');
+      const assets = await fetchSheet('asset_registry');
+      const meetings = await fetchSheet('meeting_tracker');
+      const rentals = await fetchSheet('Car_Rental');
+      const vendors = await fetchSheet('Vendor_Management');
 
       // Calculate Metrics
       let monthlyExp = 0;
