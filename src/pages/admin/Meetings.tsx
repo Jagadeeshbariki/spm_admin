@@ -16,7 +16,7 @@ interface Meeting {
   'Minutes of Meeting': string;
   'Photo Upload (link)': string;
   'Aqu_link': string;
-  'Bill Upload (link)': string;
+  'Bill Upload': string;
 }
 
 const initialFormState: Meeting = {
@@ -30,7 +30,7 @@ const initialFormState: Meeting = {
   'Minutes of Meeting': '',
   'Photo Upload (link)': '',
   'Aqu_link': '',
-  'Bill Upload (link)': '',
+  'Bill Upload': '',
 };
 
 export default function Meetings() {
@@ -187,7 +187,7 @@ export default function Meetings() {
       let minutesUrl = formData['Minutes of Meeting'];
       let photoUrls = formData['Photo Upload (link)'];
       let aquUrl = formData['Aqu_link'];
-      let billUrl = formData['Bill Upload (link)'];
+      let billUrl = formData['Bill Upload'];
 
       if (minutesFile) {
         toast.loading('Uploading Minutes of Meeting...', { id: 'uploading' });
@@ -229,7 +229,7 @@ export default function Meetings() {
         'Minutes of Meeting': minutesUrl,
         'Photo Upload (link)': photoUrls,
         'Aqu_link': aquUrl,
-        'Bill Upload (link)': billUrl
+        'Bill Upload': billUrl
       };
 
       if (editingRow !== null) {
@@ -295,11 +295,11 @@ export default function Meetings() {
         )}
       </div>
 
-      {!isLoading && meetings.length > 0 && !meetings.some(m => 'Bill Upload (link)' in m || 'Bill' in m) && (
+      {!isLoading && meetings.length > 0 && !meetings.some(m => 'Bill Upload' in m || 'Bill Upload (link)' in m || 'Bill' in m) && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl flex items-center justify-between shadow-sm">
           <div>
             <p className="font-semibold text-sm">Action Required: Google Sheet Configuration</p>
-            <p className="text-sm mt-1">To save Bill files successfully, please ensure your "meeting_tracker" sheet has a column header named exactly <strong>Bill Upload (link)</strong>.</p>
+            <p className="text-sm mt-1">To save Bill files successfully, please ensure your "meeting_tracker" sheet has a column header named exactly <strong>Bill Upload</strong>.</p>
           </div>
         </div>
       )}
@@ -401,8 +401,8 @@ export default function Meetings() {
                       ) : <span className="text-slate-400">-</span>}
                     </td>
                     <td className="px-6 py-4">
-                      {meeting['Bill Upload (link)'] || meeting['Bill'] || meeting['Bill_link'] ? (
-                        <a href={meeting['Bill Upload (link)'] || meeting['Bill'] || meeting['Bill_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                      {meeting['Bill Upload'] || meeting['Bill Upload (link)'] || meeting['Bill'] || meeting['Bill_link'] ? (
+                        <a href={meeting['Bill Upload'] || meeting['Bill Upload (link)'] || meeting['Bill'] || meeting['Bill_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
                           <Download className="w-4 h-4" /> View bill
                         </a>
                       ) : <span className="text-slate-400">-</span>}
@@ -574,9 +574,9 @@ export default function Meetings() {
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     onChange={(e) => setBillFile(e.target.files?.[0] || null)}
                   />
-                  {(formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']) && !billFile && (
+                  {(formData['Bill Upload'] || formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']) && !billFile && (
                     <p className="text-xs text-slate-500 mt-1 truncate">
-                      Current: <a href={formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']}</a>
+                      Current: <a href={formData['Bill Upload'] || formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{formData['Bill Upload'] || formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']}</a>
                     </p>
                   )}
                 </div>
@@ -612,7 +612,7 @@ export default function Meetings() {
             <div className="p-6 overflow-y-auto flex-1 min-h-0">
               <div className="space-y-4">
                 {Object.entries(selectedItem).map(([key, value]) => {
-                  if (key.startsWith('_') || key === 'Minutes of Meeting' || key === 'Photo Upload (link)' || key === 'Aqu_link' || key === 'Bill Upload (link)' || key === 'Bill' || key === 'Bill_link') return null;
+                  if (key.startsWith('_') || key === 'Minutes of Meeting' || key === 'Photo Upload (link)' || key === 'Aqu_link' || key === 'Bill Upload' || key === 'Bill Upload (link)' || key === 'Bill' || key === 'Bill_link') return null;
                   return (
                     <div key={key} className="border-b border-slate-50 pb-2">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{key.replace(/_/g, ' ')}</p>
@@ -650,10 +650,10 @@ export default function Meetings() {
                     </a>
                   </div>
                 )}
-                {(selectedItem['Bill Upload (link)'] || selectedItem['Bill'] || selectedItem['Bill_link']) && (
+                {(selectedItem['Bill Upload'] || selectedItem['Bill Upload (link)'] || selectedItem['Bill'] || selectedItem['Bill_link']) && (
                   <div className="pt-2">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Bill Upload</p>
-                    <a href={selectedItem['Bill Upload (link)'] || selectedItem['Bill'] || selectedItem['Bill_link']} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                    <a href={selectedItem['Bill Upload'] || selectedItem['Bill Upload (link)'] || selectedItem['Bill'] || selectedItem['Bill_link']} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
                       <Download className="w-4 h-4" /> View Bill File
                     </a>
                   </div>
