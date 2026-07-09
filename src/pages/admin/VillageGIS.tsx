@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
@@ -642,13 +642,13 @@ function HubMarker({ hub, expandedId }: { hub: any, expandedId: string | number 
 
   const isExpanded = expandedId === hub._rowIndex;
   
-  const hubIcon = useMemo(() => L.divIcon({
+  const hubIcon = L.divIcon({
       className: 'custom-dot',
       html: `<div class="hub-marker-dot rounded-full border-1.5 border-white shadow-sm transition-all duration-300 ${colorClass} w-3 h-3 hover:scale-110"></div>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],
       popupAnchor: [0, -10]
-  }), [colorClass]);
+  });
 
   useEffect(() => {
     if (markerRef.current) {
@@ -689,7 +689,7 @@ function AssetMarker({ asset, idx, selectedAssetId, setSelectedAssetId }: { asse
 
   const isSelected = selectedAssetId === asset._rowIndex;
   
-  const assetIcon = useMemo(() => L.divIcon({
+  const assetIcon = L.divIcon({
         className: 'custom-dot-blue',
         html: `<div class="${cn(
           "rounded-full border-1.5 border-white shadow-sm transition-all duration-300",
@@ -698,7 +698,7 @@ function AssetMarker({ asset, idx, selectedAssetId, setSelectedAssetId }: { asse
         iconSize: isSelected ? [24, 24] : [20, 20],
         iconAnchor: isSelected ? [12, 12] : [10, 10],
         popupAnchor: [0, -8]
-      }), [isSelected]);
+      });
 
   return (
     <Marker 
@@ -795,8 +795,7 @@ function VillageMarker({ village, idx }: { village: any; idx: number, key?: any 
   const activity = props['Activity Name'] || props['activity'] || props['Activity'] || null;
   const details = props['Details'] || props['details'] || props['Description'] || props['desc'] || props['REMARK'] || null;
 
-  const icon = useMemo(() => {
-    return L.divIcon({
+  const icon = L.divIcon({
       className: 'custom-dot-green',
       html: `<div style="color: #10b981; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); cursor: pointer;">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#10b981" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -807,7 +806,6 @@ function VillageMarker({ village, idx }: { village: any; idx: number, key?: any 
       iconSize: [24, 24], 
       iconAnchor: [12, 24], // Anchor at the bottom tip of the pin
     });
-  }, []);
 
   return (
     <Marker 

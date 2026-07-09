@@ -534,7 +534,7 @@ export default function CropsDashboard() {
               </LayersControl>
               <MapUpdater bounds={mapBounds} />
               {filteredPlotLocations.map((plot: any, idx: number) => (
-                <PlotMarker key={`plot-${idx}-${plot.hhId}`} plot={plot} color={modelColors[plot.model] || '#94a3b8'} />
+                <PlotMarker key={`plot-${plot.hhId}-${idx}`} plot={plot} color={modelColors[plot.model] || '#94a3b8'} />
               ))}
               
               {/* Controls Overlay */}
@@ -1077,13 +1077,13 @@ function YearlyAccordion({ year, data, setPreviewImage }: { year: string, data: 
 
 function PlotMarker({ plot, color }: { plot: any, color?: string, key?: any }) {
   const markerColor = color || '#10b981';
-  const icon = useMemo(() => L.divIcon({
+  const icon = L.divIcon({
     className: 'custom-dot',
     html: `<div class="rounded-full border-2 border-white shadow-sm w-3 h-3 hover:scale-125 transition-transform" style="background-color: ${markerColor}"></div>`,
     iconSize: [20, 20],
     iconAnchor: [10, 10],
     popupAnchor: [0, -10]
-  }), [markerColor]);
+  });
 
   return (
     <Marker position={[plot.lat, plot.lng]} icon={icon}>
