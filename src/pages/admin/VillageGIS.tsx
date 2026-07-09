@@ -175,6 +175,7 @@ export function ProcessingHubsDashboard({
       if (e.key === 'Escape') {
         setIsFullscreenMap(false);
         setFullscreenElement(null);
+        setPreviewImage(null);
       }
     };
     window.addEventListener('keydown', handleEsc);
@@ -501,51 +502,9 @@ export function ProcessingHubsDashboard({
                   subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
                 />
               )}
-              {filteredLocalHubs.map((hub) => {
-                  const lat = parseFloat(hub.lat);
-                  const lng = parseFloat(hub.long);
-                  if (isNaN(lat) || isNaN(lng)) return null;
-                  
-                  const hubStatus = (hub['status '] || hub['status_of_unit-status'] || hub['Status'] || '').toLowerCase();
-                  let colorClass = 'bg-amber-500';
-                  let pulseClass = 'ring-amber-200 bg-amber-600';
-                  
-                  if (hubStatus.includes('working')) {
-                    colorClass = 'bg-emerald-500';
-                    pulseClass = 'ring-emerald-200 bg-emerald-600';
-                  } else if (hubStatus.includes('not_using') || hubStatus.includes('not using')) {
-                    colorClass = 'bg-rose-500';
-                    pulseClass = 'ring-rose-200 bg-rose-600';
-                  } else if (hubStatus.includes('under_repair') || hubStatus.includes('under repair') || hubStatus.includes('repair')) {
-                    colorClass = 'bg-blue-500';
-                    pulseClass = 'ring-blue-200 bg-blue-600';
-                  }
-
-                  const isExpanded = expandedId === hub._rowIndex;
-                  // Avoid recreating L.divIcon on every render to prevent _leaflet_pos crash
-                  const hubIcon = L.divIcon({
-                      className: 'custom-dot',
-                      html: `<div class="${cn("rounded-full border-1.5 border-white shadow-sm transition-all", colorClass, isExpanded ? `w-4 h-4 -mt-0.5 -ml-0.5 ring-4 animate-pulse ${pulseClass}` : "w-3 h-3 hover:scale-110")}"></div>`,
-                      iconSize: isExpanded ? [24, 24] : [20, 20],
-                      iconAnchor: isExpanded ? [12, 12] : [10, 10],
-                      popupAnchor: [0, -10]
-                  });
-
-                  return (
-                    <Marker key={hub._rowIndex} position={[lat, lng]} icon={hubIcon}>
-                      <Popup className="custom-popup">
-                        <div className="p-1 min-w-[200px]">
-                           <div className="flex items-center gap-2 mb-2">
-                             <div className={cn("w-2 h-2 rounded-full", colorClass)} />
-                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{hub['Village']} Village</span>
-                           </div>
-                           <div className="font-bold text-sm text-slate-800 leading-tight mb-1">{hub['entr_name']}</div>
-                           <div className="text-[10px] text-slate-500 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">{hub['Unit name']}</div>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  )
-              })}
+              {filteredLocalHubs.map((hub) => (
+                <HubMarker key={hub._rowIndex} hub={hub} expandedId={expandedId} />
+              ))}
             </MapContainer>
         </div>
 
@@ -658,6 +617,257 @@ export function ProcessingHubsDashboard({
       )}
     </div>
   )
+}
+
+function HubMarker({ hub, expandedId }: { hub: any, expandedId: string | number | null, key?: any }) {
+  const markerRef = useRef<L.Marker>(null);
+  const lat = parseFloat(hub.lat);
+  const lng = parseFloat(hub.long);
+  if (isNaN(lat) || isNaN(lng)) return null;
+  
+  const hubStatus = (hub['status '] || hub['status_of_unit-status'] || hub['Status'] || '').toLowerCase();
+  let colorClass = 'bg-amber-500';
+  let pulseClass = 'ring-amber-200 bg-amber-600';
+  
+  if (hubStatus.includes('working')) {
+    colorClass = 'bg-emerald-500';
+    pulseClass = 'ring-emerald-200 bg-emerald-600';
+  } else if (hubStatus.includes('not_using') || hubStatus.includes('not using')) {
+    colorClass = 'bg-rose-500';
+    pulseClass = 'ring-rose-200 bg-rose-600';
+  } else if (hubStatus.includes('under_repair') || hubStatus.includes('under repair') || hubStatus.includes('repair')) {
+    colorClass = 'bg-blue-500';
+    pulseClass = 'ring-blue-200 bg-blue-600';
+  }
+
+  const isExpanded = expandedId === hub._rowIndex;
+  
+  const hubIcon = useMemo(() => L.divIcon({
+      className: 'custom-dot',
+      html: `<div class="hub-marker-dot rounded-full border-1.5 border-white shadow-sm transition-all duration-300 ${colorClass} w-3 h-3 hover:scale-110"></div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -10]
+  }), [colorClass]);
+
+  useEffect(() => {
+    if (markerRef.current) {
+      const el = markerRef.current.getElement();
+      if (el) {
+        const dot = el.querySelector('.hub-marker-dot');
+        if (dot) {
+          if (isExpanded) {
+            dot.className = `hub-marker-dot rounded-full border-1.5 border-white shadow-sm transition-all duration-300 ${colorClass} w-4 h-4 -mt-0.5 -ml-0.5 ring-4 animate-pulse ${pulseClass}`;
+          } else {
+            dot.className = `hub-marker-dot rounded-full border-1.5 border-white shadow-sm transition-all duration-300 ${colorClass} w-3 h-3 hover:scale-110`;
+          }
+        }
+      }
+    }
+  }, [isExpanded, colorClass, pulseClass]);
+
+  return (
+    <Marker ref={markerRef} position={[lat, lng]} icon={hubIcon}>
+      <Popup className="custom-popup">
+        <div className="p-1 min-w-[200px]">
+           <div className="flex items-center gap-2 mb-2">
+             <div className={cn("w-2 h-2 rounded-full", colorClass)} />
+             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{hub['Village']} Village</span>
+           </div>
+           <div className="font-bold text-sm text-slate-800 leading-tight mb-1">{hub['entr_name']}</div>
+           <div className="text-[10px] text-slate-500 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">{hub['Unit name']}</div>
+        </div>
+      </Popup>
+    </Marker>
+  )
+}
+
+function AssetMarker({ asset, idx, selectedAssetId, setSelectedAssetId }: { asset: any, idx: number, selectedAssetId: string | number | null, setSelectedAssetId: (id: string | number | null) => void, key?: any }) {
+  const lat = parseFloat(asset.Latitude as any);
+  const lng = parseFloat(asset.Longitude as any);
+  if (isNaN(lat) || isNaN(lng)) return null;
+
+  const isSelected = selectedAssetId === asset._rowIndex;
+  
+  const assetIcon = useMemo(() => L.divIcon({
+        className: 'custom-dot-blue',
+        html: `<div class="${cn(
+          "rounded-full border-1.5 border-white shadow-sm transition-all duration-300",
+          isSelected ? "bg-blue-600 w-4 h-4 -mt-0.5 -ml-0.5 ring-4 ring-blue-200 animate-pulse-blue" : "bg-blue-500 w-2.5 h-2.5"
+        )}"></div>`,
+        iconSize: isSelected ? [24, 24] : [20, 20],
+        iconAnchor: isSelected ? [12, 12] : [10, 10],
+        popupAnchor: [0, -8]
+      }), [isSelected]);
+
+  return (
+    <Marker 
+      position={[lat, lng]}
+      icon={assetIcon}
+      zIndexOffset={isSelected ? 2000 : 1000}
+      eventHandlers={{
+        click: () => {
+          if (asset._rowIndex) {
+            setSelectedAssetId(asset._rowIndex);
+            // Scroll sidebar to this item
+            const element = document.getElementById(`sidebar-asset-${asset._rowIndex}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+          }
+        },
+      }}
+    >
+      <Popup className="custom-popup" offset={[0, -10]}>
+        <div className="p-1 min-w-[240px]">
+          <div className="flex items-center justify-between mb-2">
+             <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                {asset.Mandal || 'N/A'} Block
+              </span>
+            </div>
+            <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-blue-100">
+              Asset
+            </span>
+          </div>
+          
+          <h3 className="text-sm font-bold text-slate-800 mb-2 leading-tight">
+            {asset['Village Name']}
+          </h3>
+
+          <div className="space-y-2">
+             <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 space-y-1.5">
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="text-slate-400">GP:</span>
+                <span className="font-bold text-slate-600">{asset['GP'] || asset['Gram Panchayat'] || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="text-slate-400">Activity:</span>
+                <span className="font-bold text-blue-600">{asset['Activity Name']}</span>
+              </div>
+            </div>
+
+            {asset['Details'] && (
+              <div className="text-[10px] text-slate-500 bg-blue-50/30 p-2 rounded-lg border border-blue-50/50 leading-relaxed italic">
+                "{asset['Details']}"
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+             <div className="text-[9px] font-medium text-slate-400">
+               {lat.toFixed(5)}, {lng.toFixed(5)}
+             </div>
+             <button 
+               onClick={(e) => {
+                 e.stopPropagation();
+                 window.location.href = `/admin/village-gis-management?highlight=${asset._rowIndex}`;
+               }}
+               className="text-[9px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+             >
+               Manage Asset <ChevronRight className="w-2 h-2" />
+             </button>
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+}
+
+function VillageMarker({ village, idx }: { village: any; idx: number, key?: any }) {
+  let lat: number, lng: number;
+
+  if (village.geometry.type === 'Point') {
+    [lng, lat] = village.geometry.coordinates;
+  } else if (village.geometry.type === 'MultiPoint') {
+    [lng, lat] = village.geometry.coordinates[0];
+  } else {
+    return null;
+  }
+
+  if (isNaN(lat) || isNaN(lng)) return null;
+
+  const props = village.properties || {};
+  const villageName = props['Name of Village'] || props['village'] || props['Village'] || props['Name'] || 'N/A';
+  const mandal = props.Block || props.Mandal || props.block || props.mandal || 'N/A';
+  const gp = props.GP || props.gp || props['Gram Panchayat'] || 'N/A';
+  const activity = props['Activity Name'] || props['activity'] || props['Activity'] || null;
+  const details = props['Details'] || props['details'] || props['Description'] || props['desc'] || props['REMARK'] || null;
+
+  const icon = useMemo(() => {
+    return L.divIcon({
+      className: 'custom-dot-green',
+      html: `<div style="color: #10b981; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); cursor: pointer;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#10b981" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+          <circle cx="12" cy="10" r="3" fill="white"></circle>
+        </svg>
+      </div>`,
+      iconSize: [24, 24], 
+      iconAnchor: [12, 24], // Anchor at the bottom tip of the pin
+    });
+  }, []);
+
+  return (
+    <Marker 
+      position={[lat, lng]} 
+      icon={icon}
+      zIndexOffset={900}
+    >
+      <Popup className="custom-popup" offset={[0, -24]}>
+        <div className="p-1 min-w-[200px]">
+          <div className="flex items-center justify-between mb-3 border-b border-emerald-100 pb-2">
+             <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-emerald-100 uppercase tracking-tight">
+              Village Reference
+            </span>
+            <MapPin className="w-3 h-3 text-emerald-500" />
+          </div>
+          
+          <div className="space-y-3">
+            {/* Order: Block -> GP -> Village */}
+            <div className="bg-slate-50/50 rounded-lg p-2.5 border border-slate-100 space-y-2">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Block (Mandal)</span>
+                <span className="text-[13px] font-bold text-slate-800 leading-none">{mandal}</span>
+              </div>
+              
+              <div className="flex flex-col">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Gram Panchayat (GP)</span>
+                <span className="text-[13px] font-semibold text-emerald-700 leading-none">{gp}</span>
+              </div>
+
+              <div className="flex flex-col pt-1 border-t border-slate-100">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Village Name</span>
+                <span className="text-[14px] font-black text-slate-900 leading-none">{villageName}</span>
+              </div>
+            </div>
+
+            {(activity || details) && (
+              <div className="space-y-1.5">
+                {activity && (
+                  <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] font-bold text-emerald-700">{activity}</span>
+                  </div>
+                )}
+                {details && (
+                  <div className="text-[10px] text-slate-500 bg-slate-50/50 p-2 rounded-lg border border-slate-100 leading-relaxed italic">
+                    "{details}"
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 pt-2 border-t border-slate-100 flex justify-between items-center text-[9px] font-medium text-slate-400">
+             <span>GPS Location</span>
+             <span>{lat.toFixed(5)}, {lng.toFixed(5)}</span>
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
 }
 
 export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs' }) {
@@ -887,7 +1097,8 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
 
       const matchesSearch = !searchTerm || 
         hub['Village']?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        hub['entr_name']?.toLowerCase().includes(searchTerm.toLowerCase());
+        hub['entr_name']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        hub['HH_id']?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const hasCoords = !isNaN(parseFloat(hub.lat)) && !isNaN(parseFloat(hub.long));
       return matchesUnit && matchesCluster && matchesGP && matchesVillage && matchesSearch && hasCoords;
@@ -1228,182 +1439,20 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
           ))}
 
           {/* Sheet Assets - Visible only when toggled */}
-          {activeTab === 'assets' && showActivityLayer && filteredAssets.map((asset, idx) => {
-            const lat = parseFloat(asset.Latitude as any);
-            const lng = parseFloat(asset.Longitude as any);
-            if (isNaN(lat) || isNaN(lng)) return null;
-
-            const isSelected = selectedAssetId === asset._rowIndex;
-            // Prevent _leaflet_pos crash by avoiding recreation on same key
-            const assetIcon = L.divIcon({
-                  className: 'custom-dot-blue',
-                  html: `<div class="${cn(
-                    "rounded-full border-1.5 border-white shadow-sm transition-all duration-300",
-                    isSelected ? "bg-blue-600 w-4 h-4 -mt-0.5 -ml-0.5 ring-4 ring-blue-200 animate-pulse-blue" : "bg-blue-500 w-2.5 h-2.5"
-                  )}"></div>`,
-                  iconSize: isSelected ? [24, 24] : [20, 20],
-                  iconAnchor: isSelected ? [12, 12] : [10, 10],
-                  popupAnchor: [0, -8]
-                });
-
-            return (
-              <Marker 
-                key={`asset-${asset._rowIndex || idx}`} 
-                position={[lat, lng]}
-                icon={assetIcon}
-                zIndexOffset={isSelected ? 2000 : 1000}
-                eventHandlers={{
-                  click: () => {
-                    if (asset._rowIndex) {
-                      setSelectedAssetId(asset._rowIndex);
-                      // Scroll sidebar to this item
-                      const element = document.getElementById(`sidebar-asset-${asset._rowIndex}`);
-                      if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                      }
-                    }
-                  },
-                }}
-              >
-                <Popup className="custom-popup" offset={[0, -10]}>
-                  <div className="p-1 min-w-[240px]">
-                    <div className="flex items-center justify-between mb-2">
-                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                          {asset.Mandal || 'N/A'} Block
-                        </span>
-                      </div>
-                      <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-blue-100">
-                        Asset
-                      </span>
-                    </div>
-                    
-                    <h3 className="text-sm font-bold text-slate-800 mb-2 leading-tight">
-                      {asset['Village Name']}
-                    </h3>
-
-                    <div className="space-y-2">
-                       <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 space-y-1.5">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-400">GP:</span>
-                          <span className="font-bold text-slate-600">{asset['GP'] || asset['Gram Panchayat'] || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-slate-400">Activity:</span>
-                          <span className="font-bold text-blue-600">{asset['Activity Name']}</span>
-                        </div>
-                      </div>
-
-                      {asset['Details'] && (
-                        <div className="text-[10px] text-slate-500 bg-blue-50/30 p-2 rounded-lg border border-blue-50/50 leading-relaxed italic">
-                          "{asset['Details']}"
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-                       <div className="text-[9px] font-medium text-slate-400">
-                         {lat.toFixed(5)}, {lng.toFixed(5)}
-                       </div>
-                       <button 
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           window.location.href = `/admin/village-gis-management?highlight=${asset._rowIndex}`;
-                         }}
-                         className="text-[9px] font-bold text-blue-600 hover:underline flex items-center gap-1"
-                       >
-                         Manage Asset <ChevronRight className="w-2 h-2" />
-                       </button>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
+          {activeTab === 'assets' && showActivityLayer && filteredAssets.map((asset, idx) => (
+            <AssetMarker 
+              key={`asset-${asset._rowIndex || idx}`} 
+              idx={idx} 
+              asset={asset} 
+              selectedAssetId={selectedAssetId} 
+              setSelectedAssetId={setSelectedAssetId} 
+            />
+          ))}
 
           {/* GeoJSON Village Points - Flattened React rendering for maximum reliability */}
-          {filteredGeoVillages.map((village, idx) => {
-            let lat: number, lng: number;
-            
-            if (village.geometry.type === 'Point') {
-              [lng, lat] = village.geometry.coordinates;
-            } else if (village.geometry.type === 'MultiPoint') {
-              [lng, lat] = village.geometry.coordinates[0];
-            } else {
-              return null;
-            }
-
-            if (isNaN(lat) || isNaN(lng)) return null;
-
-            const props = village.properties || {};
-            const villageName = props['Name of Village'] || props['village'] || props['Village'] || props['Name'] || 'N/A';
-            const mandal = props.Block || props.Mandal || props.block || props.mandal || 'N/A';
-            const gp = props.GP || props.gp || props['Gram Panchayat'] || 'N/A';
-            const activity = props['Activity Name'] || props['activity'] || props['Activity'] || null;
-            const details = props['Details'] || props['details'] || props['Description'] || props['desc'] || props['REMARK'] || null;
-
-            return (
-              <Marker 
-                key={`geo-v-${idx}-${villageName}`} 
-                position={[lat, lng]} 
-                icon={greenDotIcon}
-                zIndexOffset={900}
-              >
-                <Popup className="custom-popup" offset={[0, -24]}>
-                  <div className="p-1 min-w-[200px]">
-                    <div className="flex items-center justify-between mb-3 border-b border-emerald-100 pb-2">
-                       <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-emerald-100 uppercase tracking-tight">
-                        Village Reference
-                      </span>
-                      <MapPin className="w-3 h-3 text-emerald-500" />
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {/* Order: Block -> GP -> Village */}
-                      <div className="bg-slate-50/50 rounded-lg p-2.5 border border-slate-100 space-y-2">
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Block (Mandal)</span>
-                          <span className="text-[13px] font-bold text-slate-800 leading-none">{mandal}</span>
-                        </div>
-                        
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Gram Panchayat (GP)</span>
-                          <span className="text-[13px] font-semibold text-emerald-700 leading-none">{gp}</span>
-                        </div>
-
-                        <div className="flex flex-col pt-1 border-t border-slate-100">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Village Name</span>
-                          <span className="text-[14px] font-black text-slate-900 leading-none">{villageName}</span>
-                        </div>
-                      </div>
-
-                      {(activity || details) && (
-                        <div className="space-y-1.5">
-                          {activity && (
-                            <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-md">
-                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              <span className="text-[10px] font-bold text-emerald-700">{activity}</span>
-                            </div>
-                          )}
-                          {details && (
-                            <div className="text-[10px] text-slate-500 bg-slate-50/50 p-2 rounded-lg border border-slate-100 leading-relaxed italic">
-                              "{details}"
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 pt-2 border-t border-slate-100 flex justify-between items-center text-[9px] font-medium text-slate-400">
-                       <span>GPS Location</span>
-                       <span>{lat.toFixed(5)}, {lng.toFixed(5)}</span>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
+          {filteredGeoVillages.map((village, idx) => (
+            <VillageMarker key={`geo-v-${idx}-${village.properties?.Name || village.properties?.village || 'N/A'}`} village={village} idx={idx} />
+          ))}
         </MapContainer>
 
         {/* Floating UI Overlays */}

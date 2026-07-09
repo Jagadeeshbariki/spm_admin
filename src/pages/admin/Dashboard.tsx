@@ -35,7 +35,6 @@ export default function Dashboard() {
     travelExpenses: 0,
     activeVendors: 0,
   });
-  const [expenseData, setExpenseData] = useState<any[]>([]);
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
@@ -53,6 +52,9 @@ export default function Dashboard() {
 
   const [selectedMonth, setSelectedMonth] = useState('All Months');
   const [selectedFY, setSelectedFY] = useState(defaultFY);
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [rawExpenses, setRawExpenses] = useState<any[]>([]);
 
   // Generate FY options (last 5 years + next year)
   const fyOptions = [];
@@ -61,48 +63,75 @@ export default function Dashboard() {
     fyOptions.push(`${year}-${(year + 1).toString().slice(-2)}`);
   }
 
+  const normalizeDate = (dateStr: string) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return null;
+    return new Date(date.getTime() + 12 * 60 * 60 * 1000);
+  };
+
+  const isDateInFY = (dateStr: string) => {
+    const date = normalizeDate(dateStr);
+    if (!date) return false;
+    const month = date.getUTCMonth();
+    const year = date.getUTCFullYear();
+    const [startYearStr] = selectedFY.split('-');
+    const startYear = parseInt(startYearStr);
+    if (month >= 3) return year === startYear;
+    return year === startYear + 1;
+  };
+
+  const isDateInRange = (dateStr: string) => {
+    const date = normalizeDate(dateStr);
+    if (!date) return false;
+    const monthName = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(date);
+    if (!isDateInFY(dateStr)) return false;
+    if (selectedMonth !== 'All Months' && monthName !== selectedMonth) return false;
+    return true;
+  };
+
+  // Derived state for chart
+  const expenseData = (() => {
+    const expByMonth: Record<string, Record<string, number>> = {};
+    const monthsOrder = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+    
+    monthsOrder.forEach(m => { expByMonth[m] = { amount: 0 }; });
+
+    rawExpenses.forEach((e: any) => {
+      const amt = parseFloat(e.Amount) || 0;
+      const date = normalizeDate(e.date);
+      const cat = e.Expense_type || 'Others';
+      
+      if (isDateInFY(e.date) && date) {
+        const monthName = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' }).format(date);
+        
+        if (expByMonth[monthName]) {
+          // If a specific category is selected, only add its amount to "amount"
+          if (selectedCategory !== 'All Categories') {
+            if (selectedCategory === cat) {
+              expByMonth[monthName].amount += amt;
+            }
+          } else {
+            // For All Categories, calculate total amount
+            expByMonth[monthName].amount += amt;
+          }
+          // Also keep track of individual category amounts for multi-line support if needed
+          expByMonth[monthName][cat] = (expByMonth[monthName][cat] || 0) + amt;
+        }
+      }
+    });
+
+    return monthsOrder.map(name => ({
+      name,
+      ...expByMonth[name]
+    }));
+  })();
+
   useEffect(() => {
     loadDashboardData();
   }, [selectedMonth, selectedFY]);
 
   const loadDashboardData = async () => {
-    // Helper to normalize date for consistent comparison across timezones
-    const normalizeDate = (dateStr: string) => {
-      if (!dateStr) return null;
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return null;
-      // Add 12 hours to compensate for timezone shifts
-      return new Date(date.getTime() + 12 * 60 * 60 * 1000);
-    };
-
-    // Helper to check if a date matches selected FY
-    const isDateInFY = (dateStr: string) => {
-      const date = normalizeDate(dateStr);
-      if (!date) return false;
-      const month = date.getUTCMonth();
-      const year = date.getUTCFullYear();
-      const [startYearStr] = selectedFY.split('-');
-      const startYear = parseInt(startYearStr);
-      if (month >= 3) return year === startYear;
-      return year === startYear + 1;
-    };
-
-    // Helper to check if a date matches selected FY and Month
-    const isDateInRange = (dateStr: string) => {
-      const date = normalizeDate(dateStr);
-      if (!date) return false;
-
-      const monthName = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(date);
-
-      // Check FY first
-      if (!isDateInFY(dateStr)) return false;
-
-      // Check Month
-      if (selectedMonth !== 'All Months' && monthName !== selectedMonth) return false;
-
-      return true;
-    };
-
     try {
       setLoading(true);
       const expenses = await fetchSheet('expenses');
@@ -111,26 +140,24 @@ export default function Dashboard() {
       const rentals = await fetchSheet('Car_Rental');
       const vendors = await fetchSheet('Vendor_Management');
 
+      setRawExpenses(expenses);
+      const catSet = new Set<string>();
+
       // Calculate Metrics
       let monthlyExp = 0;
-      const expByMonth: Record<string, number> = {};
       const expByCategory: Record<string, number> = {};
 
       expenses.forEach((e: any) => {
         const amt = parseFloat(e.Amount) || 0;
-        const date = normalizeDate(e.date);
+        const cat = e.Expense_type || 'Others';
+        catSet.add(cat);
         
         if (isDateInRange(e.date)) {
           monthlyExp += amt;
-          const cat = e.Expense_type || 'Others';
           expByCategory[cat] = (expByCategory[cat] || 0) + amt;
         }
-
-        if (isDateInFY(e.date) && date) {
-          const monthName = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' }).format(date);
-          expByMonth[monthName] = (expByMonth[monthName] || 0) + amt;
-        }
       });
+      setAvailableCategories(Array.from(catSet).sort());
 
       let travelExp = 0;
       rentals.forEach((r: any) => {
@@ -156,14 +183,6 @@ export default function Dashboard() {
       });
 
       // Format Chart Data
-      const monthsOrder = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
-      const formattedExpenseData = monthsOrder.map(name => ({
-        name,
-        amount: expByMonth[name] || 0
-      }));
-      
-      setExpenseData(formattedExpenseData);
-
       const formattedCategoryData = Object.keys(expByCategory).map(name => ({
         name, value: expByCategory[name]
       }));
@@ -309,7 +328,17 @@ export default function Dashboard() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h2 className="text-lg font-semibold mb-6">Monthly Expenses Trend</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-semibold">Monthly Expenses Trend</h2>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none font-medium text-slate-600"
+            >
+              <option value="All Categories">All Categories</option>
+              {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={expenseData}>
@@ -319,7 +348,23 @@ export default function Dashboard() {
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
-                <Line type="monotone" dataKey="amount" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }} />
+                {selectedCategory === 'All Categories' ? (
+                  availableCategories.map((cat, idx) => (
+                    <Line 
+                      key={cat}
+                      type="monotone" 
+                      dataKey={cat} 
+                      name={cat}
+                      stroke={COLORS[idx % COLORS.length]} 
+                      strokeWidth={2} 
+                      dot={{ r: 3, strokeWidth: 1 }} 
+                      activeDot={{ r: 5 }} 
+                    />
+                  ))
+                ) : (
+                  <Line type="monotone" dataKey="amount" name={selectedCategory} stroke="#3B82F6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>

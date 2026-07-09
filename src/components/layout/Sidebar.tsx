@@ -39,6 +39,10 @@ const aboutRegionItems = [
   { name: 'Processing Hubs', path: '/admin/about-region/processing-hubs', icon: Database },
 ];
 
+const cropsItems = [
+  { name: 'Dashboard', path: '/admin/about-region/crops/dashboard', icon: LayoutDashboard },
+];
+
 export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCollapsed: (val: boolean) => void }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -109,6 +113,26 @@ export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolea
             <div className="flex flex-col gap-2">
               {!collapsed && <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">About Region</p>}
               {aboutRegionItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  onClick={() => isMobile && setCollapsed(true)}
+                  to={item.path}
+                  className={({ isActive }) => cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors font-medium text-sm",
+                    isActive 
+                      ? "bg-blue-50 text-blue-600" 
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                    collapsed && !isMobile && "justify-center px-0"
+                  )}
+                  title={collapsed && !isMobile ? item.name : undefined}
+                >
+                  <item.icon className={cn("w-5 h-5 shrink-0", collapsed && !isMobile ? "mx-auto" : "")} />
+                  {(!collapsed || isMobile) && <span>{item.name}</span>}
+                </NavLink>
+              ))}
+
+              {!collapsed && <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-4">Crops</p>}
+              {cropsItems.map((item) => (
                 <NavLink
                   key={item.path}
                   onClick={() => isMobile && setCollapsed(true)}

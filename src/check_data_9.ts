@@ -1,0 +1,27 @@
+import fetch from 'node-fetch';
+import Papa from 'papaparse';
+
+async function run() {
+  const BIO_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4QtZipnTgk2e8RU7NapbDg0b0re6_0YRrkd8fK34HEibBwpx6sa0g5gR9WK4UP3bEnuYSmO7fZpCN/pub?gid=1233605541&single=true&output=csv";
+
+  const fetchCSV = async (url: string) => {
+    const res = await fetch(url);
+    const text = await res.text();
+    return new Promise<any[]>((resolve, reject) => {
+      Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => resolve(results.data),
+      });
+    });
+  };
+
+  const bio = await fetchCSV(BIO_URL);
+  
+  const allKeys = Object.keys(bio[0]);
+  console.log("All Bio Keys:", allKeys.join(', '));
+  
+  // Also get some sample rows for inputs_applied
+  console.log("Sample inputs applied:", Array.from(new Set(bio.map(b => b['inputs_applied']))));
+}
+run();

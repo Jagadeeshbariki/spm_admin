@@ -4,13 +4,24 @@ import multer from 'multer';
 import { google } from 'googleapis';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Try to use import.meta.url if available (ESM), fallback to process.cwd() (CJS bundle)
+let __dirname = '';
+try {
+  const metaUrl = typeof import.meta !== 'undefined' ? (import.meta as any).url : null;
+  if (metaUrl) {
+    __dirname = path.dirname(fileURLToPath(metaUrl));
+  } else {
+    __dirname = process.cwd();
+  }
+} catch (e) {
+  __dirname = process.cwd();
+}
 
 const app = express();
 const PORT = 3000;
@@ -295,10 +306,14 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 // --- ODK Central Proxy ---
 let odkToken: string | null = null;
 let odkTokenExpiresAt = 0;
+let tokenPromise: Promise<string> | null = null;
 
 async function getOdkToken() {
   if (odkToken && Date.now() < odkTokenExpiresAt) {
     return odkToken;
+  }
+  if (tokenPromise) {
+    return tokenPromise;
   }
 
   const email = process.env.ODK_EMAIL;
@@ -308,39 +323,100 @@ async function getOdkToken() {
     throw new Error('ODK credentials not configured (ODK_EMAIL, ODK_PASSWORD)');
   }
 
-  const response = await fetch('https://central.wassan.org/v1/sessions', {
+  tokenPromise = fetch('https://central.wassan.org/v1/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
+  }).then(async (response) => {
+    if (!response.ok) {
+      tokenPromise = null;
+      throw new Error('Failed to authenticate with ODK Central');
+    }
+    const data = await response.json();
+    odkToken = data.token;
+    odkTokenExpiresAt = new Date(data.expiresAt).getTime() - 60000;
+    tokenPromise = null;
+    return odkToken;
+  }).catch(err => {
+    tokenPromise = null;
+    throw err;
   });
 
-  if (!response.ok) {
-    throw new Error('Failed to authenticate with ODK Central');
-  }
-
-  const data = await response.json();
-  odkToken = data.token;
-  odkTokenExpiresAt = new Date(data.expiresAt).getTime() - 60000;
-  return odkToken;
+  return tokenPromise;
 }
 
 app.get('/api/odk/image', async (req, res) => {
   try {
-    const { submissionId, filename } = req.query;
+    const { submissionId, filename, formId } = req.query;
     if (!submissionId || !filename || typeof submissionId !== 'string' || typeof filename !== 'string') {
       return res.status(400).json({ error: 'Missing or invalid submissionId or filename parameter' });
     }
 
-    const token = await getOdkToken();
-    const url = `https://central.wassan.org/v1/projects/3/forms/Processing%20Units%20Mapping/submissions/${encodeURIComponent(submissionId)}/attachments/${encodeURIComponent(filename)}`;
+    let form = formId ? String(formId) : 'Processing Units Mapping';
     
-    const imageRes = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    // Clean up form ID
+    if (form.endsWith('.svc')) {
+      form = form.slice(0, -4);
+    }
+    // Handle URL encoded names like NF-%20Register -> NF- Register
+    form = decodeURIComponent(form);
 
-    if (!imageRes.ok) {
-      const errText = await imageRes.text();
-      const status = imageRes.status;
+    // Clean up submission ID (ensure it starts with uuid:)
+    let cleanSubmissionId = String(submissionId);
+    if (!cleanSubmissionId.startsWith('uuid:')) {
+      cleanSubmissionId = `uuid:${cleanSubmissionId}`;
+    }
+
+    const url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(form)}/submissions/${cleanSubmissionId}/attachments/${encodeURIComponent(filename)}`;
+
+    const token = await getOdkToken();
+    let imageRes;
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        let currentUrl = url;
+        let followRedirects = 5;
+        let requestHeaders: HeadersInit = { Authorization: `Bearer ${token}` };
+
+        let urlTrace: string[] = [];
+
+        while (followRedirects > 0) {
+          urlTrace.push(currentUrl);
+          imageRes = await fetch(currentUrl, {
+            headers: requestHeaders,
+            redirect: 'manual'
+          });
+          
+          if (imageRes.status >= 300 && imageRes.status < 400 && imageRes.headers.has('location')) {
+            const loc = imageRes.headers.get('location')!;
+            const redirectUrlObj = new URL(loc, currentUrl);
+            urlTrace.push(`[STATUS:${imageRes.status} LOC:${loc}]`);
+            currentUrl = redirectUrlObj.toString();
+            followRedirects--;
+            // Do not forward Authorization header to third-party domains like S3
+            if (redirectUrlObj.hostname !== 'central.wassan.org') {
+              requestHeaders = {};
+            }
+          } else {
+            break;
+          }
+        }
+        
+        if (followRedirects === 0) {
+          throw new Error('redirect count exceeded. Trace: ' + JSON.stringify(urlTrace));
+        }
+        
+        break;
+      } catch (err: any) {
+        retries--;
+        if (retries === 0) throw err;
+        await new Promise(resolve => setTimeout(resolve, 500)); // wait 500ms
+      }
+    }
+
+    if (!imageRes || !imageRes.ok) {
+      const errText = imageRes ? await imageRes.text() : 'Fetch failed';
+      const status = imageRes ? imageRes.status : 500;
       const errMsg = `ODK Error ${status}: ${errText.substring(0, 50)}`;
       console.error('ODK Fetch Error:', url, status, errText);
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><rect width="100%" height="100%" fill="#fee2e2"/><text x="10" y="50" font-family="monospace" font-size="12" fill="#991b1b">${errMsg}</text></svg>`;
@@ -358,9 +434,11 @@ app.get('/api/odk/image', async (req, res) => {
       res.status(500).send('No image body');
     }
   } catch (error: any) {
-    console.error('Error proxying ODK image:', error.message || error);
-    const errMsg = `Proxy Error: ${(error.message || 'Unknown').substring(0, 50)}`;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><rect width="100%" height="100%" fill="#fee2e2"/><text x="10" y="50" font-family="monospace" font-size="12" fill="#991b1b">${errMsg}</text></svg>`;
+    console.error('Error proxying ODK image:', error.message || error, 'cause:', error.cause);
+    const errMsg = `Proxy Error: ${(error.message || 'Unknown')}`;
+    // SVG text can't wrap automatically, so we just log it and send a generic SVG but maybe I can see it in logs or return a json
+    console.error('ODK Proxy Trace:', error.message);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><rect width="100%" height="100%" fill="#fee2e2"/><text x="10" y="50" font-family="monospace" font-size="12" fill="#991b1b">Proxy Error</text></svg>`;
     res.setHeader('Content-Type', 'image/svg+xml');
     res.status(500).send(svg);
   }
