@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { google } from 'googleapis';
-import { createServer as createViteServer } from 'vite';
+
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -469,8 +469,17 @@ app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
 });
 
 // --- Vite Integration ---
+// Export for Vercel
+export default app;
+
 async function startServer() {
+  // If running in Vercel, do not start the server manually
+  if (process.env.VERCEL) {
+    return;
+  }
+  
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
