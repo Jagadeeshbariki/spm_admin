@@ -590,12 +590,12 @@ export default function CropsDashboard() {
       {/* Image Preview Modal */}
       {previewImage && (
         <div 
-          className="fixed inset-0 z-[5000] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
+          className="fixed inset-0 z-[99999] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
           onClick={() => setPreviewImage(null)}
         >
           <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center">
             <button 
-              className="fixed top-4 right-4 z-[5010] text-white/70 hover:text-white p-2 transition-colors bg-slate-900/50 hover:bg-slate-900/80 rounded-full backdrop-blur-md ring-1 ring-white/20"
+              className="fixed top-4 right-4 z-[99999] text-white/70 hover:text-white p-2 transition-colors bg-slate-900/50 hover:bg-slate-900/80 rounded-full backdrop-blur-md ring-1 ring-white/20"
               onClick={(e) => {
                 e.stopPropagation();
                 setPreviewImage(null);

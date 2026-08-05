@@ -320,8 +320,8 @@ export function ProcessingHubsDashboard({
           
           {/* Status Breakdown Pie Chart Card */}
           {statusData.length > 0 && (
-             <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate", fullscreenElement === 'status-chart' ? "fixed inset-0 z-[1001] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
-                <div className="absolute top-4 right-4 z-[1002]">
+             <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate", fullscreenElement === 'status-chart' ? "fixed inset-0 z-[99998] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
+                <div className="absolute top-4 right-4 z-[99999]">
                    <button 
                      onClick={() => setFullscreenElement(fullscreenElement === 'status-chart' ? null : 'status-chart')}
                      className="bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors rounded-lg flex items-center justify-center p-2"
@@ -374,8 +374,8 @@ export function ProcessingHubsDashboard({
             </div>
           )}
 
-          <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate", fullscreenElement === 'cluster-chart' ? "fixed inset-0 z-[1001] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
-             <div className="absolute top-4 right-4 z-[1002]">
+          <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate", fullscreenElement === 'cluster-chart' ? "fixed inset-0 z-[99998] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
+             <div className="absolute top-4 right-4 z-[99999]">
                 <button 
                   onClick={() => setFullscreenElement(fullscreenElement === 'cluster-chart' ? null : 'cluster-chart')}
                   className="bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors rounded-lg flex items-center justify-center p-2"
@@ -424,8 +424,8 @@ export function ProcessingHubsDashboard({
             )}
           </div>
           
-          <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate lg:col-span-2", fullscreenElement === 'types-chart' ? "fixed inset-0 z-[1001] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
-             <div className="absolute top-4 right-4 z-[1002]">
+          <div className={cn("bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative transition-all duration-300 isolate lg:col-span-2", fullscreenElement === 'types-chart' ? "fixed inset-0 z-[99998] m-0 rounded-none h-[100dvh] w-[100vw] overflow-y-auto" : "")}>
+             <div className="absolute top-4 right-4 z-[99999]">
                 <button 
                   onClick={() => setFullscreenElement(fullscreenElement === 'types-chart' ? null : 'types-chart')}
                   className="bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors rounded-lg flex items-center justify-center p-2"
@@ -471,9 +471,9 @@ export function ProcessingHubsDashboard({
         {/* Map Container */}
         <div className={cn(
            "bg-slate-100 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden transition-all duration-300 z-10 isolate flex flex-col w-full",
-           isFullscreenMap ? "fixed inset-0 z-[1000] m-0 rounded-none h-[100dvh] w-[100vw]" : "h-[400px] md:h-[450px]"
+           isFullscreenMap ? "fixed inset-0 z-[99998] m-0 rounded-none h-[100dvh] w-[100vw]" : "h-[400px] md:h-[450px]"
         )}>
-          <div className="absolute top-4 right-4 z-[1000] flex gap-2">
+          <div className="absolute top-4 right-4 z-[99998] flex gap-2">
               <button 
                  onClick={() => setMapType(mapType === 'streets' ? 'satellite' : 'streets')}
                  className="px-3 py-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 text-[10px] uppercase font-bold text-slate-700 hover:bg-white transition-colors"
@@ -1357,7 +1357,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
       {/* Desktop Toggle Sidebar Button */}
       <button 
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-[1000] bg-white border border-slate-200 p-2 rounded-r-xl shadow-lg hover:bg-slate-50 transition-colors hidden md:block"
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-[99998] bg-white border border-slate-200 p-2 rounded-r-xl shadow-lg hover:bg-slate-50 transition-colors hidden md:block"
         style={{ left: isSidebarOpen ? '320px' : '0' }}
       >
         <ChevronRight className={cn("w-4 h-4 transition-transform", isSidebarOpen && "rotate-180")} />
@@ -1454,7 +1454,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
         </MapContainer>
 
         {/* Floating UI Overlays */}
-        <div className="absolute top-4 right-4 md:top-6 md:right-6 z-[1000] flex flex-col gap-3">
+        <div className="absolute top-4 right-4 md:top-6 md:right-6 z-[99998] flex flex-col gap-3">
           <button 
             onClick={() => setMapType(mapType === 'streets' ? 'satellite' : 'streets')}
             className={cn(
@@ -1484,7 +1484,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
           </button>
         </div>
 
-        <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-[1000] hidden sm:block">
+        <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-[99998] hidden sm:block">
           <div className="bg-white/90 backdrop-blur-sm px-3 md:px-4 py-2 md:py-3 rounded-2xl shadow-xl border border-slate-200 flex items-center gap-3 md:gap-4">
             <div className="flex items-center gap-2 border-r border-slate-200 pr-3 md:pr-4">
               <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-blue-500" />
