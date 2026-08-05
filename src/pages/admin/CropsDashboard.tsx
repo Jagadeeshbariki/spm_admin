@@ -37,8 +37,23 @@ export default function CropsDashboard() {
         if (!regResponse.ok) {
           throw new Error('Failed to fetch data from ODK Central. Please check permissions or network.');
         }
-        const json = await regResponse.json();
-        const actJson = actResponse.ok ? await actResponse.json() : { value: [] };
+        let json, actJson;
+        try {
+          const regText = await regResponse.text();
+          if (regText.trim().startsWith('<')) {
+            throw new Error('API returned HTML instead of JSON. The backend server might not be running correctly on the hosted link.');
+          }
+          json = JSON.parse(regText);
+          
+          if (actResponse.ok) {
+            const actText = await actResponse.text();
+            actJson = actText.trim().startsWith('<') ? { value: [] } : JSON.parse(actText);
+          } else {
+            actJson = { value: [] };
+          }
+        } catch (e: any) {
+          throw new Error('Failed to parse API response: ' + e.message);
+        }
         const submissions = json.value || [];
         const activities = actJson.value || [];
         

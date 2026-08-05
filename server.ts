@@ -111,7 +111,7 @@ const getHeaders = async (sheetName: string) => {
 // --- API Routes ---
 
 // Get all rows from a sheet
-app.get('/api/sheets/:sheetName', async (req, res) => {
+app.get(['/api/sheets/:sheetName', '/api/sheets/:sheetName/'], async (req, res) => {
   try {
     const { sheetName } = req.params;
     const sheets = await getSheetsClient();
@@ -248,7 +248,7 @@ app.delete('/api/sheets/:sheetName/:rowIndex', async (req, res) => {
 });
 
 // Upload a file to Google Drive
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+app.post(['/api/upload', '/api/upload/'], upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -345,7 +345,7 @@ async function getOdkToken() {
   return tokenPromise;
 }
 
-app.get("/api/odk/data", async (req, res) => {
+app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
   try {
     const { formId } = req.query;
     if (!formId || typeof formId !== "string") {
@@ -369,7 +369,7 @@ app.get("/api/odk/data", async (req, res) => {
   }
 });
 
-app.get('/api/odk/image', async (req, res) => {
+app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
   try {
     const { submissionId, filename, formId } = req.query;
     if (!submissionId || !filename || typeof submissionId !== 'string' || typeof filename !== 'string') {
