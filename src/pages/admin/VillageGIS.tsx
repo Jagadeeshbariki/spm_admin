@@ -332,8 +332,8 @@ export function ProcessingHubsDashboard({
                 </div>
                <p className="text-sm font-bold text-slate-800 mb-4">Status Breakdown <span className="text-[10px] font-normal text-slate-400 ml-1">(Click to filter)</span></p>
                
-               <div className="min-h-[200px] w-full flex-1 relative flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
+               <div className="min-h-[200px] w-full flex-1 relative flex items-center justify-center min-w-0">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
                   <PieChart>
                     <Pie 
                        data={statusData} 
@@ -351,7 +351,7 @@ export function ProcessingHubsDashboard({
                         <Cell key={`cell-${index}`} fill={entry.color} opacity={statusFilter && statusFilter !== entry.name ? 0.3 : 1} />
                       ))}
                     </Pie>
-                    <RechartsTooltip contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px' }} itemStyle={{ color: '#333' }} />
+                    <RechartsTooltip isAnimationActive={false} wrapperStyle={{ pointerEvents: 'none' }} contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px' }} itemStyle={{ color: '#333' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -385,9 +385,9 @@ export function ProcessingHubsDashboard({
                 </button>
              </div>
             <h3 className="text-sm font-bold text-slate-800 mb-4">Cluster-wise Hub Distribution</h3>
-            <div className="min-h-[200px] w-full flex-1 relative flex items-center justify-center">
+            <div className="min-h-[200px] w-full flex-1 relative flex items-center justify-center min-w-0">
               {clusterData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
                   <PieChart>
                     <Pie 
                       data={clusterData} 
@@ -402,7 +402,7 @@ export function ProcessingHubsDashboard({
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <RechartsTooltip 
+                    <RechartsTooltip isAnimationActive={false} wrapperStyle={{ pointerEvents: 'none' }} 
                       contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px' }} 
                       itemStyle={{ color: '#333' }}
                     />
@@ -437,7 +437,7 @@ export function ProcessingHubsDashboard({
             <h3 className="text-sm font-bold text-slate-800 mb-4">Processing Unit Types</h3>
             <div className="w-full relative" style={{ height: fullscreenElement === 'types-chart' ? 'calc(100vh - 120px)' : '400px' }}>
               {unitNameData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
                   <BarChart data={unitNameData} layout="horizontal" margin={{ top: 20, right: 10, left: 0, bottom: 60 }} barSize={32}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
                     <XAxis 
@@ -450,7 +450,7 @@ export function ProcessingHubsDashboard({
                       height={90}
                     />
                     <YAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <RechartsTooltip 
+                    <RechartsTooltip isAnimationActive={false} wrapperStyle={{ pointerEvents: 'none' }} 
                       cursor={{fill: '#f1f5f9'}} 
                       contentStyle={{ fontSize: '12px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
                       formatter={(value) => [<span className="font-bold text-slate-800">{value} Units</span>, 'Count']}
@@ -642,13 +642,13 @@ function HubMarker({ hub, expandedId }: { hub: any, expandedId: string | number 
 
   const isExpanded = expandedId === hub._rowIndex;
   
-  const hubIcon = L.divIcon({
+  const hubIcon = useMemo(() => L.divIcon({
       className: 'custom-dot',
       html: `<div class="hub-marker-dot rounded-full border-1.5 border-white shadow-sm transition-all duration-300 ${colorClass} w-3 h-3 hover:scale-110"></div>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],
       popupAnchor: [0, -10]
-  });
+  }), [colorClass]);
 
   useEffect(() => {
     if (markerRef.current) {
@@ -689,7 +689,7 @@ function AssetMarker({ asset, idx, selectedAssetId, setSelectedAssetId }: { asse
 
   const isSelected = selectedAssetId === asset._rowIndex;
   
-  const assetIcon = L.divIcon({
+  const assetIcon = useMemo(() => L.divIcon({
         className: 'custom-dot-blue',
         html: `<div class="${cn(
           "rounded-full border-1.5 border-white shadow-sm transition-all duration-300",
@@ -698,7 +698,7 @@ function AssetMarker({ asset, idx, selectedAssetId, setSelectedAssetId }: { asse
         iconSize: isSelected ? [24, 24] : [20, 20],
         iconAnchor: isSelected ? [12, 12] : [10, 10],
         popupAnchor: [0, -8]
-      });
+      }), [isSelected]);
 
   return (
     <Marker 
@@ -795,7 +795,7 @@ function VillageMarker({ village, idx }: { village: any; idx: number, key?: any 
   const activity = props['Activity Name'] || props['activity'] || props['Activity'] || null;
   const details = props['Details'] || props['details'] || props['Description'] || props['desc'] || props['REMARK'] || null;
 
-  const icon = L.divIcon({
+  const icon = useMemo(() => L.divIcon({
       className: 'custom-dot-green',
       html: `<div style="color: #10b981; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); cursor: pointer;">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#10b981" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -805,7 +805,7 @@ function VillageMarker({ village, idx }: { village: any; idx: number, key?: any 
       </div>`,
       iconSize: [24, 24], 
       iconAnchor: [12, 24], // Anchor at the bottom tip of the pin
-    });
+    }), []);
 
   return (
     <Marker 

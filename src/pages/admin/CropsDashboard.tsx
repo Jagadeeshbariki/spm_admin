@@ -1,146 +1,201 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import Papa from 'papaparse';
-import { fetchWithFallback } from '../../lib/api';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
-} from 'recharts';
-import { Filter, Users, Map, Sprout, TrendingUp, FlaskConical, Wheat, ChevronDown, ChevronRight, Image as ImageIcon, Calendar, X, Maximize, Minimize } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
+import React, { useState, useEffect, useMemo } from 'react';
+import { Filter, Search, Loader2, Sprout, MapPin, Users, Database, ChevronDown, ChevronUp, Calendar, ArrowLeft, ArrowRight, Info, Layers, Activity, TrendingUp, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList } from 'recharts';
 import { cn } from '../../lib/utils';
 
-function MapResizer({ isFullscreen }: { isFullscreen: boolean }) {
-  const map = useMap();
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      map.invalidateSize();
-    }, 350);
-    if (isFullscreen) {
-      map.scrollWheelZoom.enable();
-    } else {
-      map.scrollWheelZoom.disable();
-    }
-    return () => clearTimeout(timeout);
-  }, [isFullscreen, map]);
-  return null;
-}
-
-function MapUpdater({ bounds }: { bounds?: L.LatLngBounds }) {
-  const map = useMap();
-  useEffect(() => {
-    if (bounds && bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [20, 20] });
-    }
-  }, [bounds, map]);
-  return null;
-}
-
-const MASTER_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4QtZipnTgk2e8RU7NapbDg0b0re6_0YRrkd8fK34HEibBwpx6sa0g5gR9WK4UP3bEnuYSmO7fZpCN/pub?gid=1609179150&single=true&output=csv";
-const BIO_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4QtZipnTgk2e8RU7NapbDg0b0re6_0YRrkd8fK34HEibBwpx6sa0g5gR9WK4UP3bEnuYSmO7fZpCN/pub?gid=1233605541&single=true&output=csv";
-const HARVEST_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4QtZipnTgk2e8RU7NapbDg0b0re6_0YRrkd8fK34HEibBwpx6sa0g5gR9WK4UP3bEnuYSmO7fZpCN/pub?gid=282552033&single=true&output=csv";
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
-
 export default function CropsDashboard() {
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Raw data
-  const [masterData, setMasterData] = useState<any[]>([]);
-  const [bioData, setBioData] = useState<any[]>([]);
-  const [harvestData, setHarvestData] = useState<any[]>([]);
-
-  // Filter options
-  const [blocks, setBlocks] = useState<string[]>([]);
-  const [villages, setVillages] = useState<string[]>([]);
-  const [seasons, setSeasons] = useState<string[]>([]);
-  const [years, setYears] = useState<string[]>([]);
-
-  // Selected filters
+  // Filters
   const [selectedBlock, setSelectedBlock] = useState('All');
+  const [selectedGp, setSelectedGp] = useState('All');
   const [selectedVillage, setSelectedVillage] = useState('All');
-  const [selectedSeason, setSelectedSeason] = useState('All');
+  const [selectedCropMode, setSelectedCropMode] = useState('All');
+  const [hasActivities, setHasActivities] = useState('All');
   const [selectedYear, setSelectedYear] = useState('All');
-  const [searchHHId, setSearchHHId] = useState('');
-  const [activeTab, setActiveTab] = useState('Overview');
+  const [selectedSeason, setSelectedSeason] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'frp'>('overview');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [activeModelFilter, setActiveModelFilter] = useState<string | null>(null);
-  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+
+  // Pagination & Accordion
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedRow, setExpandedRow] = useState<string | number | null>(null);
+  const itemsPerPage = 20;
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPreviewImage(null);
-    };
-    if (previewImage) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [previewImage]);
-
-  useEffect(() => {
-    async function load() {
+    async function loadData() {
       try {
         setLoading(true);
-        const fetchCSV = async (url: string) => {
-          const res = await fetchWithFallback(`${url}&t=${Date.now()}`);
-          if (!res.ok) throw new Error("Failed to fetch CSV");
-          const text = await res.text();
-          return new Promise<any[]>((resolve, reject) => {
-            Papa.parse(text, {
-              header: true,
-              skipEmptyLines: true,
-              transformHeader: (h) => h.trim(),
-              complete: (results) => resolve(results.data),
-              error: (err: any) => reject(err),
-            });
-          });
+        const [regResponse, actResponse] = await Promise.all([
+          fetch('/api/odk/data?formId=NF-%20Register'),
+          fetch('/api/odk/data?formId=NF-%20Activities')
+        ]);
+        if (!regResponse.ok) {
+          throw new Error('Failed to fetch data from ODK Central. Please check permissions or network.');
+        }
+        const json = await regResponse.json();
+        const actJson = actResponse.ok ? await actResponse.json() : { value: [] };
+        const submissions = json.value || [];
+        const activities = actJson.value || [];
+        
+        const flatten = (obj: any, prefix = ''): any => {
+          return Object.keys(obj).reduce((acc: any, k: string) => {
+            const pre = prefix.length ? prefix + '_' : '';
+            if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
+              Object.assign(acc, flatten(obj[k], pre + k));
+            } else {
+              acc[pre + k] = obj[k];
+              if (acc[k] === undefined) acc[k] = obj[k]; // fallback for direct access
+            }
+            return acc;
+          }, {});
         };
 
-        const [master, bio, harvest] = await Promise.all([
-          fetchCSV(MASTER_URL),
-          fetchCSV(BIO_URL),
-          fetchCSV(HARVEST_URL)
-        ]);
+        const mappedData = submissions.map((sub: any) => {
+          const flat = flatten(sub);
+          
+          const hhId = flat['plot_reg-farmer_Id'] || flat['plot_reg_farmer_Id'] || flat['farmer_Id'] || flat['HH_id'] || flat['HH_Id'] || flat['hh_id'] || flat['HH Id'] || flat['hhid'] || '';
+          const farmerName = flat['farmer_name'] || flat['Farmer_Name'] || flat['name'] || flat['farmer'] || '';
+          const season = flat['season'] || flat['Season'] || 'Unknown';
+          const sowingDate = flat['sowing_date'] || flat['Sowing_Date'] || flat['date'] || '-';
+          
+          const matchedActivities = activities.filter((act: any) => {
+            const pDetails = act.Primary_details || {};
+            const actFarmer = String(pDetails.farmer_name || '').trim().toLowerCase();
+            const actSeason = String(pDetails.season || pDetails.data_season || '').trim().toLowerCase();
+            const actSowing = String(pDetails.sowing_date || '').trim();
+            
+            const f1 = String(hhId).trim().toLowerCase();
+            const f2 = String(farmerName).trim().toLowerCase();
+            
+            const isFarmerMatch = actFarmer && (actFarmer === f1 || actFarmer === f2);
+            const isSeasonMatch = actSeason === String(season).trim().toLowerCase();
+            const isSowingMatch = actSowing === String(sowingDate).trim();
+            
+            return isFarmerMatch && isSeasonMatch && isSowingMatch;
+          });
 
-        setMasterData(master);
-        setBioData(bio);
-        setHarvestData(harvest);
+          let harvests: any[] = [];
+          let bioInputs: any[] = [];
+          
+          matchedActivities.forEach((act: any) => {
+            const flatAct = flatten(act);
+            const actPhoto = act.gps?.photo || flatAct['gps_photo'] || flatAct['photo'] || act.photo;
+            const actSubId = act.__id || act.meta?.instanceID?.replace('uuid:', '');
+            
+            if (act.harvesting && Array.isArray(act.harvesting)) {
+              harvests.push(...act.harvesting.map((h: any) => ({ ...h, photo: actPhoto, submissionId: actSubId, formId: 'NF- Activities' })));
+            }
+            if (act.application_bio_input && Array.isArray(act.application_bio_input)) {
+              bioInputs.push(...act.application_bio_input.map((b: any) => ({ ...b, photo: actPhoto, submissionId: actSubId, formId: 'NF- Activities' })));
+            }
+          });
 
-        // Extract filter options
-        const bSet = new Set<string>();
-        const vSet = new Set<string>();
-        const sSet = new Set<string>();
-        const ySet = new Set<string>();
-
-        master.forEach(row => {
-          if (row['block']) bSet.add(row['block']);
-          if (row['Village']) vSet.add(row['Village']);
-          if (row['plot_reg-season']) sSet.add(row['plot_reg-season']);
-          if (row['Year']) ySet.add(row['Year']);
+          return {
+            plotPhoto: flat['plot_reg_image'] || flat['image'] || flat['photo'],
+            plotSubmissionId: sub.__id || sub.meta?.instanceID?.replace('uuid:', ''),
+            plotFormId: 'NF- Register',
+            block: flat['block'] || flat['Block'] || '',
+            gp: flat['gp'] || flat['GP'] || flat['Gram_Panchayat'] || flat['gram_panchayat'] || '',
+            village: flat['village'] || flat['Village'] || '',
+            cropMode: flat['crop_mode'] || flat['crop_model'] || flat['plot_reg_crop_model'] || flat['plot_reg-crop_model'] || '',
+            farmerName: flat['farmer_name'] || flat['Farmer_Name'] || flat['name'] || flat['farmer'] || '',
+            hhId: flat['plot_reg-farmer_Id'] || flat['plot_reg_farmer_Id'] || flat['farmer_Id'] || flat['HH_id'] || flat['HH_Id'] || flat['hh_id'] || flat['HH Id'] || flat['hhid'] || '',
+            year: (flat['text_year'] || flat['year'] || '').substring(0, 4) || 'Unknown',
+            season: flat['season'] || flat['Season'] || 'Unknown',
+            mainCrop: flat['main_crop'] || flat['Main_Crop'] || '-',
+            interCrops: flat['inter_crops'] || flat['Inter_Crops'] || '-',
+            sowingDate: flat['sowing_date'] || flat['Sowing_Date'] || flat['date'] || '-',
+            area: flat['area_'] || flat['Area'] || flat['area'] || '-',
+            harvests,
+            bioInputs,
+            raw: flat
+          };
         });
 
-        setBlocks(Array.from(bSet).sort());
-        setVillages(Array.from(vSet).sort());
-        setSeasons(Array.from(sSet).sort());
-        setYears(Array.from(ySet).sort());
-
+        setData(mappedData);
       } catch (err: any) {
         setError(err.message || "Failed to load data");
       } finally {
         setLoading(false);
       }
     }
-    load();
+    loadData();
   }, []);
+
+  const { blocks, gps, villages, cropModes, years, seasons } = useMemo(() => {
+    const bSet = new Set<string>();
+    const gSet = new Set<string>();
+    const vSet = new Set<string>();
+    const cSet = new Set<string>();
+    const ySet = new Set<string>();
+    const sSet = new Set<string>();
+    data.forEach(item => {
+      if (item.block) bSet.add(item.block);
+      if (item.gp) gSet.add(item.gp);
+      if (item.village) vSet.add(item.village);
+      if (item.cropMode) cSet.add(item.cropMode);
+      if (item.year) ySet.add(item.year);
+      if (item.season) sSet.add(item.season);
+    });
+    return { 
+      blocks: Array.from(bSet).sort(), 
+      gps: Array.from(gSet).sort(), 
+      villages: Array.from(vSet).sort(), 
+      cropModes: Array.from(cSet).sort(),
+      years: Array.from(ySet).sort(),
+      seasons: Array.from(sSet).sort()
+    };
+  }, [data]);
+
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
+      if (selectedBlock !== 'All' && item.block !== selectedBlock) return false;
+      if (selectedGp !== 'All' && item.gp !== selectedGp) return false;
+      if (selectedVillage !== 'All' && item.village !== selectedVillage) return false;
+      if (selectedCropMode !== 'All' && item.cropMode !== selectedCropMode) return false;
+      if (selectedYear !== 'All' && item.year !== selectedYear) return false;
+      if (selectedSeason !== 'All' && item.season !== selectedSeason) return false;
+      
+      if (hasActivities === 'Yes') {
+        if (item.bioInputs.length === 0 && item.harvests.length === 0) return false;
+      } else if (hasActivities === 'No') {
+        if (item.bioInputs.length > 0 || item.harvests.length > 0) return false;
+      }
+      
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const fName = String(item.farmerName).toLowerCase();
+        const hh = String(item.hhId).toLowerCase();
+        if (!fName.includes(term) && !hh.includes(term)) return false;
+      }
+      
+      return true;
+    });
+  }, [data, selectedBlock, selectedGp, selectedVillage, selectedCropMode, hasActivities, selectedYear, selectedSeason, searchTerm]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBlock, selectedGp, selectedVillage, selectedCropMode, hasActivities, selectedYear, selectedSeason, searchTerm]);
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredData.slice(start, start + itemsPerPage);
+  }, [filteredData, currentPage]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-600 font-medium">Loading Crops Dashboard...</p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-4 bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+          <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+          <p className="text-slate-600 font-medium">Fetching crop data from ODK Central...</p>
         </div>
       </div>
     );
@@ -149,964 +204,609 @@ export default function CropsDashboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-200 shadow-sm max-w-md w-full">
-          <h2 className="font-semibold mb-2">Error</h2>
+        <div className="bg-red-50 text-red-600 p-6 rounded-2xl border border-red-200 shadow-sm max-w-md w-full">
+          <h2 className="font-bold text-lg mb-2">Error Loading Data</h2>
           <p className="text-sm opacity-90">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
   }
 
-  // Filter Data
-  const filteredMaster = masterData.filter(row => {
-    if (selectedBlock !== 'All' && row['block'] !== selectedBlock) return false;
-    if (selectedVillage !== 'All' && row['Village'] !== selectedVillage) return false;
-    if (selectedSeason !== 'All' && row['plot_reg-season'] !== selectedSeason) return false;
-    if (selectedYear !== 'All' && row['Year'] !== selectedYear) return false;
-    if (searchHHId && !String(row['HH Id'] || row['HH_id'] || '').toLowerCase().includes(searchHHId.toLowerCase())) return false;
-    return true;
-  });
-
-  const validHHIdsForBreakdown = new Set(filteredMaster.map(r => r['HH Id']));
-  const filteredHarvestForBreakdown = harvestData.filter(row => validHHIdsForBreakdown.has(row['HH_id']));
-  const filteredBioForBreakdown = bioData.filter(row => validHHIdsForBreakdown.has(row['HH_id']));
-
-  // Calculate Crop Models Breakdown for Tabs
-  const cropModelsBreakdown: Record<string, {
-    farmers: Set<string>;
-    extent: number;
-    yield: number;
-    bioInputsAcres: Record<string, number>;
-    mainCrops: Record<string, number>;
-    hhIds: string[];
-  }> = {};
-
-  filteredMaster.forEach(row => {
-    let model = row['plot_reg-crop_model'];
-    if (!model || model.trim() === '') model = 'Unknown';
-    
-    if (!cropModelsBreakdown[model]) {
-      cropModelsBreakdown[model] = {
-        farmers: new Set(),
-        extent: 0,
-        yield: 0,
-        bioInputsAcres: {},
-        mainCrops: {},
-        hhIds: []
-      };
-    }
-    const hhId = row['HH Id'];
-    if (hhId) {
-      cropModelsBreakdown[model].farmers.add(hhId);
-      cropModelsBreakdown[model].hhIds.push(hhId);
-    }
-    
-    cropModelsBreakdown[model].extent += (parseFloat(row['Extent']) || parseFloat(row['plot_reg-area']) || 0);
-    
-    const crop = row['plot_reg-main_crop'] || row['plot_reg-crop_type'] || 'Unknown';
-    if (crop) {
-      cropModelsBreakdown[model].mainCrops[crop] = (cropModelsBreakdown[model].mainCrops[crop] || 0) + 1;
-    }
-  });
-
-  filteredHarvestForBreakdown.forEach(row => {
-    const hhId = row['HH_id'];
-    const y = parseFloat(row['yield_Qntl']) || 0;
-    if (hhId && y > 0) {
-      const models = Object.keys(cropModelsBreakdown).filter(m => cropModelsBreakdown[m].hhIds.includes(hhId));
-      if (models.length > 0) {
-        const splitY = y / models.length;
-        models.forEach(m => {
-          cropModelsBreakdown[m].yield += splitY;
-        });
-      }
-    }
-  });
-
-  filteredBioForBreakdown.forEach(row => {
-    const hhId = row['HH_id'];
-    const input = row['inputs_applied'] || 'Unknown';
-    if (hhId) {
-      const models = Object.keys(cropModelsBreakdown).filter(m => cropModelsBreakdown[m].hhIds.includes(hhId));
-      if (models.length > 0) {
-        const masterRow = filteredMaster.find(m => m['HH Id'] === hhId);
-        const acres = masterRow ? (parseFloat(masterRow['Extent']) || parseFloat(masterRow['plot_reg-area']) || 0) : 0;
-        const splitAcres = acres / models.length;
-        models.forEach(m => {
-          cropModelsBreakdown[m].bioInputsAcres[input] = (cropModelsBreakdown[m].bioInputsAcres[input] || 0) + splitAcres;
-        });
-      }
-    }
-  });
-
-  const breakdownArray = Object.entries(cropModelsBreakdown)
-    .filter(([model]) => model !== 'Unknown')
-    .sort((a, b) => b[1].farmers.size - a[1].farmers.size);
-
-
-  const tabFilteredMaster = activeTab === 'Overview' 
-    ? filteredMaster 
-    : filteredMaster.filter(row => row['plot_reg-crop_model'] === activeTab);
-
-  const validHHIds = new Set(tabFilteredMaster.map(r => r['HH Id']));
-
-  const filteredHarvest = harvestData.filter(row => validHHIds.has(row['HH_id']));
-  const filteredBio = bioData.filter(row => validHHIds.has(row['HH_id']));
-
-  // Calculate KPIs
-  const totalFarmers = validHHIds.size;
-  const totalArea = tabFilteredMaster.reduce((sum, row) => sum + (parseFloat(row['Extent']) || parseFloat(row['plot_reg-area']) || 0), 0);
-  const totalYield = filteredHarvest.reduce((sum, row) => sum + (parseFloat(row['yield_Qntl']) || 0), 0);
-  const totalBioInputs = filteredBio.length;
-
-  // Process data for charts
-  
-  // 1. Crop Types Distribution
-  const cropTypeCounts: Record<string, number> = {};
-  tabFilteredMaster.forEach(row => {
-    const crop = row['plot_reg-main_crop'] || row['plot_reg-crop_type'] || 'Unknown';
-    if (crop) {
-      cropTypeCounts[crop] = (cropTypeCounts[crop] || 0) + 1;
-    }
-  });
-  const cropTypeData = Object.entries(cropTypeCounts)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 10); // Top 10
-
-  // 2. Additional Crops (Inter/Border/Bund)
-  const isValidCrop = (val: string) => val && val.toLowerCase() !== 'no' && val.toLowerCase() !== 'none';
-  const additionalCrops = [
-    { name: 'Inter Crops', value: tabFilteredMaster.filter(r => isValidCrop(r['plot_reg-inter_crops']) || isValidCrop(r['plot_reg-intercrops_others'])).length },
-    { name: 'Border Crops', value: tabFilteredMaster.filter(r => isValidCrop(r['plot_reg-border_crops']) || r['plot_reg-border_crops_followed'] === 'yes').length },
-    { name: 'Bund Plants', value: tabFilteredMaster.filter(r => isValidCrop(r['plot_reg-bund_plants']) || r['plot_reg-bund_plantation_followed'] === 'yes').length },
-  ];
-
-  // 3. Crop Models
-  const cropModelCounts: Record<string, number> = {};
-  tabFilteredMaster.forEach(row => {
-    const model = row['plot_reg-crop_model'] || 'Unknown';
-    if (model) {
-      cropModelCounts[model] = (cropModelCounts[model] || 0) + 1;
-    }
-  });
-  const cropModelData = Object.entries(cropModelCounts)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 10);
-
-  // 4. Bio Inputs usage (Acres)
-  const bioInputAcres: Record<string, number> = {};
-  filteredBio.forEach(row => {
-    const input = row['inputs_applied'] || 'Unknown';
-    // Match with master to get acres
-    const hhId = row['HH_id'];
-    const masterRow = tabFilteredMaster.find(m => m['HH Id'] === hhId);
-    let acres = 0;
-    if (masterRow) {
-      acres = parseFloat(masterRow['Extent']) || parseFloat(masterRow['plot_reg-area']) || 0;
-    }
-    bioInputAcres[input] = (bioInputAcres[input] || 0) + acres;
-  });
-  
-  const bioInputData = Object.entries(bioInputAcres)
-    .map(([name, acres]) => ({ name, count: parseFloat(acres.toFixed(2)) }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-
-  // 5. Plot Locations for Map
-  const plotLocations = tabFilteredMaster
-    .map(row => {
-      const lat = parseFloat(row['plot_reg-plot_gps-Latitude']);
-      const lng = parseFloat(row['plot_reg-plot_gps-Longitude']);
-      const name = row['Farmer name'] || row['plot_reg-farmer_name'] || 'Unknown Farmer';
-      const crop = row['plot_reg-main_crop'] || row['plot_reg-crop_type'] || 'Unknown';
-      const area = row['Extent'] || row['plot_reg-area'] || '0';
-      const village = row['Village'] || 'Unknown';
-      const model = row['plot_reg-crop_model'] || 'Unknown';
-      const hhId = row['HH Id'] || 'N/A';
-      
-      if (!isNaN(lat) && !isNaN(lng)) {
-        return { lat, lng, name, crop, area, village, model, hhId };
-      }
-      return null;
-    })
-    .filter(Boolean);
-
-  const filteredPlotLocations = activeModelFilter 
-    ? plotLocations.filter(p => p.model === activeModelFilter)
-    : plotLocations;
-
-  let mapBounds: L.LatLngBounds | undefined = undefined;
-  if (filteredPlotLocations.length > 0) {
-    try {
-      const bounds = L.latLngBounds(filteredPlotLocations.map((p: any) => [p.lat, p.lng]));
-      if (bounds.isValid()) {
-        mapBounds = bounds;
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  // 6. Crop Models Colors
-  const uniqueModels = Array.from(new Set(plotLocations.map(p => p.model))).filter(Boolean).sort();
-  const modelColors: Record<string, string> = {};
-  const MODEL_PALETTE = [
-    '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', 
-    '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'
-  ];
-  uniqueModels.forEach((model: any, idx) => {
-    modelColors[model] = MODEL_PALETTE[idx % MODEL_PALETTE.length];
-  });
-
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Crops Dashboard</h1>
-          <p className="text-slate-500 text-sm mt-1">Analytics for master plot, bio inputs, and harvest data.</p>
+    <div className="bg-[#F5F7FA] min-h-[calc(100vh-64px)] -m-4 md:-m-8 p-4 md:p-6 font-sans text-slate-800 overflow-x-hidden">
+      <div className="w-full flex flex-col gap-6">
+        
+        {/* Header Section */}
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <Sprout className="w-5 h-5 text-emerald-600" />
+            Crops Dashboard
+          </h1>
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-500 bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-200 shrink-0">
+            <Database className="w-4 h-4 text-emerald-500" />
+            {filteredData.length} Records Found
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center gap-2 px-2 text-slate-500 border-r border-slate-100">
-            <Filter className="w-4 h-4" />
-            <input
-              type="text"
-              placeholder="HH ID..."
-              value={searchHHId}
-              onChange={e => setSearchHHId(e.target.value)}
-              className="bg-transparent text-sm outline-none w-24 text-slate-700 placeholder:text-slate-400"
+        {/* Tabs */}
+        <div className="flex items-center gap-4 border-b border-slate-200">
+          <button 
+            onClick={() => setActiveTab('overview')}
+            className={cn(
+              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors",
+              activeTab === 'overview' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
+            )}
+          >
+            Overview Dashboard
+          </button>
+          <button 
+            onClick={() => setActiveTab('frp')}
+            className={cn(
+              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors",
+              activeTab === 'frp' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
+            )}
+          >
+            FRP Dashboard
+          </button>
+        </div>
+
+        {/* Filters Panel */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+            <Filter className="w-5 h-5 text-slate-400" />
+            <h2 className="font-bold text-slate-700">Filter Data</h2>
+          </div>
+          
+          <div className="flex flex-nowrap overflow-x-auto gap-4 pb-2 snap-x custom-scrollbar">
+            <FilterSelect 
+              label="Year" 
+              value={selectedYear} 
+              onChange={setSelectedYear} 
+              options={years} 
+              className="min-w-[140px] shrink-0"
+            />
+            <FilterSelect 
+              label="Season" 
+              value={selectedSeason} 
+              onChange={setSelectedSeason} 
+              options={seasons} 
+              className="min-w-[140px] shrink-0"
+            />
+            <FilterSelect 
+              label="Block" 
+              value={selectedBlock} 
+              onChange={setSelectedBlock} 
+              options={blocks} 
+              className="min-w-[150px] shrink-0"
+            />
+            <FilterSelect 
+              label="Gram Panchayat (GP)" 
+              value={selectedGp} 
+              onChange={setSelectedGp} 
+              options={gps} 
+              className="min-w-[160px] shrink-0"
+            />
+            <FilterSelect 
+              label="Village" 
+              value={selectedVillage} 
+              onChange={setSelectedVillage} 
+              options={villages} 
+              className="min-w-[150px] shrink-0"
+            />
+            <FilterSelect 
+              label="Crop Mode" 
+              value={selectedCropMode} 
+              onChange={setSelectedCropMode} 
+              options={cropModes} 
+              className="min-w-[150px] shrink-0"
+            />
+            <FilterSelect 
+              label="Has Activities" 
+              value={hasActivities} 
+              onChange={setHasActivities} 
+              options={['Yes', 'No']} 
+              className="min-w-[140px] shrink-0"
             />
           </div>
 
-          <select 
-            value={selectedBlock} 
-            onChange={e => {
-              setSelectedBlock(e.target.value);
-              setSelectedVillage('All');
-            }}
-            className="bg-slate-50 border border-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none font-medium text-slate-700 min-w-[120px]"
-          >
-            <option value="All">All Blocks</option>
-            {blocks.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-          
-          <select 
-            value={selectedVillage} 
-            onChange={e => setSelectedVillage(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none font-medium text-slate-700 min-w-[120px]"
-          >
-            <option value="All">All Villages</option>
-            {villages.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-
-          <select 
-            value={selectedSeason} 
-            onChange={e => setSelectedSeason(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none font-medium text-slate-700"
-          >
-            <option value="All">All Seasons</option>
-            {seasons.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-
-          <select 
-            value={selectedYear} 
-            onChange={e => setSelectedYear(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none font-medium text-slate-700"
-          >
-            <option value="All">All Years</option>
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-200 gap-6 overflow-x-auto whitespace-nowrap pb-2">
-        <button
-          onClick={() => setActiveTab('Overview')}
-          className={`pb-2 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'Overview' 
-              ? 'border-blue-600 text-blue-600' 
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Overview
-        </button>
-        {breakdownArray.map(([model]) => (
-          <button
-            key={model}
-            onClick={() => setActiveTab(model)}
-            className={`pb-2 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === model
-                ? 'border-blue-600 text-blue-600' 
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {model}
-          </button>
-        ))}
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Total Farmers</p>
-            <p className="text-2xl font-bold text-slate-900">{totalFarmers}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <Map className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Total Extent (Acres)</p>
-            <p className="text-2xl font-bold text-slate-900">{totalArea.toFixed(2)}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-            {activeTab === 'Overview' ? <Sprout className="w-6 h-6" /> : <TrendingUp className="w-6 h-6" />}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">
-              {activeTab === 'Overview' ? 'Crop Models' : 'Total Yield (Qntl)'}
-            </p>
-            <p className="text-2xl font-bold text-slate-900">
-              {activeTab === 'Overview' ? Object.keys(cropModelCounts).length : totalYield.toFixed(2)}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
-            <FlaskConical className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Top Bio Input</p>
-            <p className="text-lg font-bold text-slate-900 truncate" title={bioInputData[0]?.name || '-'}>{bioInputData[0]?.name || '-'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Map View */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Map className="w-5 h-5 text-blue-600" />
-            <h2 className="font-semibold text-slate-800">Plot Locations</h2>
-          </div>
-          <span className="text-sm text-slate-500 font-medium bg-slate-50 px-3 py-1 rounded-full">{plotLocations.length} Plots Mapped</span>
-        </div>
-        <div className={cn(
-          "w-full bg-slate-50 z-0 transition-all duration-300",
-          isMapFullscreen ? "!fixed !inset-0 !h-[100dvh] !w-[100dvw] !z-[9999]" : "relative h-[450px]"
-        )}>
-          {typeof window !== 'undefined' && (
-            <MapContainer 
-              center={[20.5937, 78.9629]}
-              zoom={5}
-              scrollWheelZoom={isMapFullscreen} 
-              className="w-full h-full relative"
-            >
-              <MapResizer isFullscreen={isMapFullscreen} />
-              <LayersControl position="topright">
-                <LayersControl.BaseLayer checked name="OpenStreetMap">
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                </LayersControl.BaseLayer>
-                <LayersControl.BaseLayer name="Satellite">
-                  <TileLayer
-                    attribution='&copy; Google'
-                    url="https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}"
-                    subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
-                  />
-                </LayersControl.BaseLayer>
-              </LayersControl>
-              <MapUpdater bounds={mapBounds} />
-              {filteredPlotLocations.map((plot: any, idx: number) => (
-                <PlotMarker key={`plot-${plot.hhId}-${idx}`} plot={plot} color={modelColors[plot.model] || '#94a3b8'} />
-              ))}
-              
-              {/* Controls Overlay */}
-              <div className="absolute bottom-8 right-4 z-[1000]">
+          <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col md:flex-row items-center gap-4">
+            <div className="relative w-full md:w-96">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search by Farmer Name or HH ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 w-full bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+              />
+            </div>
+            
+            <div className="ml-auto w-full md:w-auto">
+              {(selectedBlock !== 'All' || selectedGp !== 'All' || selectedVillage !== 'All' || selectedCropMode !== 'All' || hasActivities !== 'All' || selectedYear !== 'All' || selectedSeason !== 'All' || searchTerm !== '') && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMapFullscreen(!isMapFullscreen);
+                  onClick={() => {
+                    setSelectedBlock('All');
+                    setSelectedGp('All');
+                    setSelectedVillage('All');
+                    setSelectedCropMode('All');
+                    setHasActivities('All');
+                    setSearchTerm('');
                   }}
-                  className="bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-md border border-slate-200 hover:bg-white text-slate-700 transition-colors"
-                  title={isMapFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                  className="w-full md:w-auto px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
                 >
-                  {isMapFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex flex-col">
+        {activeTab === 'overview' ? (
+          <OverviewTab data={filteredData} />
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div className="overflow-auto custom-scrollbar">
+            <table className="w-full text-left text-sm whitespace-nowrap min-w-[800px]">
+              <thead className="bg-[#F8FAFC] text-slate-500 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 w-10"></th>
+                  <th className="px-6 py-4">HH ID</th>
+                  <th className="px-6 py-4">Farmer Name</th>
+                  <th className="px-6 py-4">Crop Mode</th>
+                  <th className="px-6 py-4">Village</th>
+                  <th className="px-6 py-4">GP</th>
+                  <th className="px-6 py-4">Block</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paginatedData.length > 0 ? (
+                  paginatedData.map((row, idx) => {
+                    const rowId = row.raw?.__id || idx;
+                    const isExpanded = expandedRow === rowId;
+                    return (
+                      <React.Fragment key={rowId}>
+                        <tr 
+                          onClick={() => setExpandedRow(isExpanded ? null : rowId)}
+                          className={cn(
+                            "transition-colors group cursor-pointer",
+                            isExpanded ? "bg-slate-50" : "hover:bg-slate-50"
+                          )}
+                        >
+                          <td className="px-6 py-4 text-slate-400">
+                            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                          </td>
+                          <td className="px-6 py-4 font-bold text-slate-900">
+                            <div className="flex items-center gap-2">
+                              {row.hhId || '-'}
+                              {(row.bioInputs.length > 0 || row.harvests.length > 0) && (
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold" title="Has Activities">
+                                  {row.bioInputs.length + row.harvests.length}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-slate-700">{row.farmerName || '-'}</td>
+                          <td className="px-6 py-4">
+                            <span className={cn(
+                              "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold tracking-wide",
+                              row.cropMode 
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-slate-100 text-slate-500 border border-slate-200"
+                            )}>
+                              {row.cropMode || 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-600 flex items-center gap-2">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                            {row.village || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">{row.gp || '-'}</td>
+                          <td className="px-6 py-4 text-slate-600">{row.block || '-'}</td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={7} className="p-0 border-b border-slate-200 bg-slate-50/50">
+                              <div className="px-16 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-top-2 duration-200">
+                                <div className="space-y-1">
+                                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Date of Sowing</div>
+                                  <div className="text-sm font-medium text-slate-900">{row.sowingDate}</div>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> Season</div>
+                                  <div className="text-sm font-medium text-slate-900">{row.season}</div>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> Main Crop</div>
+                                  <div className="text-sm font-medium text-slate-900">{row.mainCrop}</div>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><Sprout className="w-3.5 h-3.5" /> Inter Crops</div>
+                                  <div className="text-sm font-medium text-slate-900">{row.interCrops}</div>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><Database className="w-3.5 h-3.5" /> Area</div>
+                                  <div className="text-sm font-medium text-slate-900">{row.area}</div>
+                                </div>
+                              </div>
+                              
+                              {/* Activities Section */}
+                              {(row.bioInputs.length > 0 || row.harvests.length > 0) && (
+                                <div className="px-16 pb-6 pt-0 animate-in slide-in-from-top-2 duration-200">
+                                  <div className="border-t border-slate-200 pt-6 mt-2">
+                                    <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center justify-between">
+                                      <span>Activities & Data</span>
+                                      {row.plotPhoto && row.plotSubmissionId && (
+                                        <button 
+                                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            window.open(`/api/odk/image?submissionId=${encodeURIComponent(row.plotSubmissionId)}&filename=${encodeURIComponent(row.plotPhoto)}&formId=${encodeURIComponent(row.plotFormId)}`, '_blank');
+                                          }}
+                                        >
+                                          <Sprout className="w-3 h-3" /> View Plot Photo
+                                        </button>
+                                      )}
+                                    </h4>
+                                    {row.plotPhoto && row.plotSubmissionId && (
+                                      <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Plot Registration Photo</h5>
+                                        <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(row.plotSubmissionId)}&filename=${encodeURIComponent(row.plotPhoto)}&formId=${encodeURIComponent(row.plotFormId)}`); }} src={`/api/odk/image?submissionId=${encodeURIComponent(row.plotSubmissionId)}&filename=${encodeURIComponent(row.plotPhoto)}&formId=${encodeURIComponent(row.plotFormId)}`} alt="Plot Registration" className="w-full max-w-sm h-48 object-cover rounded-lg shadow-sm border border-slate-300 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                      </div>
+                                    )}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                      
+                                      {/* Bio Inputs */}
+                                      {row.bioInputs.length > 0 && (
+                                        <div>
+                                          <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Bio Inputs Applied</h5>
+                                          <div className="space-y-3">
+                                            {row.bioInputs.map((bi: any, i: number) => (
+                                              <div key={i} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                                <div className="flex justify-between items-start mb-2">
+                                                  <span className="font-semibold text-sm text-slate-800">{bi.inputs_applied || 'Unknown Input'}</span>
+                                                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{bi.application_date_bio_input || '-'}</span>
+                                                </div>
+                                                <div className="text-sm text-slate-600 flex justify-between mb-2">
+                                                  <span>Qty: {bi.Dhravajeevamrutham_Quantity || bi.qty || '-'} {bi.unit || ''}</span>
+                                                  <span>Source: {bi.bioinputs_source || '-'}</span>
+                                                </div>
+                                                {bi.photo && bi.submissionId && (
+                                                  <div className="mt-2">
+                                                    <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`); }} src={`/api/odk/image?submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`} alt="Bio Input" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Harvests */}
+                                      {row.harvests.length > 0 && (
+                                        <div>
+                                          <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Harvesting Data</h5>
+                                          <div className="space-y-3">
+                                            {row.harvests.map((h: any, i: number) => (
+                                              <div key={i} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                                <div className="flex justify-between items-start mb-2">
+                                                  <span className="font-semibold text-sm text-slate-800">{h.crop_harvested || 'Unknown Crop'}</span>
+                                                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{h.date_harvest || '-'}</span>
+                                                </div>
+                                                <div className="text-sm text-slate-600">
+                                                  Yield: <span className="font-medium text-emerald-600">{((parseFloat(h.yield_Qntl || h.yield || 0) || 0) * 100).toFixed(2)} KG</span>
+                                                </div>
+                                                {h.photo && h.submissionId && (
+                                                  <div className="mt-3">
+                                                    <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`); }} src={`/api/odk/image?submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`} alt="Harvest" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                      <div className="flex flex-col items-center justify-center">
+                        <Search className="w-8 h-8 text-slate-300 mb-3" />
+                        <p className="text-base font-medium">No records found</p>
+                        <p className="text-sm mt-1">Try adjusting your search or filters.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white">
+              <div className="text-sm text-slate-500">
+                Showing <span className="font-medium text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-slate-900">{Math.min(currentPage * itemsPerPage, filteredData.length)}</span> of <span className="font-medium text-slate-900">{filteredData.length}</span> results
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <div className="text-sm font-medium text-slate-700 px-2">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
-
-              {/* Legend overlay */}
-              <div className="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-slate-200 max-h-[300px] min-w-[120px] overflow-y-auto custom-scrollbar">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Crop Models</h4>
-                  {activeModelFilter && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveModelFilter(null);
-                      }}
-                      className="text-[10px] text-red-500 hover:text-red-700 font-medium"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {uniqueModels.map((model: any) => (
-                    <div 
-                      key={model} 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveModelFilter(activeModelFilter === model ? null : model);
-                      }}
-                      className={cn(
-                        "flex items-center gap-2 cursor-pointer p-1 rounded-md transition-colors",
-                        activeModelFilter === model ? "bg-slate-100" : "hover:bg-slate-50",
-                        activeModelFilter && activeModelFilter !== model ? "opacity-40" : "opacity-100"
-                      )}
-                    >
-                      <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: modelColors[model] }}></div>
-                      <span className="text-xs font-medium text-slate-700 capitalize">{model}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </MapContainer>
+            </div>
           )}
+          </div>
+        )}
         </div>
       </div>
-
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Main Crop Distribution */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-          <div className="flex items-center gap-2 mb-6">
-            <Sprout className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold">Top Main Crops</h2>
-          </div>
-          <div className="w-full" style={{ height: 320 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={cropTypeData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {cropTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <RechartsTooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Secondary Practices */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-          <div className="flex items-center gap-2 mb-6">
-            <Sprout className="w-5 h-5 text-teal-600" />
-            <h2 className="text-lg font-semibold">Secondary Practices Followed</h2>
-          </div>
-          <div className="w-full" style={{ height: 320 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={additionalCrops} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 13}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 13}} dx={-10} />
-                <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Bar dataKey="value" name="Plots" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
-                  {additionalCrops.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-      {activeTab === 'Overview' && (
-        <>
-          {/* Crop Models */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-            <div className="flex items-center gap-2 mb-6">
-              <Sprout className="w-5 h-5 text-amber-600" />
-              <h2 className="text-lg font-semibold">Interested Crop Models</h2>
-            </div>
-            <div className="w-full" style={{ height: 320 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={cropModelData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                  <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 13}} />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
-                  <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="value" name="Plots" fill="#f59e0b" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Bio Inputs */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-            <div className="flex items-center gap-2 mb-6">
-              <FlaskConical className="w-5 h-5 text-purple-600" />
-              <h2 className="text-lg font-semibold">Bio Inputs Application Count (Acres)</h2>
-            </div>
-            <div className="w-full" style={{ height: 320 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={bioInputData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                  <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 13}} />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
-                  <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="count" name="Applications" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </>
-      )}
-
-      </div>
-
-      {/* Crop Models Breakdown Details */}
-      {activeTab === 'Overview' && (
-        <div className="mt-8 space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
-            <Sprout className="w-6 h-6 text-slate-800" />
-            <h2 className="text-xl font-bold text-slate-900">Crop Models Overview</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-6">
-            {breakdownArray.map(([model, data]) => {
-              const topCrop = Object.entries(data.mainCrops).sort((a, b) => b[1] - a[1])[0];
-              const topBio = Object.entries(data.bioInputsAcres).sort((a, b) => b[1] - a[1])[0];
-              
-              return (
-                <div key={model} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                  <div className="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
-                    <h3 className="font-bold text-lg text-slate-800">{model}</h3>
-                    <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-semibold">
-                      {data.farmers.size} {data.farmers.size === 1 ? 'Farmer' : 'Farmers'}
-                    </span>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                      <div>
-                        <p className="text-sm font-medium text-slate-500 mb-1">Total Extent</p>
-                        <p className="text-xl font-bold text-slate-900">{data.extent.toFixed(2)} Acres</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-500 mb-1">Total Harvest</p>
-                        <p className="text-xl font-bold text-slate-900">{data.yield.toFixed(2)} Qntl</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-500 mb-1">Top Crop</p>
-                        <p className="text-lg font-bold text-slate-900 truncate" title={topCrop ? topCrop[0] : '-'}>
-                          {topCrop ? topCrop[0] : '-'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-500 mb-1">Top Bio Input</p>
-                        <p className="text-lg font-bold text-slate-900 truncate" title={topBio ? topBio[0] : '-'}>
-                          {topBio ? topBio[0] : '-'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Model Specific Details */}
-      {activeTab !== 'Overview' && (
-        <ModelSpecificDetails 
-          modelName={activeTab} 
-          masterData={tabFilteredMaster} 
-          bioData={filteredBio} 
-          harvestData={filteredHarvest} 
-          setPreviewImage={setPreviewImage}
-        />
-      )}
-
-      {/* Full Screen Image Preview */}
+      {/* Image Preview Modal */}
       {previewImage && (
         <div 
-          className="fixed inset-0 bg-slate-900/90 z-[9999] flex items-center justify-center p-4 cursor-zoom-out backdrop-blur-sm"
+          className="fixed inset-0 z-[5000] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
           onClick={() => setPreviewImage(null)}
         >
-          <button 
-            className="absolute top-6 right-6 md:top-10 md:right-10 z-[10000] bg-slate-800/80 hover:bg-slate-700 text-white rounded-full p-3 transition-all border border-slate-600 shadow-xl backdrop-blur-md"
-            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
-            title="Close image"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <img 
-            src={previewImage} 
-            alt="Full size preview" 
-            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function getOdkImageUrl(formId: string, instanceId: string, filename: string) {
-  if (!filename || !instanceId) return null;
-  const instanceClean = instanceId.startsWith('uuid:') ? instanceId : `uuid:${instanceId}`;
-  
-  return `/api/odk/image?submissionId=${encodeURIComponent(instanceClean)}&filename=${encodeURIComponent(filename)}&formId=${encodeURIComponent(formId)}`;
-}
-
-function ModelSpecificDetails({ modelName, masterData, bioData, harvestData, setPreviewImage }: { modelName: string, masterData: any[], bioData: any[], harvestData: any[], setPreviewImage: (url: string) => void }) {
-  // Aggregate bio inputs
-  const bioSummary: Record<string, { quantity: number, acres: number, records: number }> = {};
-  
-  bioData.forEach(row => {
-    const input = row['inputs_applied'];
-    if (!input) return;
-    if (!bioSummary[input]) {
-      bioSummary[input] = { quantity: 0, acres: 0, records: 0 };
-    }
-    const q = parseFloat(row['Dhravajeevamrutham_Quantity']) || 0;
-    const hhId = row['HH_id'];
-    const masterRow = masterData.find(m => m['HH Id'] === hhId);
-    const acres = masterRow ? (parseFloat(masterRow['Extent']) || parseFloat(masterRow['plot_reg-area']) || 0) : 0;
-    
-    bioSummary[input].quantity += q;
-    bioSummary[input].acres += acres; // This might double count acres if multiple inputs per plot, but that's how it was done before.
-    bioSummary[input].records += 1;
-  });
-
-  return (
-    <div className="mt-8 space-y-8">
-      {/* Bio Inputs Summary */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
-          <FlaskConical className="w-6 h-6 text-purple-600" />
-          <h2 className="text-xl font-bold text-slate-900">Bio Inputs Usage Summary</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
-                <th className="py-3 px-4 font-semibold rounded-tl-lg">Bio Input Type</th>
-                <th className="py-3 px-4 font-semibold">Total Quantity (Liters/Kg)</th>
-                <th className="py-3 px-4 font-semibold rounded-tr-lg">Applied Extent (Acres)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(bioSummary).length === 0 && (
-                <tr>
-                  <td colSpan={3} className="py-8 text-center text-slate-500">No bio inputs data available for this model.</td>
-                </tr>
-              )}
-              {Object.entries(bioSummary).sort((a, b) => b[1].quantity - a[1].quantity).map(([input, data], idx) => (
-                <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
-                  <td className="py-4 px-4 font-medium text-slate-800">{input}</td>
-                  <td className="py-4 px-4 font-bold text-purple-700">{data.quantity.toFixed(2)}</td>
-                  <td className="py-4 px-4 font-semibold text-slate-600">{data.acres.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Farmers Details */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
-          <Users className="w-6 h-6 text-blue-600" />
-          <h2 className="text-xl font-bold text-slate-900">Farmers Details</h2>
-        </div>
-        <div className="space-y-4">
-          {masterData.map((farmerRow, idx) => (
-            <FarmerAccordion 
-              key={`${farmerRow['HH Id']}-${idx}`} 
-              farmerRow={farmerRow} 
-              bioData={bioData.filter(b => b['HH_id'] === farmerRow['HH Id'])} 
-              harvestData={harvestData.filter(h => h['HH_id'] === farmerRow['HH Id'])} 
-              setPreviewImage={setPreviewImage}
+          <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center">
+            <button 
+              className="fixed top-4 right-4 z-[5010] text-white/70 hover:text-white p-2 transition-colors bg-slate-900/50 hover:bg-slate-900/80 rounded-full backdrop-blur-md ring-1 ring-white/20"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(null);
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+            <img 
+              src={previewImage} 
+              alt="Preview" 
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl ring-1 ring-white/20"
+              onClick={(e) => e.stopPropagation()} 
             />
-          ))}
-          {masterData.length === 0 && (
-            <div className="py-8 text-center text-slate-500">No farmers found for this model.</div>
-          )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FilterSelect({ label, value, onChange, options, className }: { label: string, value: string, onChange: (val: string) => void, options: string[], className?: string }) {
+  return (
+    <select 
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={cn("px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 appearance-none cursor-pointer hover:bg-slate-50 transition-colors shadow-sm shrink-0 min-w-[120px] pr-8", className)}
+      style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem top 50%', backgroundSize: '0.65rem auto' }}
+    >
+      <option value="All">{label}: All</option>
+      {options.filter(Boolean).map(o => (
+        <option key={o} value={o}>{o}</option>
+      ))}
+    </select>
+  );
+}
+
+
+function OverviewTab({ data }: { data: any[] }) {
+  const stats = useMemo(() => {
+    let totalArea = 0;
+    let totalHarvests = 0;
+    let totalBioInputs = 0;
+    
+    const uniqueFarmers = new Set<string>();
+    const activeFarmers = new Set<string>();
+    
+    const cropModeCount: Record<string, number> = {};
+    const mainCropFarmers: Record<string, Set<string>> = {};
+    
+    data.forEach(item => {
+      const farmerId = item.hhId || item.farmerName || 'unknown';
+      uniqueFarmers.add(farmerId);
+      
+      // Area
+      const area = parseFloat(item.area);
+      if (!isNaN(area)) totalArea += area;
+      
+      // Activities
+      if (item.harvests.length > 0 || item.bioInputs.length > 0) {
+        activeFarmers.add(farmerId);
+      }
+      totalHarvests += item.harvests.length;
+      totalBioInputs += item.bioInputs.length;
+      
+      // Crop Mode
+      const mode = item.cropMode || 'Unknown';
+      cropModeCount[mode] = (cropModeCount[mode] || 0) + 1;
+      
+      // Main Crop
+      const mainCrop = item.mainCrop || 'Unknown';
+      if (mainCrop !== 'Unknown' && mainCrop !== '-') {
+        if (!mainCropFarmers[mainCrop]) {
+          mainCropFarmers[mainCrop] = new Set<string>();
+        }
+        mainCropFarmers[mainCrop].add(farmerId);
+      }
+    });
+    
+    const cropModeData = Object.entries(cropModeCount)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+      
+    const mainCropData = Object.entries(mainCropFarmers)
+      .map(([name, set]) => ({ name, value: set.size }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10); // top 10
+      
+    return {
+      totalUniqueFarmers: uniqueFarmers.size,
+      totalArea: totalArea.toFixed(2),
+      activeFarmers: activeFarmers.size,
+      totalHarvests,
+      totalBioInputs,
+      cropModeData,
+      mainCropData
+    };
+  }, [data]);
+  
+  const COLORS = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col">
+          <div className="flex items-center gap-2 text-slate-500 mb-1">
+            <Users className="w-4 h-4 text-emerald-500" />
+            <h3 className="font-semibold text-xs uppercase tracking-wider">Unique Farmers</h3>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">{stats.totalUniqueFarmers}</div>
+        </div>
+        
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col">
+          <div className="flex items-center gap-2 text-slate-500 mb-1">
+            <Layers className="w-4 h-4 text-emerald-500" />
+            <h3 className="font-semibold text-xs uppercase tracking-wider">Total Area (Acres)</h3>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">{stats.totalArea}</div>
+        </div>
+        
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col">
+          <div className="flex items-center gap-2 text-slate-500 mb-1">
+            <Activity className="w-4 h-4 text-emerald-500" />
+            <h3 className="font-semibold text-xs uppercase tracking-wider">Active Farmers</h3>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">{stats.activeFarmers}</div>
+          <div className="text-xs text-slate-500 mt-1">With logged activities</div>
+        </div>
+        
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col">
+          <div className="flex items-center gap-2 text-slate-500 mb-1">
+            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <h3 className="font-semibold text-xs uppercase tracking-wider">Total Activities</h3>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">{stats.totalHarvests + stats.totalBioInputs}</div>
+          <div className="text-xs text-slate-500 mt-1">{stats.totalHarvests} Harvests, {stats.totalBioInputs} Bio Inputs</div>
+        </div>
+      </div>
+      
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[400px] overflow-hidden min-w-0">
+          <div className="flex items-center gap-2 mb-4 shrink-0">
+            <PieChartIcon className="w-4 h-4 text-slate-400" />
+            <h3 className="font-bold text-slate-800 text-sm">Crop Modes Distribution</h3>
+          </div>
+          <div className="flex-1 min-h-0 relative">
+            {stats.cropModeData.length > 0 ? (
+              <div className="absolute inset-0">
+              <ResponsiveContainer width="100%" height="100%" debounce={50}>
+                <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 20 }}>
+                  <Pie
+                    data={stats.cropModeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value"
+                    isAnimationActive={false}
+                    labelLine={false}
+                  >
+                    {stats.cropModeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip isAnimationActive={false} wrapperStyle={{ pointerEvents: 'none' }} 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36} 
+                    iconType="circle"
+                    wrapperStyle={{ paddingTop: '20px' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
+            )}
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[400px] overflow-hidden min-w-0">
+          <div className="flex items-center gap-2 mb-4 shrink-0">
+            <BarChart3 className="w-4 h-4 text-slate-400" />
+            <h3 className="font-bold text-slate-800 text-sm">Crop-wise Farmers Count</h3>
+          </div>
+          <div className="flex-1 min-h-0 relative">
+            {stats.mainCropData.length > 0 ? (
+              <div className="absolute inset-0">
+              <ResponsiveContainer width="100%" height="100%" debounce={50}>
+                <BarChart data={stats.mainCropData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 11 }} 
+                    dy={10}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                  />
+                  <RechartsTooltip isAnimationActive={false} wrapperStyle={{ pointerEvents: 'none' }}
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false}>
+                    <LabelList dataKey="value" position="top" style={{ fontSize: '11px', fill: '#64748b', fontWeight: 'bold' }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
+            )}
+          </div>
         </div>
       </div>
     </div>
-  );
-}
-
-function FarmerAccordion({ farmerRow, bioData, harvestData, setPreviewImage }: { farmerRow: any, bioData: any[], harvestData: any[], setPreviewImage: (url: string) => void, key?: any }) {
-  const [isOpen, setIsOpen] = useState(false);
-  
-  // Group activities by year
-  // Try to parse year from sowing_date or date_harvest or application_date_bio_input, or fallback to farmerRow['Year']
-  const activitiesByYear: Record<string, { bio: any[], harvest: any[] }> = {};
-  
-  const getYear = (dateStr: string) => {
-    if (!dateStr) return null;
-    const d = new Date(dateStr);
-    if (!isNaN(d.getTime())) return d.getFullYear().toString();
-    return null;
-  };
-
-  const defaultYear = farmerRow['Year'] || 'Unknown';
-
-  bioData.forEach(b => {
-    const y = getYear(b['application_date_bio_input']) || defaultYear;
-    if (!activitiesByYear[y]) activitiesByYear[y] = { bio: [], harvest: [] };
-    activitiesByYear[y].bio.push(b);
-  });
-
-  harvestData.forEach(h => {
-    const y = getYear(h['date_harvest']) || defaultYear;
-    if (!activitiesByYear[y]) activitiesByYear[y] = { bio: [], harvest: [] };
-    activitiesByYear[y].harvest.push(h);
-  });
-
-  // If no activities, just show an empty year block or the default year
-  if (Object.keys(activitiesByYear).length === 0) {
-    activitiesByYear[defaultYear] = { bio: [], harvest: [] };
-  }
-
-  const name = farmerRow['Farmer name'] || farmerRow['plot_reg-farmer_name'] || 'Unknown Farmer';
-  const hhId = farmerRow['HH Id'] || 'N/A';
-  const village = farmerRow['Village'] || 'N/A';
-  
-  const masterPhotoUrl = getOdkImageUrl('NF- Register', farmerRow['meta-instanceID'], farmerRow['plot_reg-image'] || farmerRow['plot_reg-farmer_photo'] || farmerRow['Photo']);
-  const sowingImageUrl = getOdkImageUrl('NF- Register', farmerRow['meta-instanceID'], farmerRow['plot_reg-image']);
-
-  return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
-      >
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm flex-shrink-0 cursor-pointer" onClick={(e) => { e.stopPropagation(); if (masterPhotoUrl) setPreviewImage(masterPhotoUrl); }}>
-            {masterPhotoUrl ? (
-              <img src={masterPhotoUrl} alt={name} className="w-full h-full object-cover hover:opacity-90 transition-opacity" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            ) : (
-              <Users className="w-6 h-6 text-blue-500" />
-            )}
-          </div>
-          <div>
-            <h3 className="font-bold text-slate-900">{name}</h3>
-            <p className="text-sm text-slate-500">{village} • ID: {hhId}</p>
-          </div>
-        </div>
-        {isOpen ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
-      </button>
-
-      {isOpen && (
-        <div className="p-6 border-t border-slate-200 bg-white">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Extent</span>
-              <span className="font-bold text-slate-800">{farmerRow['Extent'] || farmerRow['plot_reg-area'] || '0'} Acres</span>
-            </div>
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Main Crop</span>
-              <span className="font-bold text-slate-800 truncate">{farmerRow['plot_reg-main_crop'] || farmerRow['plot_reg-crop_type'] || '-'}</span>
-            </div>
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Season</span>
-              <span className="font-bold text-slate-800">{farmerRow['plot_reg-season'] || '-'}</span>
-            </div>
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Sowing Date</span>
-              <span className="font-bold text-slate-800">{farmerRow['plot_reg-sowing_date'] || '-'}</span>
-            </div>
-          </div>
-
-          {sowingImageUrl && (
-            <div className="mb-6">
-              <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-green-600" />
-                Sowing Image
-              </h4>
-              <div 
-                className="w-32 h-32 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 cursor-pointer shadow-sm"
-                onClick={() => setPreviewImage(sowingImageUrl)}
-              >
-                <img 
-                  src={sowingImageUrl} 
-                  alt="Sowing" 
-                  className="w-full h-full object-cover hover:scale-105 transition-transform" 
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }} 
-                />
-              </div>
-            </div>
-          )}
-
-          <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            Yearly Activities
-          </h4>
-          
-          <div className="space-y-4">
-            {Object.entries(activitiesByYear).sort(([yA], [yB]) => Number(yB) - Number(yA)).map(([year, data]) => (
-              <YearlyAccordion key={year} year={year} data={data} setPreviewImage={setPreviewImage} />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function YearlyAccordion({ year, data, setPreviewImage }: { year: string, data: { bio: any[], harvest: any[] }, setPreviewImage: (url: string) => void, key?: any }) {
-  const [isOpen, setIsOpen] = useState(true);
-
-  return (
-    <div className="border border-slate-100 rounded-lg overflow-hidden bg-slate-50">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 bg-slate-100/50 hover:bg-slate-200/50 transition-colors text-left border-b border-slate-100"
-      >
-        <h5 className="font-bold text-slate-700">Year {year}</h5>
-        {isOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
-      </button>
-
-      {isOpen && (
-        <div className="p-4 space-y-6">
-          {/* Bio Inputs */}
-          <div>
-            <h6 className="text-sm font-bold text-purple-700 mb-3 flex items-center gap-2">
-              <FlaskConical className="w-4 h-4" /> Bio Inputs Applied ({data.bio.length})
-            </h6>
-            {data.bio.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {data.bio.map((b, i) => {
-                  const photoUrl = getOdkImageUrl('NF- Activities', b['PARENT_KEY'] || b['KEY'] || b['meta-instanceID'], b['Photos'] || b['photo'] || b['Photo']);
-                  return (
-                    <div key={i} className="bg-white p-3 rounded-lg border border-purple-100 shadow-sm flex gap-3">
-                      {photoUrl && (
-                        <div 
-                          className="w-16 h-16 rounded-md bg-slate-100 overflow-hidden flex-shrink-0 border border-slate-200 cursor-pointer shadow-sm"
-                          onClick={() => setPreviewImage(photoUrl)}
-                        >
-                          <img src={photoUrl} alt="Bio Input" className="w-full h-full object-cover hover:scale-110 transition-transform" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-bold text-sm text-slate-800">{b['inputs_applied'] || 'Unknown'}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{b['application_date_bio_input'] || 'No Date'}</p>
-                        <p className="text-xs font-semibold text-purple-600 mt-1">
-                          {b['Dhravajeevamrutham_Quantity'] ? `${b['Dhravajeevamrutham_Quantity']} Qty` : ''}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400 italic">No bio inputs recorded.</p>
-            )}
-          </div>
-
-          {/* Harvests */}
-          <div>
-            <h6 className="text-sm font-bold text-amber-600 mb-3 flex items-center gap-2">
-              <Wheat className="w-4 h-4" /> Harvest Records ({data.harvest.length})
-            </h6>
-            {data.harvest.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {data.harvest.map((h, i) => {
-                  const photoUrl = getOdkImageUrl('NF- Activities', h['PARENT_KEY'] || h['KEY'] || h['meta-instanceID'], h['photo'] || h['Photo'] || h['Photos']);
-                  return (
-                    <div key={i} className="bg-white p-3 rounded-lg border border-amber-100 shadow-sm flex gap-3">
-                      {photoUrl && (
-                        <div 
-                          className="w-16 h-16 rounded-md bg-slate-100 overflow-hidden flex-shrink-0 border border-slate-200 cursor-pointer shadow-sm"
-                          onClick={() => setPreviewImage(photoUrl)}
-                        >
-                          <img src={photoUrl} alt="Harvest" className="w-full h-full object-cover hover:scale-110 transition-transform" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-bold text-sm text-slate-800">Harvest Yield</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{h['date_harvest'] || 'No Date'}</p>
-                        <p className="text-xs font-semibold text-amber-600 mt-1">
-                          {h['yield_Qntl'] ? `${h['yield_Qntl']} Qntl` : ''}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400 italic">No harvest records.</p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PlotMarker({ plot, color }: { plot: any, color?: string, key?: any }) {
-  const markerColor = color || '#10b981';
-  const icon = L.divIcon({
-    className: 'custom-dot',
-    html: `<div class="rounded-full border-2 border-white shadow-sm w-3 h-3 hover:scale-125 transition-transform" style="background-color: ${markerColor}"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-    popupAnchor: [0, -10]
-  });
-
-  return (
-    <Marker position={[plot.lat, plot.lng]} icon={icon}>
-      <Popup className="custom-popup">
-        <div className="p-1 min-w-[200px]">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: markerColor }} />
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{plot.village} Village</span>
-          </div>
-          <h3 className="font-bold text-slate-800 text-sm mb-1">{plot.name}</h3>
-          <p className="text-xs text-slate-500 mb-2">ID: {plot.hhId}</p>
-          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100">
-            <div>
-              <span className="block text-[10px] text-slate-400 font-semibold mb-0.5">CROP</span>
-              <span className="block text-xs font-medium text-slate-700 truncate" title={plot.crop}>{plot.crop}</span>
-            </div>
-            <div>
-              <span className="block text-[10px] text-slate-400 font-semibold mb-0.5">AREA</span>
-              <span className="block text-xs font-medium text-slate-700">{plot.area} Ac</span>
-            </div>
-          </div>
-        </div>
-      </Popup>
-    </Marker>
   );
 }

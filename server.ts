@@ -345,6 +345,30 @@ async function getOdkToken() {
   return tokenPromise;
 }
 
+app.get("/api/odk/data", async (req, res) => {
+  try {
+    const { formId } = req.query;
+    if (!formId || typeof formId !== "string") {
+      return res.status(400).json({ error: "Missing or invalid formId parameter" });
+    }
+    const token = await getOdkToken();
+    const url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(formId)}.svc/Submissions?$expand=*`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("ODK Data Fetch Error:", response.status, errText);
+      return res.status(response.status).json({ error: "Failed to fetch data from ODK", details: errText });
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Error proxying ODK data:", error);
+    res.status(500).json({ error: "Internal server error fetching ODK data" });
+  }
+});
+
 app.get('/api/odk/image', async (req, res) => {
   try {
     const { submissionId, filename, formId } = req.query;

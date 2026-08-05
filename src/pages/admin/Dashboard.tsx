@@ -1,464 +1,138 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { 
-  IndianRupee, 
+  ReceiptIndianRupee, 
   Box, 
   CalendarDays, 
   Car, 
-  Users,
-  Loader2,
-  Filter
+  Users, 
+  Bed,
+  Plane,
+  Database,
+  Droplets,
+  FileBarChart,
+  ArrowRight,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from 'recharts';
-import { fetchSheet } from '../../lib/api';
-import toast from 'react-hot-toast';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
+import { cn } from '../../lib/utils';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Dashboard() {
-  const [loading, setLoading] = useState(true);
-  const [metrics, setMetrics] = useState({
-    monthlyExpenses: 0,
-    totalAssets: 0,
-    totalMeetings: 0,
-    travelExpenses: 0,
-    activeVendors: 0,
-  });
-  const [categoryData, setCategoryData] = useState<any[]>([]);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
-
-  const months = [
-    'April', 'May', 'June', 'July', 'August', 'September', 
-    'October', 'November', 'December', 'January', 'February', 'March'
+  const { user } = useAuth();
+  
+  const modules = [
+    { name: 'Expenses', path: '/admin/expenses', icon: ReceiptIndianRupee, desc: 'Manage budget & transactions', color: 'blue' },
+    { name: 'Assets', path: '/admin/assets', icon: Box, desc: 'Track inventory and supplies', color: 'emerald' },
+    { name: 'Meetings', path: '/admin/meetings', icon: CalendarDays, desc: 'Schedule and manage events', color: 'indigo' },
+    { name: 'Car Rentals', path: '/admin/car-rentals', icon: Car, desc: 'Vehicle allocations & tracking', color: 'amber' },
+    { name: 'Vendors', path: '/admin/vendors', icon: Users, desc: 'Supplier and partner records', color: 'purple' },
+    { name: 'Guest Room', path: '/admin/guest-room', icon: Bed, desc: 'Accommodation management', color: 'rose' },
+    { name: 'Team Travel', path: '/admin/team-travel', icon: Plane, desc: 'Employee travel itineraries', color: 'cyan' },
+    { name: 'Reports', path: '/admin/reports', icon: FileBarChart, desc: 'Exportable data analytics', color: 'pink' },
   ];
 
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth(); // 0-11
-  
-  // Default FY logic
-  const defaultFY = currentMonth >= 3 ? `${currentYear}-${(currentYear + 1).toString().slice(-2)}` : `${currentYear - 1}-${currentYear.toString().slice(-2)}`;
-  const defaultMonth = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date());
-
-  const [selectedMonth, setSelectedMonth] = useState('All Months');
-  const [selectedFY, setSelectedFY] = useState(defaultFY);
-  const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-  const [rawExpenses, setRawExpenses] = useState<any[]>([]);
-
-  // Generate FY options (last 5 years + next year)
-  const fyOptions = [];
-  for (let i = -3; i <= 1; i++) {
-    const year = currentYear + i;
-    fyOptions.push(`${year}-${(year + 1).toString().slice(-2)}`);
-  }
-
-  const normalizeDate = (dateStr: string) => {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return null;
-    return new Date(date.getTime() + 12 * 60 * 60 * 1000);
-  };
-
-  const isDateInFY = (dateStr: string) => {
-    const date = normalizeDate(dateStr);
-    if (!date) return false;
-    const month = date.getUTCMonth();
-    const year = date.getUTCFullYear();
-    const [startYearStr] = selectedFY.split('-');
-    const startYear = parseInt(startYearStr);
-    if (month >= 3) return year === startYear;
-    return year === startYear + 1;
-  };
-
-  const isDateInRange = (dateStr: string) => {
-    const date = normalizeDate(dateStr);
-    if (!date) return false;
-    const monthName = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(date);
-    if (!isDateInFY(dateStr)) return false;
-    if (selectedMonth !== 'All Months' && monthName !== selectedMonth) return false;
-    return true;
-  };
-
-  // Derived state for chart
-  const expenseData = (() => {
-    const expByMonth: Record<string, Record<string, number>> = {};
-    const monthsOrder = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
-    
-    monthsOrder.forEach(m => { expByMonth[m] = { amount: 0 }; });
-
-    rawExpenses.forEach((e: any) => {
-      const amt = parseFloat(e.Amount) || 0;
-      const date = normalizeDate(e.date);
-      const cat = e.Expense_type || 'Others';
-      
-      if (isDateInFY(e.date) && date) {
-        const monthName = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' }).format(date);
-        
-        if (expByMonth[monthName]) {
-          // If a specific category is selected, only add its amount to "amount"
-          if (selectedCategory !== 'All Categories') {
-            if (selectedCategory === cat) {
-              expByMonth[monthName].amount += amt;
-            }
-          } else {
-            // For All Categories, calculate total amount
-            expByMonth[monthName].amount += amt;
-          }
-          // Also keep track of individual category amounts for multi-line support if needed
-          expByMonth[monthName][cat] = (expByMonth[monthName][cat] || 0) + amt;
-        }
-      }
-    });
-
-    return monthsOrder.map(name => ({
-      name,
-      ...expByMonth[name]
-    }));
-  })();
-
-  useEffect(() => {
-    loadDashboardData();
-  }, [selectedMonth, selectedFY]);
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      const expenses = await fetchSheet('expenses');
-      const assets = await fetchSheet('asset_registry');
-      const meetings = await fetchSheet('meeting_tracker');
-      const rentals = await fetchSheet('Car_Rental');
-      const vendors = await fetchSheet('Vendor_Management');
-
-      setRawExpenses(expenses);
-      const catSet = new Set<string>();
-
-      // Calculate Metrics
-      let monthlyExp = 0;
-      const expByCategory: Record<string, number> = {};
-
-      expenses.forEach((e: any) => {
-        const amt = parseFloat(e.Amount) || 0;
-        const cat = e.Expense_type || 'Others';
-        catSet.add(cat);
-        
-        if (isDateInRange(e.date)) {
-          monthlyExp += amt;
-          expByCategory[cat] = (expByCategory[cat] || 0) + amt;
-        }
-      });
-      setAvailableCategories(Array.from(catSet).sort());
-
-      let travelExp = 0;
-      rentals.forEach((r: any) => {
-        const amt = parseFloat(r.Amount) || 0;
-        if (isDateInRange(r.Date)) {
-          travelExp += amt;
-        }
-      });
-
-      let currentMonthMeetings = 0;
-      meetings.forEach((m: any) => {
-        if (isDateInRange(m['Meeting Date'])) {
-          currentMonthMeetings++;
-        }
-      });
-
-      setMetrics({
-        monthlyExpenses: monthlyExp,
-        totalAssets: assets.length,
-        totalMeetings: currentMonthMeetings,
-        travelExpenses: travelExp,
-        activeVendors: vendors.length,
-      });
-
-      // Format Chart Data
-      const formattedCategoryData = Object.keys(expByCategory).map(name => ({
-        name, value: expByCategory[name]
-      }));
-      setCategoryData(formattedCategoryData.length > 0 ? formattedCategoryData : [{ name: 'No Data', value: 1 }]);
-
-      // Compile Recent Activity
-      const activities: any[] = [];
-      
-      expenses.slice(-5).forEach((e: any) => {
-        if (e.date) {
-          activities.push({
-            id: `exp-${e._rowIndex}`,
-            date: e.date,
-            module: 'Expense',
-            desc: e.Description || e.Expense_type,
-            amount: `₹${e.Amount}`,
-            status: 'Paid',
-            timestamp: new Date(e.date).getTime()
-          });
-        }
-      });
-
-      assets.slice(-5).forEach((a: any) => {
-        if (a['Purchase Date']) {
-          activities.push({
-            id: `ast-${a._rowIndex}`,
-            date: a['Purchase Date'],
-            module: 'Asset',
-            desc: `New ${a.Asset_type} Added`,
-            amount: a.Cost ? `₹${a.Cost}` : '-',
-            status: a.Status || 'Active',
-            timestamp: new Date(a['Purchase Date']).getTime()
-          });
-        }
-      });
-
-      meetings.slice(-5).forEach((m: any) => {
-        if (m['Meeting Date']) {
-          activities.push({
-            id: `mtg-${m._rowIndex}`,
-            date: m['Meeting Date'],
-            module: 'Meeting',
-            desc: m['Project Name'] || m.Reason,
-            amount: '-',
-            status: 'Completed',
-            timestamp: new Date(m['Meeting Date']).getTime()
-          });
-        }
-      });
-
-      rentals.slice(-5).forEach((r: any) => {
-        if (r.Date) {
-          activities.push({
-            id: `rnt-${r._rowIndex}`,
-            date: r.Date,
-            module: 'Travel',
-            desc: `${r['Vehicle Type']} for ${r.Project}`,
-            amount: r.Amount ? `₹${r.Amount}` : '-',
-            status: 'Completed',
-            timestamp: new Date(r.Date).getTime()
-          });
-        }
-      });
-
-      activities.sort((a, b) => b.timestamp - a.timestamp);
-      setRecentActivity(activities.slice(0, 8));
-
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDateForDisplay = (dateStr: any) => {
-    if (!dateStr) return '-';
-    
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return String(dateStr);
-      
-      // Add 12 hours to compensate for timezone shifts
-      const adjustedDate = new Date(date.getTime() + 12 * 60 * 60 * 1000);
-      
-      const y = adjustedDate.getUTCFullYear();
-      const m = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
-      const d = String(adjustedDate.getUTCDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    } catch (e) {
-      return String(dateStr);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
-        
-        <div className="flex flex-wrap gap-3 w-full md:w-auto">
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
-            <CalendarDays className="w-4 h-4 text-slate-400 mr-2" />
-            <select 
-              value={selectedFY} 
-              onChange={(e) => setSelectedFY(e.target.value)}
-              className="bg-transparent border-none outline-none text-sm font-medium text-slate-600 cursor-pointer"
-            >
-              {fyOptions.map(fy => <option key={fy} value={fy}>{fy}</option>)}
-            </select>
-          </div>
-
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
-            <Filter className="w-4 h-4 text-slate-400 mr-2" />
-            <select 
-              value={selectedMonth} 
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-transparent border-none outline-none text-sm font-medium text-slate-600 cursor-pointer"
-            >
-              <option value="All Months">All Months</option>
-              {months.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
+    <div className="bg-[#F5F7FA] min-h-screen -m-4 md:-m-8 p-4 md:p-8 font-sans text-slate-800">
+      
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2 flex items-center gap-2">
+            Welcome back, {user?.user_name || 'Admin'}
+          </h1>
+          <p className="text-slate-500 max-w-xl">
+            Access your core administration tools, monitor regional operations, and manage organizational resources.
+          </p>
         </div>
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+          <Activity className="w-4 h-4 text-emerald-500" />
+          System Status: Online
+        </div>
+      </div>
+
+      {/* QUICK STATS (Lightweight visual flair) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <StatCard title="Active Modules" value="11" trend="System normal" icon={Database} />
+        <StatCard title="Recent Activity" value="24" trend="Updates today" icon={TrendingUp} />
+        <StatCard title="Resource Health" value="100%" trend="All systems operational" icon={Activity} />
+      </div>
+
+      <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+        Office Admin Modules
+      </h2>
+
+      {/* BENTO GRID NAVIGATION */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {modules.map((mod, idx) => (
+          <ModuleCard key={idx} {...mod} />
+        ))}
       </div>
       
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <SummaryCard title="Expenses" value={`₹${metrics.monthlyExpenses.toLocaleString()}`} subtext={selectedMonth === 'All Months' ? `FY ${selectedFY}` : `${selectedMonth} ${selectedFY}`} icon={IndianRupee} color="bg-blue-100 text-blue-600" />
-        <SummaryCard title="Total Assets" value={metrics.totalAssets} subtext="Active" icon={Box} color="bg-emerald-100 text-emerald-600" />
-        <SummaryCard title="Meetings" value={metrics.totalMeetings} subtext={selectedMonth === 'All Months' ? `FY ${selectedFY}` : `${selectedMonth} ${selectedFY}`} icon={CalendarDays} color="bg-purple-100 text-purple-600" />
-        <SummaryCard title="Travel Expenses" value={`₹${metrics.travelExpenses.toLocaleString()}`} subtext={selectedMonth === 'All Months' ? `FY ${selectedFY}` : `${selectedMonth} ${selectedFY}`} icon={Car} color="bg-orange-100 text-orange-600" />
-        <SummaryCard title="Active Vendors" value={metrics.activeVendors} subtext="Registered" icon={Users} color="bg-pink-100 text-pink-600" />
-      </div>
+    </div>
+  );
+}
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-semibold">Monthly Expenses Trend</h2>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-sm rounded-lg px-3 py-1.5 outline-none font-medium text-slate-600"
-            >
-              <option value="All Categories">All Categories</option>
-              {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={expenseData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B' }} dx={-10} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', paddingBottom: '10px' }} />
-                {selectedCategory === 'All Categories' ? (
-                  availableCategories.map((cat, idx) => (
-                    <Line 
-                      key={cat}
-                      type="monotone" 
-                      dataKey={cat} 
-                      name={cat}
-                      stroke={COLORS[idx % COLORS.length]} 
-                      strokeWidth={2} 
-                      dot={{ r: 3, strokeWidth: 1 }} 
-                      activeDot={{ r: 5 }} 
-                    />
-                  ))
-                ) : (
-                  <Line type="monotone" dataKey="amount" name={selectedCategory} stroke="#3B82F6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h2 className="text-lg font-semibold mb-6">Expense Categories</h2>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+function StatCard({ title, value, trend, icon: Icon }: any) {
+  return (
+    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5">
+      <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
+        <Icon className="w-6 h-6 text-slate-600" />
       </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
-          <h2 className="text-lg font-semibold">Recent Activity</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 text-slate-500 font-medium">
-              <tr>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Module</th>
-                <th className="px-6 py-4">Description</th>
-                <th className="px-6 py-4">Amount</th>
-                <th className="px-6 py-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {recentActivity.length > 0 ? recentActivity.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 text-slate-600">{formatDateForDisplay(item.date)}</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                      {item.module}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-slate-900">{item.desc}</td>
-                  <td className="px-6 py-4 text-slate-600">{item.amount}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                      item.status === 'Paid' || item.status === 'Completed' || item.status === 'Active' || item.status === 'Available' || item.status === 'In Use'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {item.status}
-                    </span>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">No recent activity found</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div>
+        <div className="text-2xl font-bold text-slate-900">{value}</div>
+        <div className="text-sm font-medium text-slate-500 mt-1">{title}</div>
+        <div className="text-xs text-slate-400 mt-1">{trend}</div>
       </div>
     </div>
   );
 }
 
-function SummaryCard({ title, value, subtext, icon: Icon, color }: any) {
+function ModuleCard({ name, path, icon: Icon, desc, color }: any) {
+  const colors: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-600 group-hover:text-white',
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white',
+    amber: 'bg-amber-50 text-amber-600 border-amber-100 group-hover:bg-amber-500 group-hover:text-white',
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white',
+    purple: 'bg-purple-50 text-purple-600 border-purple-100 group-hover:bg-purple-600 group-hover:text-white',
+    cyan: 'bg-cyan-50 text-cyan-600 border-cyan-100 group-hover:bg-cyan-600 group-hover:text-white',
+    pink: 'bg-pink-50 text-pink-600 border-pink-100 group-hover:bg-pink-600 group-hover:text-white',
+    rose: 'bg-rose-50 text-rose-600 border-rose-100 group-hover:bg-rose-600 group-hover:text-white',
+  };
+
+  const bgColors: Record<string, string> = {
+    blue: 'group-hover:border-blue-200',
+    emerald: 'group-hover:border-emerald-200',
+    amber: 'group-hover:border-amber-200',
+    indigo: 'group-hover:border-indigo-200',
+    purple: 'group-hover:border-purple-200',
+    cyan: 'group-hover:border-cyan-200',
+    pink: 'group-hover:border-pink-200',
+    rose: 'group-hover:border-rose-200',
+  };
+
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-3 rounded-xl ${color}`}>
-          <Icon className="w-6 h-6" />
+    <Link to={path}>
+      <motion.div 
+        whileHover={{ y: -4, scale: 1.02 }}
+        className={cn(
+          "bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all duration-300 relative overflow-hidden group cursor-pointer h-full flex flex-col",
+          bgColors[color]
+        )}
+      >
+        <div className="flex justify-between items-start mb-6">
+          <div className={cn("p-3 rounded-xl border transition-colors duration-300", colors[color])}>
+            <Icon className="w-6 h-6" />
+          </div>
+          <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-slate-600 transition-colors" />
         </div>
-      </div>
-      <div>
-        <h3 className="text-slate-500 text-sm font-medium mb-1">{title}</h3>
-        <div className="text-2xl font-bold text-slate-900">{value}</div>
-        <p className="text-xs text-slate-400 mt-1">{subtext}</p>
-      </div>
-    </div>
+        
+        <div className="mt-auto">
+          <h3 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-slate-800">{name}</h3>
+          <p className="text-sm text-slate-500 line-clamp-2">{desc}</p>
+        </div>
+      </motion.div>
+    </Link>
   );
 }

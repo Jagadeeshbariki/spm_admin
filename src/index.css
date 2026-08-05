@@ -46,3 +46,8 @@
 .animate-pulse-blue {
   animation: pulse-blue 2s infinite;
 }
+.custom-scrollbar::-webkit-scrollbar:horizontal {
+  height: 5px;
+}
+html { overflow-y: scroll; }
+body { overflow-x: hidden; }
