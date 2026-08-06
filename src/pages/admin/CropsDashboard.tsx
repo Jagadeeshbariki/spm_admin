@@ -35,7 +35,13 @@ export default function CropsDashboard() {
           fetch('/api/odk/data?formId=NF-%20Activities')
         ]);
         if (!regResponse.ok) {
-          throw new Error('Failed to fetch data from ODK Central. Please check permissions or network.');
+          const regErrText = await regResponse.text();
+          let errDetail = regErrText;
+          try {
+            const parsed = JSON.parse(regErrText);
+            errDetail = parsed.details || parsed.error || regErrText;
+          } catch (e) {}
+          throw new Error(`Failed to fetch data from ODK Central (${regResponse.status}): ${errDetail}`);
         }
         let json, actJson;
         try {

@@ -351,8 +351,16 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
     if (!formId || typeof formId !== "string") {
       return res.status(400).json({ error: "Missing or invalid formId parameter" });
     }
+    let cleanFormId = formId;
+    if (cleanFormId.endsWith('.svc')) {
+      cleanFormId = cleanFormId.slice(0, -4);
+    }
+    try {
+      cleanFormId = decodeURIComponent(cleanFormId);
+    } catch (e) {}
+
     const token = await getOdkToken();
-    const url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(formId)}.svc/Submissions?$expand=*`;
+    const url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(cleanFormId)}.svc/Submissions?$expand=*`;
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -365,7 +373,7 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
     res.json(data);
   } catch (error: any) {
     console.error("Error proxying ODK data:", error);
-    res.status(500).json({ error: "Internal server error fetching ODK data" });
+    res.status(500).json({ error: error.message || "Internal server error fetching ODK data" });
   }
 });
 
@@ -486,7 +494,9 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(__dirname, 'dist');
+    const distPath = fs.existsSync(path.join(process.cwd(), 'dist')) 
+      ? path.join(process.cwd(), 'dist')
+      : (fs.existsSync(path.join(__dirname, 'dist')) ? path.join(__dirname, 'dist') : __dirname);
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
