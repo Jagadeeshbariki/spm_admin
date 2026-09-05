@@ -53,9 +53,9 @@ export async function fetchWithFallback(
     console.warn("Direct fetch failed, attempting via proxy...", error);
 
     // Fallback to a CORS proxy if the browser blocks the direct connection
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    const proxyUrl = `/api/proxy/script?url=${encodeURIComponent(url)}`;
     const proxyController = new AbortController();
-    const proxyTimeoutId = setTimeout(() => proxyController.abort(), 25000); // Slightly longer for proxy
+    const proxyTimeoutId = setTimeout(() => proxyController.abort(), 60000); // Slightly longer for proxy
 
     try {
       const res = await fetch(proxyUrl, {
@@ -263,21 +263,24 @@ export async function deleteRow(sheetName: string, rowIndex: number) {
 
 export async function fetchFileContent(fileId: string) {
   try {
-    const url = `${API_BASE}?action=getFile&fileId=${encodeURIComponent(fileId)}&t=${Date.now()}`;
-    const res = await fetchWithFallback(url);
+    const res = await fetch(`/api/drive/file/${encodeURIComponent(fileId)}`);
     if (!res.ok) throw new Error("Failed to fetch file");
 
-    const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      throw new Error(
-        "Server returned HTML instead of file data. This often means the Google script or Drive link is unauthorized or incorrect.",
-      );
+    const text = await res.text();
+    // In case the response is JSON wrapped
+    try {
+      const data = JSON.parse(text);
+      if (data && data.content && data.error === undefined) {
+         return data.content;
+      }
+      if (data && data.error) {
+         throw new Error(data.error);
+      }
+    } catch(e) {
+      // Not JSON wrapped, just raw text.
     }
-
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    return data.content || "";
+    
+    return text;
   } catch (error: any) {
     console.error("Fetch file content error:", error);
     throw error;

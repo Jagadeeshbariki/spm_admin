@@ -247,6 +247,79 @@ app.delete('/api/sheets/:sheetName/:rowIndex', async (req, res) => {
   }
 });
 
+// Proxy for Google Apps Script to bypass CORS
+app.all(['/api/proxy/script', '/api/proxy/script/'], async (req, res) => {
+  try {
+    const targetUrl = req.query.url as string;
+    if (!targetUrl) {
+      return res.status(400).json({ error: 'Missing target url parameter' });
+    }
+
+    const fetchOptions: RequestInit = {
+      method: req.method,
+      headers: {
+        'Accept': req.headers.accept || '*/*',
+      },
+    };
+
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      fetchOptions.body = JSON.stringify(req.body);
+      fetchOptions.headers = {
+        ...fetchOptions.headers,
+        'Content-Type': 'text/plain;charset=utf-8', // Google Scripts prefer text/plain
+      };
+    }
+
+    const response = await fetch(targetUrl, fetchOptions);
+    
+    const contentType = response.headers.get('content-type');
+    const text = await response.text();
+    
+    if (contentType && contentType.includes('application/json')) {
+       try {
+         return res.json(JSON.parse(text));
+       } catch (e) {
+         return res.send(text);
+       }
+    }
+    
+    res.send(text);
+  } catch (error: any) {
+    console.error('Proxy error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Download a file from Google Drive via the Apps Script proxy
+app.get(['/api/drive/file/:fileId', '/api/drive/file/:fileId/'], async (req, res) => {
+  try {
+    const fileId = req.params.fileId;
+    if (!fileId) {
+      return res.status(400).json({ error: 'No file ID provided' });
+    }
+
+    const scriptUrl = `https://script.google.com/macros/s/AKfycbwmJxHEodAZPOUN9qQ-o1Uj9mEmt3OgymdLCzCqUpPYWTaq-brr-PdPfftd5pmpBr8/exec?action=getFile&fileId=${encodeURIComponent(fileId)}&t=${Date.now()}`;
+    
+    // Node 18+ has native fetch. Let's fetch and send back the content
+    const fetchResponse = await fetch(scriptUrl);
+    if (!fetchResponse.ok) {
+      return res.status(fetchResponse.status).json({ error: 'Failed to fetch from Apps Script' });
+    }
+
+    const data = await fetchResponse.json();
+    if (data.error) {
+       return res.status(400).json({ error: data.error });
+    }
+    
+    // The Apps Script returns { content: "..." }
+    res.send(data.content || "");
+      
+  } catch (error: any) {
+    console.error(`Error downloading file ${req.params.fileId}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Upload a file to Google Drive
 app.post(['/api/upload', '/api/upload/'], upload.single('file'), async (req, res) => {
   try {
@@ -347,7 +420,7 @@ async function getOdkToken() {
 
 app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
   try {
-    const { formId } = req.query;
+    const { formId, table } = req.query;
     if (!formId || typeof formId !== "string") {
       return res.status(400).json({ error: "Missing or invalid formId parameter" });
     }
@@ -360,7 +433,12 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
     } catch (e) {}
 
     const token = await getOdkToken();
-    const url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(cleanFormId)}.svc/Submissions?$expand=*`;
+    let url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(cleanFormId)}.svc/Submissions?$expand=*`;
+    
+    if (table && typeof table === 'string') {
+      // e.g., table = "Submissions.application_bio_input"
+      url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(cleanFormId)}.svc/${table}`;
+    }
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     });

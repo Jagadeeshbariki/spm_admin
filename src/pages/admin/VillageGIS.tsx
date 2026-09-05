@@ -29,6 +29,7 @@ import {
   X
 } from 'lucide-react';
 import { fetchSheet, getSetting, fetchGeoJson } from '@/lib/api';
+import { UtilizationDashboard } from '../../components/UtilizationDashboard';
 import { cn } from '@/lib/utils';
 
 // Fix Leaflet marker icons
@@ -103,8 +104,7 @@ const CustomYTick = (props: any) => {
         <tspan key={i} x={x - 5} dy={i === 0 ? 0 : 12}>{l}</tspan>
       ))}
     </text>
-  );
-};
+  )};
 
 const CustomXTick = (props: any) => {
   const { x, y, payload } = props;
@@ -116,8 +116,7 @@ const CustomXTick = (props: any) => {
         {name}
       </text>
     </g>
-  );
-};
+  )};
 
 function MapController({ center, zoom, bounds }: { center: [number, number], zoom: number, bounds?: L.LatLngBoundsExpression }) {
   const map = useMap();
@@ -149,6 +148,7 @@ export function ProcessingHubsDashboard({
   setSearchTerm,
   totalHubUnits,
   totalHubVillagesCovered,
+  microEnterprises = [],
 }: {
   hubs: any[];
   hubClusters: string[];
@@ -162,7 +162,9 @@ export function ProcessingHubsDashboard({
   searchTerm: string; setSearchTerm: (s: string) => void;
   totalHubUnits: number;
   totalHubVillagesCovered: number;
+  microEnterprises?: any[];
 }) {
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'utilization'>('overview');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [mapType, setMapType] = useState<'streets' | 'satellite'>('satellite');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -261,6 +263,10 @@ export function ProcessingHubsDashboard({
             <div>
                <h2 className="text-xl font-bold text-slate-800">Processing Hubs Dashboard</h2>
                <p className="text-sm text-slate-500">Overview of established units across the region</p>
+               <div className="flex gap-2 mt-3">
+                 <button onClick={() => setActiveSubTab('overview')} className={cn("px-4 py-1.5 rounded-full text-sm font-bold transition-all", activeSubTab === 'overview' ? "bg-blue-600 text-white shadow-md" : "bg-slate-100 text-slate-500 hover:bg-slate-200")}>Overview</button>
+                 <button onClick={() => setActiveSubTab('utilization')} className={cn("px-4 py-1.5 rounded-full text-sm font-bold transition-all", activeSubTab === 'utilization' ? "bg-blue-600 text-white shadow-md" : "bg-slate-100 text-slate-500 hover:bg-slate-200")}>Utilization Data</button>
+               </div>
             </div>
             <div className="flex gap-4 items-stretch">
                <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 min-w-[120px] flex flex-col justify-center">
@@ -273,6 +279,13 @@ export function ProcessingHubsDashboard({
                </div>
             </div>
           </div>
+        </div>
+        
+        {activeSubTab === 'utilization' ? (
+           <UtilizationDashboard microEnterprises={microEnterprises} />
+        ) : (
+           <>
+             <div className="flex flex-col gap-4">
           {/* Filters */}
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-2 lg:grid-cols-4 gap-3">
              <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500" value={selectedHubCluster} onChange={(e) => { setSelectedHubCluster(e.target.value); setSelectedHubGP('All GPs'); setSelectedHubVillage('All Villages'); }}>
@@ -596,7 +609,9 @@ export function ProcessingHubsDashboard({
             )
           })}
         </div>
-      </div>
+          </>
+          )}
+        </div>
       {previewImage && createPortal(
         <div className="fixed inset-0 z-[99999] bg-slate-900/95 flex items-center justify-center p-4 backdrop-blur-md" onClick={() => setPreviewImage(null)}>
           <button 
@@ -683,6 +698,7 @@ function HubMarker({ hub, expandedId }: { hub: any, expandedId: string | number 
 }
 
 function AssetMarker({ asset, idx, selectedAssetId, setSelectedAssetId }: { asset: any, idx: number, selectedAssetId: string | number | null, setSelectedAssetId: (id: string | number | null) => void, key?: any }) {
+  const markerRef = useRef<L.Marker>(null);
   const lat = parseFloat(asset.Latitude as any);
   const lng = parseFloat(asset.Longitude as any);
   if (isNaN(lat) || isNaN(lng)) return null;
@@ -691,17 +707,31 @@ function AssetMarker({ asset, idx, selectedAssetId, setSelectedAssetId }: { asse
   
   const assetIcon = useMemo(() => L.divIcon({
         className: 'custom-dot-blue',
-        html: `<div class="${cn(
-          "rounded-full border-1.5 border-white shadow-sm transition-all duration-300",
-          isSelected ? "bg-blue-600 w-4 h-4 -mt-0.5 -ml-0.5 ring-4 ring-blue-200 animate-pulse-blue" : "bg-blue-500 w-2.5 h-2.5"
-        )}"></div>`,
-        iconSize: isSelected ? [24, 24] : [20, 20],
-        iconAnchor: isSelected ? [12, 12] : [10, 10],
+        html: `<div class="asset-marker-dot rounded-full border-1.5 border-white shadow-sm transition-all duration-300 bg-blue-500 w-2.5 h-2.5"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
         popupAnchor: [0, -8]
-      }), [isSelected]);
+      }), []);
+
+  useEffect(() => {
+    if (markerRef.current) {
+      const el = markerRef.current.getElement();
+      if (el) {
+        const dot = el.querySelector('.asset-marker-dot');
+        if (dot) {
+          if (isSelected) {
+            dot.className = `asset-marker-dot rounded-full border-1.5 border-white shadow-sm transition-all duration-300 bg-blue-600 w-4 h-4 -mt-0.5 -ml-0.5 ring-4 ring-blue-200 animate-pulse-blue`;
+          } else {
+            dot.className = `asset-marker-dot rounded-full border-1.5 border-white shadow-sm transition-all duration-300 bg-blue-500 w-2.5 h-2.5`;
+          }
+        }
+      }
+    }
+  }, [isSelected]);
 
   return (
     <Marker 
+      ref={markerRef}
       position={[lat, lng]}
       icon={assetIcon}
       zIndexOffset={isSelected ? 2000 : 1000}
@@ -772,8 +802,7 @@ function AssetMarker({ asset, idx, selectedAssetId, setSelectedAssetId }: { asse
         </div>
       </Popup>
     </Marker>
-  );
-}
+  )}
 
 function VillageMarker({ village, idx }: { village: any; idx: number, key?: any }) {
   let lat: number, lng: number;
@@ -865,13 +894,13 @@ function VillageMarker({ village, idx }: { village: any; idx: number, key?: any 
         </div>
       </Popup>
     </Marker>
-  );
-}
+  )}
 
 export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs' }) {
   const [loading, setLoading] = useState(true);
   const [villageAssets, setVillageAssets] = useState<ActivityAsset[]>([]);
   const [processingHubs, setProcessingHubs] = useState<any[]>([]);
+  const [microEnterprises, setMicroEnterprises] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'assets' | 'hubs'>(tab);
 
   useEffect(() => {
@@ -989,10 +1018,17 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
   const loadData = async () => {
     try {
       setLoading(true);
-      const [hubsData] = await Promise.all([
-        fetchSheet('Master').catch(() => [])
+      const [hubsData, microEnterprisesDataReq] = await Promise.all([
+        fetchSheet('Master').catch(() => []),
+        fetch('/api/odk/data?formId=Micro Enterprizes').catch(() => ({ json: async () => ({ value: [] }) }))
       ]);
       setVillageAssets([]);
+      let microEnterprisesData = [];
+      try {
+        const json = await microEnterprisesDataReq.json();
+        microEnterprisesData = json.value || [];
+      } catch(e) {}
+      setMicroEnterprises(microEnterprisesData);
       const hubsWithIndex = hubsData.map((h: any, i: number) => ({ ...h, _rowIndex: h._rowIndex || i.toString() }));
       setProcessingHubs(hubsWithIndex);
       
@@ -1168,6 +1204,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
           setSearchTerm={setSearchTerm}
           totalHubUnits={totalHubUnits}
           totalHubVillagesCovered={totalHubVillagesCovered}
+          microEnterprises={microEnterprises}
         />
       ) : (
         <>
@@ -1439,7 +1476,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
           {/* Sheet Assets - Visible only when toggled */}
           {activeTab === 'assets' && showActivityLayer && filteredAssets.map((asset, idx) => (
             <AssetMarker 
-              key={`asset-${asset._rowIndex || idx}`} 
+              key={`asset-${asset._rowIndex ?? idx}-${asset.id || `${asset.Latitude}-${asset.Longitude}`}`} 
               idx={idx} 
               asset={asset} 
               selectedAssetId={selectedAssetId} 
@@ -1448,9 +1485,12 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
           ))}
 
           {/* GeoJSON Village Points - Flattened React rendering for maximum reliability */}
-          {filteredGeoVillages.map((village, idx) => (
-            <VillageMarker key={`geo-v-${idx}-${village.properties?.Name || village.properties?.village || 'N/A'}`} village={village} idx={idx} />
-          ))}
+          {filteredGeoVillages.map((village, idx) => {
+            const villageName = village.properties?.Name || village.properties?.village || 'N/A';
+            return (
+              <VillageMarker key={`geo-v-${village.id || village.properties?.id || idx}-${villageName}-${village.geometry?.coordinates?.[0]}-${village.geometry?.coordinates?.[1]}`} village={village} idx={idx} />
+            );
+          })}
         </MapContainer>
 
         {/* Floating UI Overlays */}
@@ -1500,5 +1540,4 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
       </>
       )}
     </div>
-  );
-}
+  )}
