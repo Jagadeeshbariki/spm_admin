@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useMemo, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPin, Sprout, Calendar, User } from 'lucide-react';
+import { MapPin, Sprout, Calendar, User, Maximize2, Minimize2 } from 'lucide-react';
 
 // Fix for default Leaflet markers in React
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -55,6 +55,8 @@ interface CropMapTabProps {
 }
 
 export function CropMapTab({ data }: CropMapTabProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   const mapData = useMemo(() => {
     return data
       .filter(d => {
@@ -127,7 +129,14 @@ export function CropMapTab({ data }: CropMapTabProps) {
         )}
       </div>
 
-      <div className="h-[600px] w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-100 relative">
+      <div className={`w-full overflow-hidden border border-slate-200 bg-slate-100 relative transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-[9999] h-screen rounded-none' : 'h-[600px] rounded-xl'}`}>
+        <button 
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          className="absolute bottom-6 right-4 z-[400] bg-white p-2 rounded-lg shadow-md border border-slate-200 hover:bg-slate-50 transition-colors"
+          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+        >
+          {isFullscreen ? <Minimize2 className="w-5 h-5 text-slate-700" /> : <Maximize2 className="w-5 h-5 text-slate-700" />}
+        </button>
         {mapData.length > 0 ? (
           <MapContainer 
             center={center} 
@@ -135,10 +144,20 @@ export function CropMapTab({ data }: CropMapTabProps) {
             style={{ height: '100%', width: '100%', zIndex: 0 }}
             scrollWheelZoom={true}
           >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            <LayersControl position="topright">
+              <LayersControl.BaseLayer checked name="Street Map">
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+              </LayersControl.BaseLayer>
+              <LayersControl.BaseLayer name="Satellite">
+                <TileLayer
+                  attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                />
+              </LayersControl.BaseLayer>
+            </LayersControl>
             {mapData.map((plot, i) => (
               <Marker 
                 key={`${plot.plotSubmissionId}-${i}`} 
