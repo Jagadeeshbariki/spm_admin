@@ -531,6 +531,7 @@ app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
       console.error('ODK Fetch Error:', url, status, errText);
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><rect width="100%" height="100%" fill="#fee2e2"/><text x="10" y="50" font-family="monospace" font-size="12" fill="#991b1b">${errMsg}</text></svg>`;
       res.setHeader('Content-Type', 'image/svg+xml');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       return res.status(status).send(svg);
     }
 
@@ -550,6 +551,7 @@ app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
     console.error('ODK Proxy Trace:', error.message);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><rect width="100%" height="100%" fill="#fee2e2"/><text x="10" y="50" font-family="monospace" font-size="12" fill="#991b1b">Proxy Error</text></svg>`;
     res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.status(500).send(svg);
   }
 });

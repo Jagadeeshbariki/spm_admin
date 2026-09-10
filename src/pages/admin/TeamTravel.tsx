@@ -592,7 +592,7 @@ export default function TeamTravel() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-[#fcfdfe] text-slate-500 font-semibold border-b border-slate-100">
+              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
                 <tr>
                   <th className="px-6 py-4">ID</th>
                   <th className="px-6 py-4">Staff Name</th>
@@ -878,12 +878,12 @@ export default function TeamTravel() {
                 </div>
                 <div className="flex justify-between pt-1">
                   <span className="text-xs text-slate-400 font-medium">Reimbursable Cost</span>
-                  <span className="text-lg font-extrabold text-[#111827]">₹{parseFloat(selectedItem['Travel Amount']?.toString() || '0').toLocaleString()}</span>
+                  <span className="text-lg font-extrabold text-slate-900">₹{parseFloat(selectedItem['Travel Amount']?.toString() || '0').toLocaleString()}</span>
                 </div>
               </div>
 
               {selectedItem['Soft Copy URL'] ? (
-                <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center gap-3 bg-[#FBFDFF] text-center">
+                <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center gap-3 bg-slate-50 text-center">
                   <FileText className="w-10 h-10 text-blue-500" />
                   <div>
                     <h4 className="text-sm font-bold text-slate-800">Attachment Saved Cleanly</h4>

@@ -111,7 +111,7 @@ export function NFValidationPage() {
       </div>
       <div className="overflow-auto max-h-[70vh]">
         <table className="w-full text-left text-sm whitespace-nowrap">
-          <thead className="bg-[#F8FAFC] text-slate-500 font-semibold border-b border-slate-200 sticky top-0">
+          <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 sticky top-0">
             <tr>
               <th className="px-6 py-4">Register ID (Matched)</th>
               <th className="px-6 py-4">Activity Plot ID</th>

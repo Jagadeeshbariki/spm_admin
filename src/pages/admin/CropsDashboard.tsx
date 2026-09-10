@@ -13,13 +13,13 @@ export default function CropsDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [selectedBlock, setSelectedBlock] = useState('All');
-  const [selectedGp, setSelectedGp] = useState('All');
-  const [selectedVillage, setSelectedVillage] = useState('All');
-  const [selectedCropMode, setSelectedCropMode] = useState('All');
+  const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
+  const [selectedGp, setSelectedGp] = useState<string[]>([]);
+  const [selectedVillage, setSelectedVillage] = useState<string[]>([]);
+  const [selectedCropMode, setSelectedCropMode] = useState<string[]>([]);
   const [hasActivities, setHasActivities] = useState('All');
-  const [selectedYear, setSelectedYear] = useState('All');
-  const [selectedSeason, setSelectedSeason] = useState('All');
+  const [selectedYear, setSelectedYear] = useState<string[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [activeTab, setActiveTab] = useState<'overview' | 'frp' | 'hdfc' | 'nf-validation' | 'nf-dashboard' | 'map'>('overview');
@@ -216,14 +216,22 @@ export default function CropsDashboard() {
     const cSet = new Set<string>();
     const ySet = new Set<string>();
     const sSet = new Set<string>();
+    
     data.forEach(item => {
-      if (item.block) bSet.add(item.block);
-      if (item.gp) gSet.add(item.gp);
-      if (item.village) vSet.add(item.village);
-      if (item.cropMode) cSet.add(item.cropMode);
+      const yearMatch = selectedYear.length === 0 || selectedYear.includes(item.year);
+      const seasonMatch = selectedSeason.length === 0 || selectedSeason.includes(item.season);
+      const blockMatch = selectedBlock.length === 0 || selectedBlock.includes(item.block);
+      const gpMatch = selectedGp.length === 0 || selectedGp.includes(item.gp);
+      const villMatch = selectedVillage.length === 0 || selectedVillage.includes(item.village);
+      
       if (item.year) ySet.add(item.year);
-      if (item.season) sSet.add(item.season);
+      if (yearMatch && item.season) sSet.add(item.season);
+      if (yearMatch && seasonMatch && item.block) bSet.add(item.block);
+      if (yearMatch && seasonMatch && blockMatch && item.gp) gSet.add(item.gp);
+      if (yearMatch && seasonMatch && blockMatch && gpMatch && item.village) vSet.add(item.village);
+      if (yearMatch && seasonMatch && blockMatch && gpMatch && villMatch && item.cropMode) cSet.add(item.cropMode);
     });
+    
     return { 
       blocks: Array.from(bSet).sort(), 
       gps: Array.from(gSet).sort(), 
@@ -232,7 +240,7 @@ export default function CropsDashboard() {
       years: Array.from(ySet).sort(),
       seasons: Array.from(sSet).sort()
     };
-  }, [data]);
+  }, [data, selectedYear, selectedSeason, selectedBlock, selectedGp, selectedVillage]);
 
   const filteredData = useMemo(() => {
     const hdfcTargetSubmitters = [
@@ -260,12 +268,12 @@ export default function CropsDashboard() {
          item.cluster = cluster;
       }
 
-      if (selectedBlock !== 'All' && item.block !== selectedBlock) return false;
-      if (selectedGp !== 'All' && item.gp !== selectedGp) return false;
-      if (selectedVillage !== 'All' && item.village !== selectedVillage) return false;
-      if (selectedCropMode !== 'All' && item.cropMode !== selectedCropMode) return false;
-      if (selectedYear !== 'All' && item.year !== selectedYear) return false;
-      if (selectedSeason !== 'All' && item.season !== selectedSeason) return false;
+      if (selectedBlock.length > 0 && !selectedBlock.includes(item.block)) return false;
+      if (selectedGp.length > 0 && !selectedGp.includes(item.gp)) return false;
+      if (selectedVillage.length > 0 && !selectedVillage.includes(item.village)) return false;
+      if (selectedCropMode.length > 0 && !selectedCropMode.includes(item.cropMode)) return false;
+      if (selectedYear.length > 0 && !selectedYear.includes(item.year)) return false;
+      if (selectedSeason.length > 0 && !selectedSeason.includes(item.season)) return false;
       
       if (hasActivities === 'Yes') {
         if (item.activityCount === 0) return false;
@@ -352,21 +360,9 @@ export default function CropsDashboard() {
   }
 
   return (
-    <div className="bg-[#F5F7FA] min-h-[calc(100vh-64px)] -m-4 md:-m-8 p-4 md:p-6 font-sans text-slate-800 overflow-x-hidden">
-      <div className="w-full flex flex-col gap-6">
+    <div className="bg-slate-50 h-[calc(100vh-64px)] -m-4 md:-m-8 p-4 font-sans text-slate-800 flex flex-col overflow-hidden">
+      <div className="w-full h-full flex flex-col gap-4">
         
-        {/* Header Section */}
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Sprout className="w-5 h-5 text-emerald-600" />
-            Crops Dashboard
-          </h1>
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-500 bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-200 shrink-0">
-            <Database className="w-4 h-4 text-emerald-500" />
-            {filteredData.length} Records Found
-          </div>
-        </div>
-
         {/* Tabs */}
         <div className="flex items-center gap-4 border-b border-slate-200">
           <button 
@@ -426,67 +422,63 @@ export default function CropsDashboard() {
         </div>
 
         {/* Filters Panel */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
-            <Filter className="w-5 h-5 text-slate-400" />
-            <h2 className="font-bold text-slate-700">Filter Data</h2>
-          </div>
+        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 shrink-0 flex flex-col gap-2">
           
-          <div className="flex flex-nowrap overflow-x-auto gap-4 pb-2 snap-x custom-scrollbar">
-            <FilterSelect 
+          <div className="flex flex-wrap lg:flex-nowrap overflow-x-visible gap-2 w-full">
+            <MultiSelectDropdown 
               label="Year" 
-              value={selectedYear} 
+              selected={selectedYear} 
               onChange={setSelectedYear} 
               options={years} 
-              className="min-w-[140px] shrink-0"
+              className="flex-1 min-w-[120px]"
             />
-            <FilterSelect 
+            <MultiSelectDropdown 
               label="Season" 
-              value={selectedSeason} 
+              selected={selectedSeason} 
               onChange={setSelectedSeason} 
               options={seasons} 
-              className="min-w-[140px] shrink-0"
+              className="flex-1 min-w-[130px]"
             />
-            <FilterSelect 
+            <MultiSelectDropdown 
               label="Block" 
-              value={selectedBlock} 
+              selected={selectedBlock} 
               onChange={setSelectedBlock} 
               options={blocks} 
-              className="min-w-[150px] shrink-0"
+              className="flex-1 min-w-[140px]"
             />
-            <FilterSelect 
-              label="Gram Panchayat (GP)" 
-              value={selectedGp} 
+            <MultiSelectDropdown 
+              label="Gram Panchayat" 
+              selected={selectedGp} 
               onChange={setSelectedGp} 
               options={gps} 
-              className="min-w-[160px] shrink-0"
+              className="flex-1 min-w-[160px]"
             />
-            <FilterSelect 
+            <MultiSelectDropdown 
               label="Village" 
-              value={selectedVillage} 
+              selected={selectedVillage} 
               onChange={setSelectedVillage} 
               options={villages} 
-              className="min-w-[150px] shrink-0"
+              className="flex-1 min-w-[150px]"
             />
-            <FilterSelect 
+            <MultiSelectDropdown 
               label="Crop Mode" 
-              value={selectedCropMode} 
+              selected={selectedCropMode} 
               onChange={setSelectedCropMode} 
               options={cropModes} 
-              className="min-w-[150px] shrink-0"
+              className="flex-1 min-w-[150px]"
             />
             <FilterSelect 
               label="Has Activities" 
               value={hasActivities} 
               onChange={setHasActivities} 
               options={['Yes', 'No']} 
-              className="min-w-[140px] shrink-0"
+              className="flex-1 min-w-[140px]"
             />
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col md:flex-row items-center gap-4">
+          <div className="flex flex-col md:flex-row items-center gap-2 w-full">
             <div className="relative w-full md:w-96">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
               <input
@@ -494,18 +486,20 @@ export default function CropsDashboard() {
                 placeholder="Search by Farmer Name or HH ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                className="pl-9 pr-3 py-1.5 w-full bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
             
-            <div className="ml-auto w-full md:w-auto">
-              {(selectedBlock !== 'All' || selectedGp !== 'All' || selectedVillage !== 'All' || selectedCropMode !== 'All' || hasActivities !== 'All' || selectedYear !== 'All' || selectedSeason !== 'All' || searchTerm !== '') && (
+            <div className="ml-auto w-full md:w-auto shrink-0">
+              {(selectedBlock.length > 0 || selectedGp.length > 0 || selectedVillage.length > 0 || selectedCropMode.length > 0 || hasActivities !== 'All' || selectedYear.length > 0 || selectedSeason.length > 0 || searchTerm !== '') && (
                 <button
                   onClick={() => {
-                    setSelectedBlock('All');
-                    setSelectedGp('All');
-                    setSelectedVillage('All');
-                    setSelectedCropMode('All');
+                    setSelectedBlock([]);
+                    setSelectedGp([]);
+                    setSelectedVillage([]);
+                    setSelectedCropMode([]);
+                    setSelectedYear([]);
+                    setSelectedSeason([]);
                     setHasActivities('All');
                     setSearchTerm('');
                   }}
@@ -519,7 +513,7 @@ export default function CropsDashboard() {
         </div>
 
         {/* Content Area */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 flex-1 min-h-0">
         
         {activeTab === 'nf-validation' && (
           <NFValidationPage />
@@ -541,7 +535,7 @@ export default function CropsDashboard() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
           <div className="overflow-auto custom-scrollbar">
             <table className="w-full text-left text-sm whitespace-nowrap min-w-[800px]">
-              <thead className="bg-[#F8FAFC] text-slate-500 font-semibold border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                 <tr>
                   <th className="px-6 py-4 w-10"></th>
                   <th className="px-6 py-4">HH ID</th>
@@ -667,7 +661,7 @@ export default function CropsDashboard() {
                                                     className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                                                     onClick={(e) => {
                                                       e.preventDefault();
-                                                      window.open(`/api/odk/image?submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId)}`, '_blank');
+                                                      window.open(`/api/odk/image?v=2&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId)}`, '_blank');
                                                     }}
                                                   >
                                                     <Sprout className="w-3 h-3" /> View Plot Photo
@@ -675,7 +669,7 @@ export default function CropsDashboard() {
                                                 </h4>
                                                 <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
                                                   <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Plot Registration Photo</h5>
-                                                  <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId)}`); }} src={`/api/odk/image?submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId)}`} alt="Plot Registration" className="w-full max-w-sm h-48 object-cover rounded-lg shadow-sm border border-slate-300 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                                  <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?v=2&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId)}`); }} src={`/api/odk/image?v=2&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId)}`} alt="Plot Registration" className="w-full max-w-sm h-48 object-cover rounded-lg shadow-sm border border-slate-300 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
                                                 </div>
                                               </div>
                                             )}
@@ -702,7 +696,7 @@ export default function CropsDashboard() {
                                                             </div>
                                                             {bi.photo && bi.submissionId && (
                                                               <div className="mt-2">
-                                                                <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`); }} src={`/api/odk/image?submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`} alt="Bio Input" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                                                <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?v=2&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`); }} src={`/api/odk/image?v=2&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`} alt="Bio Input" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
                                                               </div>
                                                             )}
                                                           </div>
@@ -730,7 +724,7 @@ export default function CropsDashboard() {
                                                             </div>
                                                             {h.photo && h.submissionId && (
                                                               <div className="mt-2">
-                                                                <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`); }} src={`/api/odk/image?submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`} alt="Harvest" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                                                <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?v=2&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`); }} src={`/api/odk/image?v=2&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`} alt="Harvest" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
                                                               </div>
                                                             )}
                                                           </div>
@@ -757,7 +751,7 @@ export default function CropsDashboard() {
                                                             </div>
                                                             {c.photo && c.submissionId && (
                                                               <div className="mt-2">
-                                                                <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`); }} src={`/api/odk/image?submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`} alt="CCE Photo" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                                                <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?v=2&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`); }} src={`/api/odk/image?v=2&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`} alt="CCE Photo" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
                                                               </div>
                                                             )}
                                                           </div>
@@ -855,6 +849,60 @@ export default function CropsDashboard() {
         </div>
       )}
 
+    </div>
+  );
+}
+
+
+function MultiSelectDropdown({ label, selected, onChange, options, className }: { label: string, selected: string[], onChange: (val: string[]) => void, options: string[], className?: string }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggle = (val: string) => {
+    if (selected.includes(val)) {
+      onChange(selected.filter(v => v !== val));
+    } else {
+      onChange([...selected, val]);
+    }
+  };
+
+  return (
+    <div className={cn("relative", className)} ref={dropdownRef}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between shadow-sm min-w-[140px]"
+      >
+        <span className="truncate pr-2">
+          {selected.length === 0 ? label : `${label} (${selected.length})`}
+        </span>
+        <ChevronDown className="w-4 h-4 text-slate-400" />
+      </div>
+      {isOpen && (
+        <div className="absolute z-[9999] mt-1 w-full min-w-[220px] max-h-60 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg py-1">
+          {options.length === 0 && <div className="px-3 py-2 text-sm text-slate-500">No options</div>}
+          {options.map(opt => (
+            <label key={opt} className="flex items-center px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={selected.includes(opt)}
+                onChange={() => toggle(opt)}
+                className="w-4 h-4 text-emerald-600 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 rounded focus:ring-emerald-500"
+              />
+              <span className="ml-2 text-sm text-slate-700 dark:text-slate-200">{opt}</span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1034,7 +1082,7 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
   const COLORS = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3 flex-1 min-h-0 h-full overflow-y-auto custom-scrollbar pb-6">
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col">
@@ -1074,7 +1122,7 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
       
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[400px] overflow-hidden min-w-0">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
           <div className="flex items-center gap-2 mb-4 shrink-0">
             <PieChartIcon className="w-4 h-4 text-slate-400" />
             <h3 className="font-bold text-slate-800 text-sm">Crop Modes Distribution</h3>
@@ -1088,8 +1136,8 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
                     data={stats.cropModeData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
+                    innerRadius="50%"
+                    outerRadius="80%"
                     paddingAngle={2}
                     dataKey="value"
                     isAnimationActive={false}
@@ -1117,7 +1165,7 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
           </div>
         </div>
         
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[400px] overflow-hidden min-w-0">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
           <div className="flex items-center gap-2 mb-4 shrink-0">
             <BarChart3 className="w-4 h-4 text-slate-400" />
             <h3 className="font-bold text-slate-800 text-sm">Crop-wise Farmers Count</h3>
@@ -1163,7 +1211,7 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
             {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Village-wise Farmers Count */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[400px] overflow-hidden min-w-0">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
           <div className="flex items-center gap-2 mb-4 shrink-0">
             <BarChart3 className="w-4 h-4 text-slate-400" />
             <h3 className="font-bold text-slate-800 text-sm">Top 10 Villages by Farmer Count</h3>
@@ -1206,7 +1254,7 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
         </div>
 
         {/* Season-wise Farmers Count */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[400px] overflow-hidden min-w-0">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
           <div className="flex items-center gap-2 mb-4 shrink-0">
             <PieChartIcon className="w-4 h-4 text-slate-400" />
             <h3 className="font-bold text-slate-800 text-sm">Season-wise Plots</h3>
@@ -1220,8 +1268,8 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
                     data={stats.seasonData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
+                    innerRadius="50%"
+                    outerRadius="80%"
                     paddingAngle={2}
                     dataKey="value"
                     isAnimationActive={false}
@@ -1268,117 +1316,6 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
         </div>
       )}
 
-      {/* Summary Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
-        {/* Table 1: Crop Modes */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-slate-200 bg-slate-50 font-bold text-slate-800 text-sm">
-            {yearFilter === 'All' ? 'All Years' : yearFilter} - {seasonFilter === 'All' ? 'All Seasons' : seasonFilter} - Crop Modes
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-3">Block</th>
-                  <th className="px-4 py-3">Crop Model</th>
-                  <th className="px-4 py-3 text-right">Plots Count</th>
-                  <th className="px-4 py-3 text-right">Extent</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {stats.table1Data.map((blockData, bIdx) => (
-                  <React.Fragment key={bIdx}>
-                    {blockData.modes.map((modeData, mIdx) => (
-                      <tr key={`${bIdx}-${mIdx}`} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-2 font-medium text-slate-700">
-                          {mIdx === 0 && (
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-3.5 h-3.5 bg-slate-200 rounded flex items-center justify-center text-[10px] text-slate-600 font-bold">-</div>
-                              {blockData.block}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-2 text-slate-600">{modeData.mode}</td>
-                        <td className="px-4 py-2 text-right font-medium text-slate-800">{modeData.count}</td>
-                        <td className="px-4 py-2 text-right font-medium text-slate-800">{modeData.area.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-                {/* Grand Total */}
-                <tr className="bg-slate-100 font-bold text-slate-900 border-t border-slate-300">
-                  <td className="px-4 py-3" colSpan={2}>Grand Total</td>
-                  <td className="px-4 py-3 text-right">
-                    {stats.table1Data.reduce((acc, curr) => acc + curr.count, 0)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {stats.table1Data.reduce((acc, curr) => acc + curr.area, 0).toFixed(2)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Table 2: NF Cotton Status */}
-        {isHdfc && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-200 bg-slate-50 font-bold text-slate-800 text-sm">
-              {yearFilter === 'All' ? 'All Years' : yearFilter} - {seasonFilter === 'All' ? 'All Seasons' : seasonFilter} - NF Cotton Status
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3">Block</th>
-                    <th className="px-4 py-3">Submitter Name</th>
-                    <th className="px-4 py-3 text-right">Number of plots</th>
-                    <th className="px-4 py-3 text-right">Extent covered</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {stats.table2Data.map((blockData, bIdx) => (
-                    <React.Fragment key={bIdx}>
-                      {blockData.submitters.map((subData, sIdx) => (
-                        <tr key={`${bIdx}-${sIdx}`} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-4 py-2 font-medium text-slate-700">
-                            {sIdx === 0 && (
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-3.5 h-3.5 bg-slate-200 rounded flex items-center justify-center text-[10px] text-slate-600 font-bold">-</div>
-                                {blockData.block}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-slate-600">{subData.name}</td>
-                          <td className="px-4 py-2 text-right font-medium text-slate-800">{subData.count}</td>
-                          <td className="px-4 py-2 text-right font-medium text-slate-800">{subData.area.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                      {/* Block Total */}
-                      <tr className="bg-slate-50 font-semibold text-slate-800 border-t border-slate-200">
-                        <td className="px-4 py-2" colSpan={2}>{blockData.block} Total</td>
-                        <td className="px-4 py-2 text-right">{blockData.count}</td>
-                        <td className="px-4 py-2 text-right">{blockData.area.toFixed(2)}</td>
-                      </tr>
-                    </React.Fragment>
-                  ))}
-                  {/* Grand Total */}
-                  <tr className="bg-slate-100 font-bold text-slate-900 border-t border-slate-300">
-                    <td className="px-4 py-3" colSpan={2}>Grand Total</td>
-                    <td className="px-4 py-3 text-right">
-                      {stats.table2Data.reduce((acc, curr) => acc + curr.count, 0)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {stats.table2Data.reduce((acc, curr) => acc + curr.area, 0).toFixed(2)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-    </div>
   );
 }

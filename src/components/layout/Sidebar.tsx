@@ -76,7 +76,7 @@ export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolea
       
       <aside 
         className={cn(
-          "bg-[#F5F7FA] border-r border-slate-200 flex flex-col transition-all duration-300 z-[9995] shrink-0 h-full",
+          "bg-slate-50 border-r border-slate-200 flex flex-col transition-all duration-300 z-[9995] shrink-0 h-full",
           isMobile ? "fixed left-0 top-0 bottom-0 shadow-2xl" : "relative",
           collapsed 
             ? (isMobile ? "-translate-x-full" : "w-16 lg:w-20 translate-x-0") 

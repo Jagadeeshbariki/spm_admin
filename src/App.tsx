@@ -23,7 +23,6 @@ import Settings from './pages/admin/Settings';
 import Reports from './pages/admin/Reports';
 import WaterCollective from './pages/admin/WaterCollective';
 import WaterCollectiveManagement from './pages/admin/WaterCollectiveManagement';
-import MailTracker from './pages/admin/MailTracker';
 import VillageGIS from './pages/admin/VillageGIS';
 import VillageGISManagement from './pages/admin/VillageGISManagement';
 import TeamTravel from './pages/admin/TeamTravel';
@@ -59,8 +58,7 @@ export default function App() {
               <Route path="assets" element={<Assets />} />
               <Route path="meetings" element={<Meetings />} />
               <Route path="car-rentals" element={<CarRentals />} />
-              <Route path="mail-tracker" element={<MailTracker />} />
-              <Route path="water-collective" element={<WaterCollective />} />
+                            <Route path="water-collective" element={<WaterCollective />} />
               <Route path="water-collective-management" element={<WaterCollectiveManagement />} />
               <Route path="about-region" element={<Navigate to="/admin/about-region/working-villages" replace />} />
               <Route path="about-region/working-villages" element={<VillageGIS tab="assets" />} />

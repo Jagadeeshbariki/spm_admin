@@ -10,7 +10,20 @@ export default function Topbar() {
   const location = useLocation();
   const [showProfile, setShowProfile] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark' || 
+           (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+  
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +47,6 @@ export default function Topbar() {
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
-    // In a real app this would sync with a theme provider
   };
 
   const navLinks = [
@@ -54,11 +66,7 @@ export default function Topbar() {
       path: '/admin/about-region',
       roles: ['Admin', 'office admin', 'TL', 'CC', 'field']
     },
-    { 
-      name: 'Mail Tracker', 
-      path: '/admin/mail-tracker',
-      roles: ['Admin', 'office admin']
-    },
+
     { 
       name: 'Water Collective', 
       path: '/admin/water-collective',
@@ -87,9 +95,7 @@ export default function Topbar() {
           {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">SW</span>
-          </div>
+          <img src="/WASSANIcon.jpg" alt="WASSAN" className="h-8 object-contain" />
           <span className="text-lg md:text-xl font-bold text-slate-800 tracking-tight whitespace-nowrap hidden sm:block">
             Seethampeta Wassan
           </span>

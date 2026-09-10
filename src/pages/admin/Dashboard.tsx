@@ -34,7 +34,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="bg-[#F5F7FA] min-h-screen -m-4 md:-m-8 p-4 md:p-8 font-sans text-slate-800">
+    <div className="bg-slate-50 min-h-screen -m-4 md:-m-8 p-4 md:p-8 font-sans text-slate-800">
       
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">

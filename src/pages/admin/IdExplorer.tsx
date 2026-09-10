@@ -260,7 +260,7 @@ export default function IdExplorer() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search Name, Aadhar, Old ID..." 
+              placeholder="Search Name, Beneficiary No, Old ID..." 
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
@@ -482,7 +482,7 @@ export default function IdExplorer() {
               <div className="p-6 max-h-[70vh] overflow-y-auto">
                 <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                   <DetailItem icon={<UserIcon className="w-4 h-4"/>} label="Father/Husband" value={selectedHousehold.father_husband_name || selectedHousehold['Father/Husband Name']} />
-                  <DetailItem icon={<Fingerprint className="w-4 h-4"/>} label="Aadhar Number" value={selectedHousehold['Adhar Number'] || selectedHousehold['Aadhar Number']} />
+                  <DetailItem icon={<Fingerprint className="w-4 h-4"/>} label="Beneficiary Number" value={selectedHousehold['Adhar Number'] || selectedHousehold['Aadhar Number']} />
                   
                   <DetailItem icon={<Fingerprint className="w-4 h-4"/>} label="Farmer ID (New)" value={selectedHousehold.farmer_ID || selectedHousehold['Farmer ID'] || selectedHousehold['Adhar Number']} />
                   <DetailItem icon={<Fingerprint className="w-4 h-4"/>} label="Old ID" value={benIdToOldIdsMap[String(selectedHousehold['Adhar Number'] || selectedHousehold['Aadhar Number']).toLowerCase().trim()]?.oldIds?.join(', ')} />
