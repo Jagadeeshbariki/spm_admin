@@ -1,3 +1,20 @@
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 55000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return res;
+  } catch (error) {
+    clearTimeout(id);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out after ' + timeoutMs + 'ms');
+    }
+    throw error;
+  }
+}
+
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
@@ -396,7 +413,7 @@ async function getOdkToken() {
     throw new Error('ODK credentials not configured (ODK_EMAIL, ODK_PASSWORD)');
   }
 
-  tokenPromise = fetch('https://central.wassan.org/v1/sessions', {
+  tokenPromise = fetchWithTimeout('https://central.wassan.org/v1/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -439,7 +456,7 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
       // e.g., table = "Submissions.application_bio_input"
       url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(cleanFormId)}.svc/${table}`;
     }
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) {
@@ -524,7 +541,7 @@ app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
           let resCandidate: Response | null = null;
 
           while (followRedirects > 0) {
-            resCandidate = await fetch(currentUrl, {
+            resCandidate = await fetchWithTimeout(currentUrl, {
               headers: requestHeaders,
               redirect: 'manual'
             });
