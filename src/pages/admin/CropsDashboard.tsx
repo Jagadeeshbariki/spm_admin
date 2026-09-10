@@ -672,7 +672,7 @@ export default function CropsDashboard() {
                                                     className="text-xs text-blue-600 hover:underline flex items-center gap-1.5 font-medium"
                                                     onClick={(e) => {
                                                       e.preventDefault();
-                                                      window.open(`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId || 'NF- Register')}`, '_blank');
+                                                      window.open(`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}`, '_blank');
                                                     }}
                                                   >
                                                     <ExternalLink className="w-3.5 h-3.5" /> Open Photo in New Tab
@@ -684,11 +684,11 @@ export default function CropsDashboard() {
                                                     className="relative group max-w-sm h-48 rounded-lg overflow-hidden border border-slate-300 shadow-sm cursor-pointer bg-slate-100"
                                                     onClick={(e) => { 
                                                       e.stopPropagation(); 
-                                                      setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId || 'NF- Register')}`); 
+                                                      setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}`); 
                                                     }}
                                                   >
                                                     <img 
-                                                      src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId || 'NF- Register')}`} 
+                                                      src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}`} 
                                                       alt="Plot Registration" 
                                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
                                                       loading="lazy" 
@@ -716,11 +716,11 @@ export default function CropsDashboard() {
                                                         className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-300 shadow-sm cursor-pointer bg-slate-100"
                                                         onClick={(e) => { 
                                                           e.stopPropagation(); 
-                                                          setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(ap.submissionId)}&filename=${encodeURIComponent(ap.photo)}&formId=${encodeURIComponent(ap.formId)}`); 
+                                                          setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(ap.submissionId)}&filename=${encodeURIComponent(ap.photo)}`); 
                                                         }}
                                                       >
                                                         <img 
-                                                          src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(ap.submissionId)}&filename=${encodeURIComponent(ap.photo)}&formId=${encodeURIComponent(ap.formId)}`} 
+                                                          src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(ap.submissionId)}&filename=${encodeURIComponent(ap.photo)}`} 
                                                           alt="Activity Photo" 
                                                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
                                                           loading="lazy" 
@@ -761,11 +761,11 @@ export default function CropsDashboard() {
                                                                   className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-200 cursor-pointer bg-slate-100"
                                                                   onClick={(e) => { 
                                                                     e.stopPropagation(); 
-                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`); 
+                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}`); 
                                                                   }}
                                                                 >
                                                                   <img 
-                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`} 
+                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}`} 
                                                                     alt="Bio Input" 
                                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
                                                                     loading="lazy" 
@@ -805,11 +805,11 @@ export default function CropsDashboard() {
                                                                   className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-200 cursor-pointer bg-slate-100"
                                                                   onClick={(e) => { 
                                                                     e.stopPropagation(); 
-                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`); 
+                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}`); 
                                                                   }}
                                                                 >
                                                                   <img 
-                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`} 
+                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}`} 
                                                                     alt="Harvest" 
                                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
                                                                     loading="lazy" 
@@ -848,11 +848,11 @@ export default function CropsDashboard() {
                                                                   className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-200 cursor-pointer bg-slate-100"
                                                                   onClick={(e) => { 
                                                                     e.stopPropagation(); 
-                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`); 
+                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}`); 
                                                                   }}
                                                                 >
                                                                   <img 
-                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`} 
+                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}`} 
                                                                     alt="CCE Photo" 
                                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
                                                                     loading="lazy" 
