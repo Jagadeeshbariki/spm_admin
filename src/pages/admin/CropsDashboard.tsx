@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Filter, Search, Loader2, Sprout, MapPin, Users, Database, ChevronDown, ChevronUp, Calendar, ArrowLeft, ArrowRight, Info, Layers, Activity, TrendingUp, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+import { Filter, Search, Loader2, Sprout, MapPin, Users, Database, ChevronDown, ChevronUp, Calendar, ArrowLeft, ArrowRight, Info, Layers, Activity, TrendingUp, BarChart3, PieChart as PieChartIcon, ExternalLink, X, ZoomIn } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList } from 'recharts';
 import { cn } from '../../lib/utils';
 import { flatten } from 'flat';
@@ -658,18 +658,34 @@ export default function CropsDashboard() {
                                                 <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center justify-between">
                                                   <span>Plot Registration</span>
                                                   <button 
-                                                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                                                    className="text-xs text-blue-600 hover:underline flex items-center gap-1.5 font-medium"
                                                     onClick={(e) => {
                                                       e.preventDefault();
-                                                      window.open(`/api/odk/image?v=2&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId)}`, '_blank');
+                                                      window.open(`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId || 'NF- Register')}`, '_blank');
                                                     }}
                                                   >
-                                                    <Sprout className="w-3 h-3" /> View Plot Photo
+                                                    <ExternalLink className="w-3.5 h-3.5" /> Open Photo in New Tab
                                                   </button>
                                                 </h4>
                                                 <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
                                                   <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Plot Registration Photo</h5>
-                                                  <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?v=2&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId)}`); }} src={`/api/odk/image?v=2&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId)}`} alt="Plot Registration" className="w-full max-w-sm h-48 object-cover rounded-lg shadow-sm border border-slate-300 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                                  <div 
+                                                    className="relative group max-w-sm h-48 rounded-lg overflow-hidden border border-slate-300 shadow-sm cursor-pointer bg-slate-100"
+                                                    onClick={(e) => { 
+                                                      e.stopPropagation(); 
+                                                      setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId || 'NF- Register')}`); 
+                                                    }}
+                                                  >
+                                                    <img 
+                                                      src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}&formId=${encodeURIComponent(plot.plotFormId || 'NF- Register')}`} 
+                                                      alt="Plot Registration" 
+                                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
+                                                      loading="lazy" 
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5">
+                                                      <ZoomIn className="w-4 h-4" /> Click to view full image
+                                                    </div>
+                                                  </div>
                                                 </div>
                                               </div>
                                             )}
@@ -696,7 +712,23 @@ export default function CropsDashboard() {
                                                             </div>
                                                             {bi.photo && bi.submissionId && (
                                                               <div className="mt-2">
-                                                                <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?v=2&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`); }} src={`/api/odk/image?v=2&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`} alt="Bio Input" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                                                <div 
+                                                                  className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-200 cursor-pointer bg-slate-100"
+                                                                  onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`); 
+                                                                  }}
+                                                                >
+                                                                  <img 
+                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}&formId=${encodeURIComponent(bi.formId || 'NF- Activities')}`} 
+                                                                    alt="Bio Input" 
+                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
+                                                                    loading="lazy" 
+                                                                  />
+                                                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
+                                                                    <ZoomIn className="w-3.5 h-3.5" /> View Photo
+                                                                  </div>
+                                                                </div>
                                                               </div>
                                                             )}
                                                           </div>
@@ -724,7 +756,23 @@ export default function CropsDashboard() {
                                                             </div>
                                                             {h.photo && h.submissionId && (
                                                               <div className="mt-2">
-                                                                <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?v=2&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`); }} src={`/api/odk/image?v=2&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`} alt="Harvest" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
+                                                                <div 
+                                                                  className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-200 cursor-pointer bg-slate-100"
+                                                                  onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`); 
+                                                                  }}
+                                                                >
+                                                                  <img 
+                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}&formId=${encodeURIComponent(h.formId || 'NF- Activities')}`} 
+                                                                    alt="Harvest" 
+                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
+                                                                    loading="lazy" 
+                                                                  />
+                                                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
+                                                                    <ZoomIn className="w-3.5 h-3.5" /> View Photo
+                                                                  </div>
+                                                                </div>
                                                               </div>
                                                             )}
                                                           </div>
@@ -751,8 +799,24 @@ export default function CropsDashboard() {
                                                             </div>
                                                             {c.photo && c.submissionId && (
                                                               <div className="mt-2">
-                                                                <img onClick={(e) => { e.stopPropagation(); setPreviewImage(`/api/odk/image?v=2&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`); }} src={`/api/odk/image?v=2&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`} alt="CCE Photo" className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" />
-                                                              </div>
+                                                                <div 
+                                                                  className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-200 cursor-pointer bg-slate-100"
+                                                                  onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`); 
+                                                                  }}
+                                                                >
+                                                                  <img 
+                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}&formId=${encodeURIComponent(c.formId || 'NF- Activities')}`} 
+                                                                    alt="CCE Photo" 
+                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
+                                                                    loading="lazy" 
+                                                                  />
+                                                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
+                                                                    <ZoomIn className="w-3.5 h-3.5" /> View Photo
+                                                                  </div>
+                                                                </div>
+                                                             </div>
                                                             )}
                                                           </div>
                                                         ))}
@@ -826,25 +890,47 @@ export default function CropsDashboard() {
       {/* Image Preview Modal */}
       {previewImage && (
         <div 
-          className="fixed inset-0 z-[99999] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
+          className="fixed inset-0 z-[99999] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
           onClick={() => setPreviewImage(null)}
         >
-          <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center">
-            <button 
-              className="fixed top-4 right-4 z-[99999] text-white/70 hover:text-white p-2 transition-colors bg-slate-900/50 hover:bg-slate-900/80 rounded-full backdrop-blur-md ring-1 ring-white/20"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPreviewImage(null);
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-            <img 
-              src={previewImage} 
-              alt="Preview" 
-              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl ring-1 ring-white/20"
-              onClick={(e) => e.stopPropagation()} 
-            />
+          <div 
+            className="relative max-w-5xl w-full max-h-[92vh] flex flex-col items-center justify-center bg-slate-900/60 p-4 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-sm cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Bar with Actions */}
+            <div className="w-full flex items-center justify-between pb-3 mb-2 border-b border-white/10">
+              <span className="text-sm font-semibold text-white/90 flex items-center gap-2">
+                <Sprout className="w-4 h-4 text-emerald-400" /> Image Preview
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewImage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors flex items-center gap-1.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Open in New Tab
+                </a>
+                <button 
+                  className="text-white/70 hover:text-white p-1.5 transition-colors bg-white/10 hover:bg-white/20 rounded-lg"
+                  onClick={() => setPreviewImage(null)}
+                  title="Close preview"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Main Image */}
+            <div className="relative w-full flex items-center justify-center overflow-hidden max-h-[80vh] rounded-xl bg-black/40">
+              <img 
+                src={previewImage} 
+                alt="Full Preview" 
+                className="max-w-full max-h-[78vh] object-contain rounded-lg shadow-2xl transition-all duration-300"
+                loading="eager"
+              />
+            </div>
           </div>
         </div>
       )}

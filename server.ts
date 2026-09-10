@@ -462,96 +462,129 @@ app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
       return res.status(400).json({ error: 'Missing or invalid submissionId or filename parameter' });
     }
 
-    let form = formId ? String(formId) : 'Processing Units Mapping';
-    
-    // Clean up form ID
-    if (form.endsWith('.svc')) {
-      form = form.slice(0, -4);
+    // 1. Clean and normalize filename
+    let cleanFilename = decodeURIComponent(String(filename)).trim();
+
+    // 2. Clean and normalize submission ID
+    let rawSub = decodeURIComponent(String(submissionId)).trim();
+    while (rawSub.toLowerCase().startsWith('uuid:')) {
+      rawSub = rawSub.slice(5).trim();
     }
-    // Handle URL encoded names like NF-%20Register -> NF- Register
-    form = decodeURIComponent(form);
+    const subIdVariants = [`uuid:${rawSub}`, rawSub];
 
-    // Clean up submission ID (ensure it starts with uuid:)
-    let cleanSubmissionId = String(submissionId);
-    if (!cleanSubmissionId.startsWith('uuid:')) {
-      cleanSubmissionId = `uuid:${cleanSubmissionId}`;
-    }
-
-    const url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(form)}/submissions/${cleanSubmissionId}/attachments/${encodeURIComponent(filename)}`;
-
-    const token = await getOdkToken();
-    let imageRes;
-    let retries = 3;
-    while (retries > 0) {
-      try {
-        let currentUrl = url;
-        let followRedirects = 5;
-        let requestHeaders: HeadersInit = { Authorization: `Bearer ${token}` };
-
-        let urlTrace: string[] = [];
-
-        while (followRedirects > 0) {
-          urlTrace.push(currentUrl);
-          imageRes = await fetch(currentUrl, {
-            headers: requestHeaders,
-            redirect: 'manual'
-          });
-          
-          if (imageRes.status >= 300 && imageRes.status < 400 && imageRes.headers.has('location')) {
-            const loc = imageRes.headers.get('location')!;
-            const redirectUrlObj = new URL(loc, currentUrl);
-            urlTrace.push(`[STATUS:${imageRes.status} LOC:${loc}]`);
-            currentUrl = redirectUrlObj.toString();
-            followRedirects--;
-            // Do not forward Authorization header to third-party domains like S3
-            if (redirectUrlObj.hostname !== 'central.wassan.org') {
-              requestHeaders = {};
-            }
-          } else {
-            break;
-          }
+    // 3. Build candidate forms list to search
+    const candidateForms: string[] = [];
+    if (formId && typeof formId === 'string' && formId !== 'undefined' && formId !== 'null') {
+      let f = decodeURIComponent(formId).trim();
+      if (f.endsWith('.svc')) {
+        f = f.slice(0, -4).trim();
+      }
+      if (f) {
+        candidateForms.push(f);
+        if (f.includes('-') && !f.includes('- ')) {
+          candidateForms.push(f.replace('-', '- '));
         }
-        
-        if (followRedirects === 0) {
-          throw new Error('redirect count exceeded. Trace: ' + JSON.stringify(urlTrace));
+        if (f.includes('- ')) {
+          candidateForms.push(f.replace('- ', '-'));
         }
-        
-        break;
-      } catch (err: any) {
-        retries--;
-        if (retries === 0) throw err;
-        await new Promise(resolve => setTimeout(resolve, 500)); // wait 500ms
       }
     }
 
-    if (!imageRes || !imageRes.ok) {
-      const errText = imageRes ? await imageRes.text() : 'Fetch failed';
-      const status = imageRes ? imageRes.status : 500;
-      const errMsg = `ODK Error ${status}: ${errText.substring(0, 50)}`;
-      console.error('ODK Fetch Error:', url, status, errText);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><rect width="100%" height="100%" fill="#fee2e2"/><text x="10" y="50" font-family="monospace" font-size="12" fill="#991b1b">${errMsg}</text></svg>`;
-      res.setHeader('Content-Type', 'image/svg+xml');
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      return res.status(status).send(svg);
+    // Always include the main forms as fallback
+    const defaultForms = [
+      'NF- Register',
+      'NF- Activities',
+      'Processing Units Mapping',
+      'BRC_Units',
+      'Micro Enterprizes',
+      'Beneficiary Register',
+      'Material_distribution'
+    ];
+    for (const df of defaultForms) {
+      if (!candidateForms.includes(df)) {
+        candidateForms.push(df);
+      }
     }
 
-    const contentType = imageRes.headers.get('content-type') || 'application/octet-stream';
+    const token = await getOdkToken();
+    let successfulRes: Response | null = null;
+    let successfulUrl = '';
+    let lastStatus = 404;
+    let lastErrText = '';
+
+    // Search across candidate forms and submission ID variants
+    for (const form of candidateForms) {
+      for (const subIdToTry of subIdVariants) {
+        const url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(form)}/submissions/${encodeURIComponent(subIdToTry)}/attachments/${encodeURIComponent(cleanFilename)}`;
+        
+        try {
+          let currentUrl = url;
+          let followRedirects = 5;
+          let requestHeaders: HeadersInit = { Authorization: `Bearer ${token}` };
+          let resCandidate: Response | null = null;
+
+          while (followRedirects > 0) {
+            resCandidate = await fetch(currentUrl, {
+              headers: requestHeaders,
+              redirect: 'manual'
+            });
+
+            if (resCandidate.status >= 300 && resCandidate.status < 400 && resCandidate.headers.has('location')) {
+              const loc = resCandidate.headers.get('location')!;
+              const redirectUrlObj = new URL(loc, currentUrl);
+              currentUrl = redirectUrlObj.toString();
+              followRedirects--;
+              if (redirectUrlObj.hostname !== 'central.wassan.org') {
+                requestHeaders = {};
+              }
+            } else {
+              break;
+            }
+          }
+
+          if (resCandidate && resCandidate.ok) {
+            successfulRes = resCandidate;
+            successfulUrl = currentUrl;
+            break;
+          } else if (resCandidate) {
+            lastStatus = resCandidate.status;
+            lastErrText = await resCandidate.text();
+          }
+        } catch (err: any) {
+          lastErrText = err.message || 'Fetch error';
+        }
+      }
+      if (successfulRes) break;
+    }
+
+    if (!successfulRes || !successfulRes.ok) {
+      console.error('ODK Image Not Found after checking all candidate forms:', { cleanFilename, rawSub, candidateForms, lastStatus, lastErrText });
+      const errMsg = `ODK Error ${lastStatus}: Image not found`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="120"><rect width="100%" height="100%" fill="#fee2e2" rx="8"/><text x="16" y="45" font-family="sans-serif" font-size="14" font-weight="bold" fill="#991b1b">${errMsg}</text><text x="16" y="75" font-family="monospace" font-size="11" fill="#b91c1c">File: ${cleanFilename.substring(0, 50)}</text><text x="16" y="95" font-family="monospace" font-size="10" fill="#7f1d1d">Sub: ${rawSub.substring(0, 50)}</text></svg>`;
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.status(lastStatus === 404 ? 404 : 500).send(svg);
+    }
+
+    const contentType = successfulRes.headers.get('content-type') || 'image/jpeg';
     res.setHeader('Content-Type', contentType);
-    
-    if (imageRes.body) {
-      const buffer = await imageRes.arrayBuffer();
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+    if (successfulRes.body) {
+      const buffer = await successfulRes.arrayBuffer();
       res.send(Buffer.from(buffer));
     } else {
       res.status(500).send('No image body');
     }
   } catch (error: any) {
-    console.error('Error proxying ODK image:', error.message || error, 'cause:', error.cause);
-    const errMsg = `Proxy Error: ${(error.message || 'Unknown')}`;
-    // SVG text can't wrap automatically, so we just log it and send a generic SVG but maybe I can see it in logs or return a json
-    console.error('ODK Proxy Trace:', error.message);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><rect width="100%" height="100%" fill="#fee2e2"/><text x="10" y="50" font-family="monospace" font-size="12" fill="#991b1b">Proxy Error</text></svg>`;
+    console.error('Error proxying ODK image:', error.message || error);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><rect width="100%" height="100%" fill="#fee2e2" rx="8"/><text x="16" y="45" font-family="sans-serif" font-size="13" fill="#991b1b">Proxy Error: ${error.message || 'Unknown'}</text></svg>`;
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.status(500).send(svg);
   }
 });
