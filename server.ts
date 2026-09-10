@@ -581,7 +581,20 @@ app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
     }
   } catch (error: any) {
     console.error('Error proxying ODK image:', error.message || error);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><rect width="100%" height="100%" fill="#fee2e2" rx="8"/><text x="16" y="45" font-family="sans-serif" font-size="13" fill="#991b1b">Proxy Error: ${error.message || 'Unknown'}</text></svg>`;
+    
+    let svg = '';
+    if (error.message && error.message.includes('ODK credentials not configured')) {
+      svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="150">
+        <rect width="100%" height="100%" fill="#fef2f2" rx="8"/>
+        <text x="20" y="40" font-family="sans-serif" font-size="16" font-weight="bold" fill="#991b1b">API Keys Missing</text>
+        <text x="20" y="70" font-family="sans-serif" font-size="14" fill="#7f1d1d">To view images in the Live Preview:</text>
+        <text x="20" y="95" font-family="sans-serif" font-size="13" fill="#7f1d1d">1. Click the "Settings" gear icon in the top right.</text>
+        <text x="20" y="115" font-family="sans-serif" font-size="13" fill="#7f1d1d">2. Add ODK_EMAIL and ODK_PASSWORD secrets.</text>
+      </svg>`;
+    } else {
+      svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><rect width="100%" height="100%" fill="#fee2e2" rx="8"/><text x="16" y="45" font-family="sans-serif" font-size="13" fill="#991b1b">Proxy Error: ${error.message || 'Unknown'}</text></svg>`;
+    }
+    
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Access-Control-Allow-Origin', '*');
