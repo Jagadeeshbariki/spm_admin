@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Filter, Search, Loader2, Sprout, MapPin, Users, Database, ChevronDown, ChevronUp, Calendar, ArrowLeft, ArrowRight, Info, Layers, Activity, TrendingUp, BarChart3, PieChart as PieChartIcon, ExternalLink, X, ZoomIn } from 'lucide-react';
+import { FlaskConical, Wheat, Filter, Search, Loader2, Sprout, MapPin, Users, Database, ChevronDown, ChevronUp, Calendar, ArrowLeft, ArrowRight, Info, Layers, Activity, TrendingUp, BarChart3, PieChart as PieChartIcon, ExternalLink, X, ZoomIn } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList } from 'recharts';
 import { cn } from '../../lib/utils';
 import { flatten } from 'flat';
@@ -205,6 +205,17 @@ export default function CropsDashboard() {
             cces,
             raw: flat,
             activityCount: matchedActivities.length,
+            activitiesData: matchedActivities.map((act) => {
+              const flatAct = flatten(act);
+              const parentKey = act.meta?.instanceID || act.__id || '';
+              return {
+                ...act,
+                displayPhoto: act.gps?.photo || flatAct['gps_photo'] || flatAct['gps-photo'] || flatAct['photo'] || act.photo,
+                displaySubmissionId: act.__id || parentKey.replace('uuid:', ''),
+                displayDate: act.Primary_details?.date_visit || act.Primary_details?.date || flatAct['date_visit'] || '-',
+                displayActivity: act.crop_activity || flatAct['crop_activity'] || 'Activity'
+              };
+            }),
             activityPhotos,
             submitterName: sub.__system?.submitterName || ''
           };
@@ -228,7 +239,33 @@ export default function CropsDashboard() {
     const ySet = new Set<string>();
     const sSet = new Set<string>();
     
+
+    const bioInputTotals: Record<string, number> = {};
+    const harvestTotals: Record<string, number> = {};
+
     data.forEach(item => {
+      if (item.bioInputs && Array.isArray(item.bioInputs)) {
+        item.bioInputs.forEach((bi: any) => {
+            const name = String(bi.inputs_applied || bi.bio_input_name || bi.input_name || 'Unknown').trim();
+            const qty = parseFloat(bi.Dhravajeevamrutham_Quantity || bi.qty_applied || bi.qty || bi.qty_units || '0');
+            if (name && name !== 'undefined' && name !== '-' && name !== 'Unknown') {
+                if (!bioInputTotals[name]) bioInputTotals[name] = 0;
+                bioInputTotals[name] += isNaN(qty) ? 0 : qty;
+            }
+        });
+      }
+
+      if (item.harvests && Array.isArray(item.harvests)) {
+        item.harvests.forEach((h: any) => {
+            const name = String(h.crop_harvested || h.crop || 'Unknown').trim();
+            const qty = parseFloat(h.yield_quantity || h.qty || h.yield_Qntl || h.yield_qntl || '0');
+            if (name && name !== 'undefined' && name !== '-' && name !== 'Unknown') {
+                if (!harvestTotals[name]) harvestTotals[name] = 0;
+                harvestTotals[name] += isNaN(qty) ? 0 : qty;
+            }
+        });
+      }
+
       const yearMatch = selectedYear.length === 0 || selectedYear.includes(item.year);
       const seasonMatch = selectedSeason.length === 0 || selectedSeason.includes(item.season);
       const blockMatch = selectedBlock.length === 0 || selectedBlock.includes(item.block);
@@ -703,176 +740,127 @@ export default function CropsDashboard() {
 
                                             
 
-                                            {plot.activityPhotos && plot.activityPhotos.length > 0 && (
+                                            {plot.activitiesData && plot.activitiesData.length > 0 && (
                                               <div className="border-t border-slate-200 pt-6 mt-6">
-                                                <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center justify-between">
-                                                  <span>Activity Photos</span>
+                                                <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                                  <Activity className="w-4 h-4 text-blue-600" /> Activities & Field Visits
                                                 </h4>
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                  {plot.activityPhotos.map((ap: any, i: number) => (
-                                                    <div key={i}>
-                                                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Visit: {ap.date}</h5>
-                                                      <div 
-                                                        className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-300 shadow-sm cursor-pointer bg-slate-100"
-                                                        onClick={(e) => { 
-                                                          e.stopPropagation(); 
-                                                          setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(ap.submissionId)}&filename=${encodeURIComponent(ap.photo)}`); 
-                                                        }}
-                                                      >
-                                                        <img 
-                                                          src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(ap.submissionId)}&filename=${encodeURIComponent(ap.photo)}`} 
-                                                          alt="Activity Photo" 
-                                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
-                                                          loading="lazy" 
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5">
-                                                          <ZoomIn className="w-4 h-4" /> View
+                                                <div className="space-y-4">
+                                                  {plot.activitiesData.map((act: any, i: number) => {
+                                                    const hasBioInputs = act.application_bio_input && act.application_bio_input.length > 0;
+                                                    const hasHarvests = act.harvesting && act.harvesting.length > 0;
+                                                    const hasCCE = act.cce && (act.cce.date_cce || act.cce.sqmtr_5_5_kgs);
+                                                    
+                                                    return (
+                                                      <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4">
+                                                        {/* Left: Photo */}
+                                                        <div className="w-full md:w-1/3 lg:w-1/4">
+                                                          {act.displayPhoto ? (
+                                                            <div 
+                                                              className="relative group w-full h-40 rounded-lg overflow-hidden border border-slate-300 shadow-sm cursor-pointer bg-slate-100"
+                                                              onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(act.displaySubmissionId)}&filename=${encodeURIComponent(act.displayPhoto)}`); 
+                                                              }}
+                                                            >
+                                                              <img 
+                                                                src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(act.displaySubmissionId)}&filename=${encodeURIComponent(act.displayPhoto)}`} 
+                                                                alt="Activity Photo" 
+                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
+                                                                loading="lazy" 
+                                                              />
+                                                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5">
+                                                                <ZoomIn className="w-4 h-4" /> View
+                                                              </div>
+                                                            </div>
+                                                          ) : (
+                                                            <div className="w-full h-40 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 text-sm">
+                                                              No Photo
+                                                            </div>
+                                                          )}
+                                                        </div>
+
+                                                        {/* Right: Details */}
+                                                        <div className="flex-1">
+                                                          <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-2">
+                                                            <div>
+                                                              <h5 className="font-bold text-slate-800 capitalize text-base">{act.displayActivity.replace(/_/g, ' ')}</h5>
+                                                              <span className="text-xs font-medium text-slate-500">{act.displayDate}</span>
+                                                            </div>
+                                                          </div>
+
+                                                          <div className="space-y-4">
+                                                            {hasBioInputs && (
+                                                              <div>
+                                                                <h6 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Bio Inputs Applied</h6>
+                                                                <div className="space-y-2">
+                                                                  {act.application_bio_input.map((bi: any, j: number) => (
+                                                                    <div key={j} className="text-sm bg-blue-50/50 p-3 rounded border border-blue-100">
+                                                                      <div className="font-semibold text-slate-700">{bi.inputs_applied || bi.bio_input_name || bi.input_name || '-'}</div>
+                                                                      <div className="text-slate-600 flex flex-col gap-1 mt-1.5 border-t border-blue-100/50 pt-1.5">
+                                                                        <div className="flex justify-between">
+                                                                          <span className="text-slate-500">Date:</span>
+                                                                          <span className="font-medium text-slate-700">{bi.application_date_bio_input || bi.date_applied || bi.date || '-'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                          <span className="text-slate-500">Quantity:</span>
+                                                                          <span className="font-medium text-blue-700">{bi.Dhravajeevamrutham_Quantity || bi.qty_applied || bi.qty || bi.qty_units || '-'} {bi.unit || bi.units || 'Lts/Kgs'}</span>
+                                                                        </div>
+                                                                        {bi.bioinputs_source && (
+                                                                          <div className="flex justify-between">
+                                                                            <span className="text-slate-500">Source:</span>
+                                                                            <span className="font-medium text-slate-700 capitalize">{String(bi.bioinputs_source).replace(/_/g, ' ')}</span>
+                                                                          </div>
+                                                                        )}
+                                                                      </div>
+                                                                    </div>
+                                                                  ))}
+                                                                </div>
+                                                              </div>
+                                                            )}
+
+                                                            {hasHarvests && (
+                                                              <div>
+                                                                <h6 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harvesting Data</h6>
+                                                                <div className="space-y-2">
+                                                                  {act.harvesting.map((h: any, j: number) => (
+                                                                    <div key={j} className="text-sm bg-green-50/50 p-3 rounded border border-green-100">
+                                                                      <div className="font-semibold text-slate-700">{h.crop_harvested || h.crop || 'Crop'}</div>
+                                                                      <div className="text-slate-600 flex justify-between mt-1">
+                                                                        <span>Harvested: {h.date_harvest || h.date || '-'}</span>
+                                                                        <span className="font-medium text-green-700">{h.yield_quantity || h.qty || h.yield_Qntl || h.yield_qntl || '-'} {h.unit || h.units || 'Kg'}</span>
+                                                                      </div>
+                                                                    </div>
+                                                                  ))}
+                                                                </div>
+                                                              </div>
+                                                            )}
+
+                                                            {hasCCE && (
+                                                              <div>
+                                                                <h6 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Crop Cutting Experiment</h6>
+                                                                <div className="text-sm bg-amber-50/50 p-3 rounded border border-amber-100">
+                                                                  <div className="text-slate-600 flex justify-between">
+                                                                    <span>Date: {act.cce.date_cce || '-'}</span>
+                                                                    <span className="font-medium text-amber-700">Yield: {act.cce.sqmtr_5_5_kgs || '-'} Kgs (5x5 Sqm)</span>
+                                                                  </div>
+                                                                </div>
+                                                              </div>
+                                                            )}
+
+                                                            {!hasBioInputs && !hasHarvests && !hasCCE && (
+                                                              <div className="text-sm text-slate-500 italic">
+                                                                General field visit / observation
+                                                              </div>
+                                                            )}
+                                                          </div>
                                                         </div>
                                                       </div>
-                                                    </div>
-                                                  ))}
+                                                    );
+                                                  })}
                                                 </div>
                                               </div>
                                             )}
-
-                                            {(plot.bioInputs.length > 0 || plot.harvests.length > 0 || (plot.cces && plot.cces.length > 0)) && (
-                                              <div className="border-t border-slate-200 pt-6 mt-6">
-                                                <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-blue-600" /> Activities & Data</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                  
-                                                  {/* Bio Inputs */}
-                                                  {plot.bioInputs.length > 0 && (
-                                                    <div>
-                                                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Bio Inputs Applied</h5>
-                                                      <div className="space-y-3">
-                                                        {plot.bioInputs.map((bi: any, i: number) => (
-                                                          <div key={i} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                                                            <div className="flex justify-between items-start mb-2">
-                                                              <span className="font-semibold text-sm text-slate-800">{bi.inputs_applied || 'Unknown Input'}</span>
-                                                              <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{bi.application_date_bio_input || '-'}</span>
-                                                            </div>
-                                                            <div className="text-sm text-slate-600 flex justify-between mb-2">
-                                                              <span>Qty: {bi.Dhravajeevamrutham_Quantity || bi.qty || '-'} {bi.unit || ''}</span>
-                                                              <span>Source: {bi.bioinputs_source || '-'}</span>
-                                                            </div>
-                                                            {bi.photo && bi.submissionId && (
-                                                              <div className="mt-2">
-                                                                <div 
-                                                                  className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-200 cursor-pointer bg-slate-100"
-                                                                  onClick={(e) => { 
-                                                                    e.stopPropagation(); 
-                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}`); 
-                                                                  }}
-                                                                >
-                                                                  <img 
-                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(bi.submissionId)}&filename=${encodeURIComponent(bi.photo)}`} 
-                                                                    alt="Bio Input" 
-                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
-                                                                    loading="lazy" 
-                                                                  />
-                                                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
-                                                                    <ZoomIn className="w-3.5 h-3.5" /> View Photo
-                                                                  </div>
-                                                                </div>
-                                                              </div>
-                                                            )}
-                                                          </div>
-                                                        ))}
-                                                      </div>
-                                                    </div>
-                                                  )}
-
-                                                  {/* Harvests */}
-                                                  {plot.harvests.length > 0 && (
-                                                    <div>
-                                                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Harvesting Data</h5>
-                                                      <div className="space-y-3">
-                                                        {plot.harvests.map((h: any, i: number) => (
-                                                          <div key={i} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                                                            <div className="flex justify-between items-start mb-2">
-                                                              <span className="font-semibold text-sm text-slate-800">Harvest #{i + 1}</span>
-                                                              <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{h.harvesting_date || '-'}</span>
-                                                            </div>
-                                                            <div className="text-sm text-slate-600 space-y-1 mb-2">
-                                                              <div className="flex justify-between">
-                                                                <span className="text-slate-500">Yield:</span>
-                                                                <span className="font-medium">{h.yield_quantity || h.qty || '-'} {h.unit || 'Kg'}</span>
-                                                              </div>
-                                                            </div>
-                                                            {h.photo && h.submissionId && (
-                                                              <div className="mt-2">
-                                                                <div 
-                                                                  className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-200 cursor-pointer bg-slate-100"
-                                                                  onClick={(e) => { 
-                                                                    e.stopPropagation(); 
-                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}`); 
-                                                                  }}
-                                                                >
-                                                                  <img 
-                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(h.submissionId)}&filename=${encodeURIComponent(h.photo)}`} 
-                                                                    alt="Harvest" 
-                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
-                                                                    loading="lazy" 
-                                                                  />
-                                                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
-                                                                    <ZoomIn className="w-3.5 h-3.5" /> View Photo
-                                                                  </div>
-                                                                </div>
-                                                              </div>
-                                                            )}
-                                                          </div>
-                                                        ))}
-                                                      </div>
-                                                    </div>
-                                                  )}
-                                                  {/* CCEs */}
-                                                  {plot.cces && plot.cces.length > 0 && (
-                                                    <div>
-                                                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Crop Cutting Experiments (CCE)</h5>
-                                                      <div className="space-y-3">
-                                                        {plot.cces.map((c: any, i: number) => (
-                                                          <div key={i} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                                                            <div className="flex justify-between items-start mb-2">
-                                                              <span className="font-semibold text-sm text-slate-800">CCE #{i + 1}</span>
-                                                              <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{c.date_cce || '-'}</span>
-                                                            </div>
-                                                            <div className="text-sm text-slate-600 space-y-1 mb-2">
-                                                              <div className="flex justify-between">
-                                                                <span className="text-slate-500">Yield (5x5 Sqm):</span>
-                                                                <span className="font-medium">{c.sqmtr_5_5_kgs || '-'} Kgs</span>
-                                                              </div>
-                                                            </div>
-                                                            {c.photo && c.submissionId && (
-                                                              <div className="mt-2">
-                                                                <div 
-                                                                  className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-200 cursor-pointer bg-slate-100"
-                                                                  onClick={(e) => { 
-                                                                    e.stopPropagation(); 
-                                                                    setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}`); 
-                                                                  }}
-                                                                >
-                                                                  <img 
-                                                                    src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(c.submissionId)}&filename=${encodeURIComponent(c.photo)}`} 
-                                                                    alt="CCE Photo" 
-                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
-                                                                    loading="lazy" 
-                                                                  />
-                                                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1">
-                                                                    <ZoomIn className="w-3.5 h-3.5" /> View Photo
-                                                                  </div>
-                                                                </div>
-                                                             </div>
-                                                            )}
-                                                          </div>
-                                                        ))}
-                                                      </div>
-                                                    </div>
-                                                  )}
-
-                                                </div>
-                                              </div>
-                                            )}
-
                                           </div>
                                         )}
                                       </div>
@@ -1063,6 +1051,8 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
     
     const uniqueFarmers = new Set<string>();
     const activeFarmers = new Set<string>();
+    const bioInputFarmers = new Set<string>();
+    const harvestFarmers = new Set<string>();
     
     const cropModeCount: Record<string, number> = {};
     const mainCropFarmers: Record<string, Set<string>> = {};
@@ -1072,7 +1062,33 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
     const blockCropModeStats: Record<string, Record<string, { count: number, area: number }>> = {};
     const blockSubmitterStats: Record<string, Record<string, { count: number, area: number }>> = {};
     
+
+    const bioInputTotals: Record<string, number> = {};
+    const harvestTotals: Record<string, number> = {};
+
     data.forEach(item => {
+      if (item.bioInputs && Array.isArray(item.bioInputs)) {
+        item.bioInputs.forEach((bi: any) => {
+            const name = String(bi.inputs_applied || bi.bio_input_name || bi.input_name || 'Unknown').trim();
+            const qty = parseFloat(bi.Dhravajeevamrutham_Quantity || bi.qty_applied || bi.qty || bi.qty_units || '0');
+            if (name && name !== 'undefined' && name !== '-' && name !== 'Unknown') {
+                if (!bioInputTotals[name]) bioInputTotals[name] = 0;
+                bioInputTotals[name] += isNaN(qty) ? 0 : qty;
+            }
+        });
+      }
+
+      if (item.harvests && Array.isArray(item.harvests)) {
+        item.harvests.forEach((h: any) => {
+            const name = String(h.crop_harvested || h.crop || 'Unknown').trim();
+            const qty = parseFloat(h.yield_quantity || h.qty || h.yield_Qntl || h.yield_qntl || '0');
+            if (name && name !== 'undefined' && name !== '-' && name !== 'Unknown') {
+                if (!harvestTotals[name]) harvestTotals[name] = 0;
+                harvestTotals[name] += isNaN(qty) ? 0 : qty;
+            }
+        });
+      }
+
       // strictly use plot_reg-farmer_Id for unique farmer counts as requested
       const farmerId = item.plotFarmerId || null;
       if (farmerId) {
@@ -1088,6 +1104,12 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
         if (farmerId) {
           activeFarmers.add(farmerId);
         }
+      }
+      if (item.bioInputs && item.bioInputs.length > 0 && farmerId) {
+        bioInputFarmers.add(farmerId);
+      }
+      if (item.harvests && item.harvests.length > 0 && farmerId) {
+        harvestFarmers.add(farmerId);
       }
       totalHarvests += item.harvests.length;
       totalBioInputs += item.bioInputs.length;
@@ -1200,13 +1222,17 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
       activeFarmers: activeFarmers.size,
       totalHarvests,
       totalBioInputs,
+      bioInputFarmersCount: bioInputFarmers.size,
+      harvestFarmersCount: harvestFarmers.size,
       cropModeData,
       mainCropData,
       villageData,
       seasonData,
       clusterData,
       table1Data,
-      table2Data
+      table2Data,
+      bioInputData: Object.entries(bioInputTotals).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value: Math.round(value * 100) / 100 })).sort((a, b) => b.value - a.value).filter(item => item.value > 0).slice(0, 10),
+      harvestData: Object.entries(harvestTotals).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value: Math.round(value * 100) / 100 })).sort((a, b) => b.value - a.value).filter(item => item.value > 0).slice(0, 10)
     };
   }, [data]);
   
@@ -1420,6 +1446,105 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
                     wrapperStyle={{ paddingTop: '20px' }}
                   />
                 </PieChart>
+              </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row 3 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        {/* Bio Inputs Applied */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
+          <div className="flex items-center gap-2 mb-4 shrink-0">
+            <FlaskConical className="w-4 h-4 text-slate-400" />
+            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+              Bio Inputs Quantity Used
+              <span className="bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-full">
+                from {stats.bioInputFarmersCount} farmers
+              </span>
+            </h3>
+          </div>
+          <div className="flex-1 min-h-0 relative">
+            {stats.bioInputData && stats.bioInputData.length > 0 ? (
+              <div className="absolute inset-0">
+              <ResponsiveContainer width="100%" height="100%" debounce={50}>
+                <BarChart data={stats.bioInputData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 11 }} 
+                    dy={10}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                  />
+                  <RechartsTooltip isAnimationActive={false} wrapperStyle={{ pointerEvents: 'none' }}
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false}>
+                    <LabelList dataKey="value" position="top" style={{ fontSize: '11px', fill: '#64748b', fontWeight: 'bold' }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
+            )}
+          </div>
+        </div>
+
+        {/* Harvest Data */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
+          <div className="flex items-center gap-2 mb-4 shrink-0">
+            <Wheat className="w-4 h-4 text-slate-400" />
+            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+              Harvest Quantity by Crop
+              <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full">
+                from {stats.harvestFarmersCount} farmers
+              </span>
+            </h3>
+          </div>
+          <div className="flex-1 min-h-0 relative">
+            {stats.harvestData && stats.harvestData.length > 0 ? (
+              <div className="absolute inset-0">
+              <ResponsiveContainer width="100%" height="100%" debounce={50}>
+                <BarChart data={stats.harvestData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 11 }} 
+                    dy={10}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                  />
+                  <RechartsTooltip isAnimationActive={false} wrapperStyle={{ pointerEvents: 'none' }}
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false}>
+                    <LabelList dataKey="value" position="top" style={{ fontSize: '11px', fill: '#64748b', fontWeight: 'bold' }} />
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
               </div>
             ) : (

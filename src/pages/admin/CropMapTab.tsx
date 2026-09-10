@@ -1,6 +1,10 @@
+import * as L from 'leaflet';
 import React, { useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
-import L from 'leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMap } from 'react-leaflet';
+import { useEffect } from 'react';
+
+function MapUpdater({ center, mapData }: { center: [number, number], mapData: any[] }) {  const map = useMap();  useEffect(() => {    if (mapData.length > 0) {      const bounds = L.latLngBounds(mapData.map(d => d.position));      if (bounds.isValid()) {        map.fitBounds(bounds, { padding: [50, 50] });      } else {        map.setView(center, map.getZoom());      }    }  }, [center, map, mapData]);  return null;}
+
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Sprout, Calendar, User, Maximize2, Minimize2 } from 'lucide-react';
 
@@ -35,19 +39,25 @@ const getCropModeColor = (mode: string) => {
 };
 
 // Custom SVG marker for coloring
+const iconCache: Record<string, L.DivIcon> = {};
+
 const createCustomIcon = (color: string) => {
+  if (iconCache[color]) return iconCache[color];
+  
   const markerHtml = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="24" height="36" fill="${color}" stroke="white" stroke-width="15">
       <path d="M172.3 501.7C27 291 0 269.4 0 192 0 86 86 0 192 0s192 86 192 192c0 77.4-27 99-172.3 309.7-9.5 13.8-29.9 13.8-39.5 0zM192 272c44.2 0 80-35.8 80-80s-35.8-80-80-80-80 35.8-80 80 35.8 80 80 80z"/>
     </svg>
   `;
-  return new L.DivIcon({
+  const icon = new L.DivIcon({
     html: markerHtml,
     className: 'custom-leaflet-marker',
     iconSize: [24, 36],
     iconAnchor: [12, 36],
     popupAnchor: [0, -36],
   });
+  iconCache[color] = icon;
+  return icon;
 };
 
 interface CropMapTabProps {
@@ -139,11 +149,13 @@ export function CropMapTab({ data }: CropMapTabProps) {
         </button>
         {mapData.length > 0 ? (
           <MapContainer 
+
             center={center} 
             zoom={10} 
             style={{ height: '100%', width: '100%', zIndex: 0 }}
             scrollWheelZoom={true}
           >
+            <MapUpdater center={center} mapData={mapData} />
             <LayersControl position="topright">
               <LayersControl.BaseLayer checked name="Street Map">
                 <TileLayer

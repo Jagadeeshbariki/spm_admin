@@ -38,3 +38,17 @@ const originalMarkerSetPos = (L.Marker.prototype as any)._setPos;
   if (!this._icon) return;
   originalMarkerSetPos.call(this, pos);
 };
+const originalAdjustPan = (L.Popup.prototype as any)._adjustPan;
+if (originalAdjustPan) {
+  (L.Popup.prototype as any)._adjustPan = function() {
+    if (!this._container) return;
+    originalAdjustPan.call(this);
+  };
+}
+const originalGetMapPanePos = (L.Map.prototype as any)._getMapPanePos;
+if (originalGetMapPanePos) {
+  (L.Map.prototype as any)._getMapPanePos = function() {
+    if (!this._mapPane) return new (L as any).Point(0, 0);
+    return originalGetMapPanePos.call(this);
+  };
+}
