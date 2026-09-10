@@ -108,13 +108,23 @@ export default function CropsDashboard() {
           let harvests: any[] = [];
           let bioInputs: any[] = [];
           let cces: any[] = [];
+          let activityPhotos: any[] = [];
           
           matchedActivities.forEach((act: any) => {
             const flatAct = flatten(act);
-            const actPhoto = act.gps?.photo || flatAct['gps_photo'] || flatAct['photo'] || act.photo;
+            const actPhoto = act.gps?.photo || flatAct['gps_photo'] || flatAct['gps-photo'] || flatAct['photo'] || act.photo;
             
             // 4. Use Instance ID as PARENT_KEY for nested tables
             const parentKey = act.meta?.instanceID || act.__id || '';
+            const submissionId = act.__id || parentKey.replace('uuid:', '');
+            if (actPhoto) {
+              activityPhotos.push({
+                photo: actPhoto,
+                submissionId,
+                formId: 'NF- Activities',
+                date: act.Primary_details?.date_visit || act.date || flatAct['date_visit'] || '-'
+              });
+            }
             
             if (act.harvesting && Array.isArray(act.harvesting)) {
               harvests.push(...act.harvesting.map((h: any) => ({ 
@@ -170,7 +180,7 @@ export default function CropsDashboard() {
             }
 
             return {
-            plotPhoto: flat['plot_reg_image'] || flat['image'] || flat['photo'],
+            plotPhoto: flat['plot_reg_image'] || flat['plot_reg-image'] || flat['image'] || flat['photo'],
             coordinates: sub.plot_reg?.plot_gps?.coordinates || sub.plot_gps?.coordinates || sub.gps?.coordinates || null,
             plotSubmissionId: sub.__id || sub.meta?.instanceID?.replace('uuid:', ''),
             plotFormId: 'NF- Register',
@@ -195,6 +205,7 @@ export default function CropsDashboard() {
             cces,
             raw: flat,
             activityCount: matchedActivities.length,
+            activityPhotos,
             submitterName: sub.__system?.submitterName || ''
           };
         });
@@ -686,6 +697,40 @@ export default function CropsDashboard() {
                                                       <ZoomIn className="w-4 h-4" /> Click to view full image
                                                     </div>
                                                   </div>
+                                                </div>
+                                              </div>
+                                            )}
+
+                                            
+
+                                            {plot.activityPhotos && plot.activityPhotos.length > 0 && (
+                                              <div className="border-t border-slate-200 pt-6 mt-6">
+                                                <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center justify-between">
+                                                  <span>Activity Photos</span>
+                                                </h4>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                  {plot.activityPhotos.map((ap: any, i: number) => (
+                                                    <div key={i}>
+                                                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Visit: {ap.date}</h5>
+                                                      <div 
+                                                        className="relative group w-full h-32 rounded-lg overflow-hidden border border-slate-300 shadow-sm cursor-pointer bg-slate-100"
+                                                        onClick={(e) => { 
+                                                          e.stopPropagation(); 
+                                                          setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(ap.submissionId)}&filename=${encodeURIComponent(ap.photo)}&formId=${encodeURIComponent(ap.formId)}`); 
+                                                        }}
+                                                      >
+                                                        <img 
+                                                          src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(ap.submissionId)}&filename=${encodeURIComponent(ap.photo)}&formId=${encodeURIComponent(ap.formId)}`} 
+                                                          alt="Activity Photo" 
+                                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
+                                                          loading="lazy" 
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5">
+                                                          <ZoomIn className="w-4 h-4" /> View
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  ))}
                                                 </div>
                                               </div>
                                             )}
