@@ -1,0 +1,1916 @@
+[
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "seethampeta",
+      "cluster": "seethampeta_2",
+      "gp": "manda",
+      "village": "manda colony"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1171318040999-Savara Pedda Jaganthamma",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination Deworming",
+      "vacn_info": {
+        "date_vaccination": "2025-04-24",
+        "mdc_byp_birds_vaccinated": 16,
+        "mdc_byp_vaccine_name": "RDK_R2B",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2026-04-08",
+        "mdc_byp_birds_dewormed": 16,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 2,
+        "mdc_byp_no_cocks": 2,
+        "mdc_byp_growers": 4,
+        "mdc_byp_chicks": 0,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 8,
+        "mdc_byp_health_expense": 16
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 2,
+      "mdc_byp_income_birds_sold": 2,
+      "mdc_byp_chicken_sold_kgs": 3,
+      "mdc_byp_chicken_sold_income": 1850,
+      "mdc_byp_birds_own_consumption": 2,
+      "mdc_byp_birds_own_consumption_value_rs": 1800,
+      "mdc_byp_eggs_own_consumption": 3
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 3,
+      "mdc_byp_birds_predation": 2,
+      "mdc_byp_chicks_died": 1,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Govindu",
+    "meta": {
+      "instanceID": "uuid:d60b01a3-2f03-4d64-8c9b-26da17c7e506"
+    },
+    "__id": "uuid:d60b01a3-2f03-4d64-8c9b-26da17c7e506",
+    "__system": {
+      "submissionDate": "2026-09-11T05:31:13.765Z",
+      "updatedAt": null,
+      "submitterId": "374",
+      "submitterName": "Simhachalam",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:MA9NfRKjIUwIzxQj",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "seethampeta",
+      "cluster": "seethampeta_2",
+      "gp": "manda",
+      "village": "manda colony"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1171318040998-Savara Susheela",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination Deworming",
+      "vacn_info": {
+        "date_vaccination": "2025-04-24",
+        "mdc_byp_birds_vaccinated": 12,
+        "mdc_byp_vaccine_name": "RDK_R2B",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2025-04-08",
+        "mdc_byp_birds_dewormed": 12,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 2,
+        "mdc_byp_no_cocks": 0,
+        "mdc_byp_growers": 3,
+        "mdc_byp_chicks": 0,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 5,
+        "mdc_byp_health_expense": 10
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 0,
+      "mdc_byp_income_birds_sold": 0,
+      "mdc_byp_chicken_sold_kgs": 0,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 1,
+      "mdc_byp_birds_own_consumption_value_rs": 800,
+      "mdc_byp_eggs_own_consumption": 2
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 6,
+      "mdc_byp_birds_predation": 2,
+      "mdc_byp_chicks_died": 3,
+      "mdc_byp_chicks_predation": 1
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Govindu",
+    "meta": {
+      "instanceID": "uuid:fd488edb-4117-4edd-b22c-7bcaa74b60c4"
+    },
+    "__id": "uuid:fd488edb-4117-4edd-b22c-7bcaa74b60c4",
+    "__system": {
+      "submissionDate": "2026-09-11T05:31:08.116Z",
+      "updatedAt": null,
+      "submitterId": "374",
+      "submitterName": "Simhachalam",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:MA9NfRKjIUwIzxQj",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "seethampeta",
+      "cluster": "seethampeta_2",
+      "gp": "manda",
+      "village": "manda colony"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1171318040992-Savara Chandramma",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination Deworming",
+      "vacn_info": {
+        "date_vaccination": "2025-04-24",
+        "mdc_byp_birds_vaccinated": 18,
+        "mdc_byp_vaccine_name": "RDK_R2B",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2025-04-08",
+        "mdc_byp_birds_dewormed": 15,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 3,
+        "mdc_byp_no_cocks": 4,
+        "mdc_byp_growers": 8,
+        "mdc_byp_chicks": 3,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 18,
+        "mdc_byp_health_expense": 36
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 0,
+      "mdc_byp_income_birds_sold": 0,
+      "mdc_byp_chicken_sold_kgs": 0,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 2,
+      "mdc_byp_birds_own_consumption_value_rs": 1500,
+      "mdc_byp_eggs_own_consumption": 5
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 4,
+      "mdc_byp_birds_predation": 2,
+      "mdc_byp_chicks_died": 2,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Govindu",
+    "meta": {
+      "instanceID": "uuid:1a798a67-2260-434d-86e4-f6ebf64419a0"
+    },
+    "__id": "uuid:1a798a67-2260-434d-86e4-f6ebf64419a0",
+    "__system": {
+      "submissionDate": "2026-09-11T05:31:00.906Z",
+      "updatedAt": null,
+      "submitterId": "374",
+      "submitterName": "Simhachalam",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:MA9NfRKjIUwIzxQj",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "seethampeta",
+      "cluster": "seethampeta_2",
+      "gp": "manda",
+      "village": "manda colony"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1171318040989-Savara Gowramma",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Deworming Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2025-04-24",
+        "mdc_byp_birds_vaccinated": 19,
+        "mdc_byp_vaccine_name": "RDK_R2B",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2025-04-08",
+        "mdc_byp_birds_dewormed": 19,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 3,
+        "mdc_byp_no_cocks": 6,
+        "mdc_byp_growers": 4,
+        "mdc_byp_chicks": 6,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 19,
+        "mdc_byp_health_expense": 38
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 3,
+      "mdc_byp_income_birds_sold": 3,
+      "mdc_byp_chicken_sold_kgs": 0,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 4,
+      "mdc_byp_birds_own_consumption_value_rs": 2500,
+      "mdc_byp_eggs_own_consumption": 6
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 2,
+      "mdc_byp_birds_predation": 2,
+      "mdc_byp_chicks_died": 0,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Govindu",
+    "meta": {
+      "instanceID": "uuid:ddf627a1-04d5-474f-82cb-e4fe0c546028"
+    },
+    "__id": "uuid:ddf627a1-04d5-474f-82cb-e4fe0c546028",
+    "__system": {
+      "submissionDate": "2026-09-11T05:30:54.858Z",
+      "updatedAt": null,
+      "submitterId": "374",
+      "submitterName": "Simhachalam",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:MA9NfRKjIUwIzxQj",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "seethampeta",
+      "cluster": "seethampeta_2",
+      "gp": "manda",
+      "village": "manda colony"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1171318040978-Savara Mangamma",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination Deworming",
+      "vacn_info": {
+        "date_vaccination": "2025-04-26",
+        "mdc_byp_birds_vaccinated": 11,
+        "mdc_byp_vaccine_name": "RDK_R2B",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2026-04-08",
+        "mdc_byp_birds_dewormed": 11,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 3,
+        "mdc_byp_no_cocks": 2,
+        "mdc_byp_growers": 8,
+        "mdc_byp_chicks": 6,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 19,
+        "mdc_byp_health_expense": 36
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 2,
+      "mdc_byp_income_birds_sold": 2100,
+      "mdc_byp_chicken_sold_kgs": 0,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 3,
+      "mdc_byp_birds_own_consumption_value_rs": 2000,
+      "mdc_byp_eggs_own_consumption": 3
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 6,
+      "mdc_byp_birds_predation": 3,
+      "mdc_byp_chicks_died": 2,
+      "mdc_byp_chicks_predation": 1
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Govindu",
+    "meta": {
+      "instanceID": "uuid:d9e75b00-48dd-4f07-ba10-ae4d9b843e8f"
+    },
+    "__id": "uuid:d9e75b00-48dd-4f07-ba10-ae4d9b843e8f",
+    "__system": {
+      "submissionDate": "2026-09-11T05:30:47.720Z",
+      "updatedAt": null,
+      "submitterId": "374",
+      "submitterName": "Simhachalam",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:MA9NfRKjIUwIzxQj",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "seethampeta",
+      "cluster": "seethampeta_2",
+      "gp": "manda",
+      "village": "manda colony"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1171318040978-Savara Vijaya Lakshmi",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination Deworming",
+      "vacn_info": {
+        "date_vaccination": "2025-04-24",
+        "mdc_byp_birds_vaccinated": 15,
+        "mdc_byp_vaccine_name": "RDK_R2B",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2025-04-08",
+        "mdc_byp_birds_dewormed": 0,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 2,
+        "mdc_byp_no_cocks": 3,
+        "mdc_byp_growers": 5,
+        "mdc_byp_chicks": 5,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 15,
+        "mdc_byp_health_expense": 30
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 3,
+      "mdc_byp_income_birds_sold": 2500,
+      "mdc_byp_chicken_sold_kgs": 0,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 3,
+      "mdc_byp_birds_own_consumption_value_rs": 1800,
+      "mdc_byp_eggs_own_consumption": 3
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 6,
+      "mdc_byp_birds_predation": 7,
+      "mdc_byp_chicks_died": 3,
+      "mdc_byp_chicks_predation": 4
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Govindu",
+    "meta": {
+      "instanceID": "uuid:b532f056-51d9-42b0-b729-188bcae9c683"
+    },
+    "__id": "uuid:b532f056-51d9-42b0-b729-188bcae9c683",
+    "__system": {
+      "submissionDate": "2026-09-11T05:30:41.763Z",
+      "updatedAt": null,
+      "submitterId": "374",
+      "submitterName": "Simhachalam",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:MA9NfRKjIUwIzxQj",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "boddaguda"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1170205022244-Biddika Jamanthi",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2026-07-03",
+        "mdc_byp_birds_vaccinated": 19,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 5,
+        "mdc_byp_no_cocks": 3,
+        "mdc_byp_growers": 5,
+        "mdc_byp_chicks": 6,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 19,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 2,
+      "mdc_byp_income_birds_sold": 2600,
+      "mdc_byp_chicken_sold_kgs": 4,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 0,
+      "mdc_byp_birds_own_consumption_value_rs": 0,
+      "mdc_byp_eggs_own_consumption": 0
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 0,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:e73e172a-b02f-4093-bec3-45ac071bb48a"
+    },
+    "__id": "uuid:e73e172a-b02f-4093-bec3-45ac071bb48a",
+    "__system": {
+      "submissionDate": "2026-09-11T02:12:25.469Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "boddaguda"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1170205022244-Biddika Jamanthi",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2026-04-13",
+        "mdc_byp_birds_vaccinated": 27,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 7,
+        "mdc_byp_no_cocks": 4,
+        "mdc_byp_growers": 6,
+        "mdc_byp_chicks": 10,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 27,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q1_Apr_Jun",
+    "Income_info": {
+      "mdc_byp_birds_sold": 3,
+      "mdc_byp_income_birds_sold": 3250,
+      "mdc_byp_chicken_sold_kgs": 5,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 1,
+      "mdc_byp_birds_own_consumption_value_rs": 1000,
+      "mdc_byp_eggs_own_consumption": 3
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 0,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:f332e21c-cb39-47ad-94cc-d8b9d7a1a6a7"
+    },
+    "__id": "uuid:f332e21c-cb39-47ad-94cc-d8b9d7a1a6a7",
+    "__system": {
+      "submissionDate": "2026-09-11T02:08:07.416Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "boddaguda"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1170205022244-Biddika Jamanthi",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Deworming",
+      "vacn_info": {
+        "date_vaccination": null,
+        "mdc_byp_birds_vaccinated": null,
+        "mdc_byp_vaccine_name": null,
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2025-10-17",
+        "mdc_byp_birds_dewormed": 18,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 8,
+        "mdc_byp_no_cocks": 4,
+        "mdc_byp_growers": 6,
+        "mdc_byp_chicks": 12,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 30,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q3_October_December",
+    "Income_info": {
+      "mdc_byp_birds_sold": 5,
+      "mdc_byp_income_birds_sold": 6500,
+      "mdc_byp_chicken_sold_kgs": 10,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 1,
+      "mdc_byp_birds_own_consumption_value_rs": 1500,
+      "mdc_byp_eggs_own_consumption": 6
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 2,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:e00c2b65-7b70-42ac-831d-6d7fbd2d9026"
+    },
+    "__id": "uuid:e00c2b65-7b70-42ac-831d-6d7fbd2d9026",
+    "__system": {
+      "submissionDate": "2026-09-11T01:55:47.217Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "boddaguda"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1170205022244-Biddika Jamanthi",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2025-07-05",
+        "mdc_byp_birds_vaccinated": 25,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 6,
+        "mdc_byp_no_cocks": 3,
+        "mdc_byp_growers": 8,
+        "mdc_byp_chicks": 8,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 25,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 0,
+      "mdc_byp_income_birds_sold": 0,
+      "mdc_byp_chicken_sold_kgs": 0,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 0,
+      "mdc_byp_birds_own_consumption_value_rs": 0,
+      "mdc_byp_eggs_own_consumption": 0
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 0,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:996517a4-eab8-4b85-9492-a4ddfcd81e6e"
+    },
+    "__id": "uuid:996517a4-eab8-4b85-9492-a4ddfcd81e6e",
+    "__system": {
+      "submissionDate": "2026-09-11T01:50:23.940Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Mortality Service Income"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "boddaguda"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1170205022244-Biddika Jamanthi",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2025-04-14",
+        "mdc_byp_birds_vaccinated": 23,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 3,
+        "mdc_byp_no_cocks": 2,
+        "mdc_byp_growers": 12,
+        "mdc_byp_chicks": 6,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 23,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q1_Apr_Jun",
+    "Income_info": {
+      "mdc_byp_birds_sold": 1,
+      "mdc_byp_income_birds_sold": 1300,
+      "mdc_byp_chicken_sold_kgs": 2,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 0,
+      "mdc_byp_birds_own_consumption_value_rs": 0,
+      "mdc_byp_eggs_own_consumption": 0
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 0,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:b1492dd4-b85c-42d9-841d-5c24ae09f79d"
+    },
+    "__id": "uuid:b1492dd4-b85c-42d9-841d-5c24ae09f79d",
+    "__system": {
+      "submissionDate": "2026-09-11T01:45:15.503Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "boddaguda"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1170205022244-Biddika Jamanthi",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2024-10-04",
+        "mdc_byp_birds_vaccinated": 22,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 4,
+        "mdc_byp_no_cocks": 2,
+        "mdc_byp_growers": 8,
+        "mdc_byp_chicks": 8,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 22,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q3_October_December",
+    "Income_info": {
+      "mdc_byp_birds_sold": 4,
+      "mdc_byp_income_birds_sold": 4550,
+      "mdc_byp_chicken_sold_kgs": 7,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 1,
+      "mdc_byp_birds_own_consumption_value_rs": 1200,
+      "mdc_byp_eggs_own_consumption": 3
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 1,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:b01712bf-5682-4b5f-9c81-6471a9e0c87b"
+    },
+    "__id": "uuid:b01712bf-5682-4b5f-9c81-6471a9e0c87b",
+    "__system": {
+      "submissionDate": "2026-09-11T01:29:30.948Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "boddaguda"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1170205022244-Biddika Jamanthi",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Deworming",
+      "vacn_info": {
+        "date_vaccination": null,
+        "mdc_byp_birds_vaccinated": null,
+        "mdc_byp_vaccine_name": null,
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2024-07-15",
+        "mdc_byp_birds_dewormed": 19,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 5,
+        "mdc_byp_no_cocks": 2,
+        "mdc_byp_growers": 12,
+        "mdc_byp_chicks": 8,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 24,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 3,
+      "mdc_byp_income_birds_sold": 3250,
+      "mdc_byp_chicken_sold_kgs": 5,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 2,
+      "mdc_byp_birds_own_consumption_value_rs": 2600,
+      "mdc_byp_eggs_own_consumption": 7
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 3,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:d813529d-a9b1-4030-b74a-3ac2a35bd05d"
+    },
+    "__id": "uuid:d813529d-a9b1-4030-b74a-3ac2a35bd05d",
+    "__system": {
+      "submissionDate": "2026-09-11T01:24:17.623Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-11",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "NS",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "boddaguda"
+    },
+    "personal_info": {
+      "NS_farmer_name": "1170205022244-Biddika Jamanthi",
+      "NS_Project": "HDFC - P0552",
+      "BFE_farmer_name": null,
+      "BFE_Project": null
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2024-04-05",
+        "mdc_byp_birds_vaccinated": 23,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 7,
+        "mdc_byp_no_cocks": 3,
+        "mdc_byp_growers": 8,
+        "mdc_byp_chicks": 5,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 23,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q1_Apr_Jun",
+    "Income_info": {
+      "mdc_byp_birds_sold": 2,
+      "mdc_byp_income_birds_sold": 2600,
+      "mdc_byp_chicken_sold_kgs": 4,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 1,
+      "mdc_byp_birds_own_consumption_value_rs": 1000,
+      "mdc_byp_eggs_own_consumption": 5
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 2,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:89032c40-7ce5-45ce-a8b1-6e70e7b5ca80"
+    },
+    "__id": "uuid:89032c40-7ce5-45ce-a8b1-6e70e7b5ca80",
+    "__system": {
+      "submissionDate": "2026-09-11T01:12:41.119Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-10",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "BFE",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "sannaicolony"
+    },
+    "personal_info": {
+      "NS_farmer_name": null,
+      "NS_Project": null,
+      "BFE_farmer_name": "1170205082465-Palaka. Maigi [HDFC BFE]_Jujaru",
+      "BFE_Project": "HDFC - P0552"
+    },
+    "service_info": {
+      "byp_service_type": "Deworming",
+      "vacn_info": {
+        "date_vaccination": null,
+        "mdc_byp_birds_vaccinated": null,
+        "mdc_byp_vaccine_name": null,
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2024-10-04",
+        "mdc_byp_birds_dewormed": 55,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 20,
+        "mdc_byp_no_cocks": 10,
+        "mdc_byp_growers": 25,
+        "mdc_byp_chicks": 30,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 85,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q3_October_December",
+    "Income_info": {
+      "mdc_byp_birds_sold": 7,
+      "mdc_byp_income_birds_sold": 9100,
+      "mdc_byp_chicken_sold_kgs": 14,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 3,
+      "mdc_byp_birds_own_consumption_value_rs": 3900,
+      "mdc_byp_eggs_own_consumption": 8
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 6,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:b00a661b-5b5c-46b0-8452-7277fdc1a841"
+    },
+    "__id": "uuid:b00a661b-5b5c-46b0-8452-7277fdc1a841",
+    "__system": {
+      "submissionDate": "2026-09-10T16:41:28.062Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-10",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "BFE",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "sannaicolony"
+    },
+    "personal_info": {
+      "NS_farmer_name": null,
+      "NS_Project": null,
+      "BFE_farmer_name": "1170205082465-Palaka. Maigi [HDFC BFE]_Jujaru",
+      "BFE_Project": "HDFC - P0552"
+    },
+    "service_info": {
+      "byp_service_type": "Deworming",
+      "vacn_info": {
+        "date_vaccination": null,
+        "mdc_byp_birds_vaccinated": null,
+        "mdc_byp_vaccine_name": null,
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2024-07-16",
+        "mdc_byp_birds_dewormed": 65,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 20,
+        "mdc_byp_no_cocks": 15,
+        "mdc_byp_growers": 30,
+        "mdc_byp_chicks": 30,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 95,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 6,
+      "mdc_byp_income_birds_sold": 6500,
+      "mdc_byp_chicken_sold_kgs": 10,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 3,
+      "mdc_byp_birds_own_consumption_value_rs": 3900,
+      "mdc_byp_eggs_own_consumption": 5
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 4,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:0d0619cb-b9f5-404d-84de-ff0a34f98065"
+    },
+    "__id": "uuid:0d0619cb-b9f5-404d-84de-ff0a34f98065",
+    "__system": {
+      "submissionDate": "2026-09-10T16:28:01.879Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-10",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "BFE",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "sannaicolony"
+    },
+    "personal_info": {
+      "NS_farmer_name": null,
+      "NS_Project": null,
+      "BFE_farmer_name": "1170205082465-Palaka. Maigi [HDFC BFE]_Jujaru",
+      "BFE_Project": "HDFC - P0552"
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2024-04-04",
+        "mdc_byp_birds_vaccinated": 80,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 18,
+        "mdc_byp_no_cocks": 7,
+        "mdc_byp_growers": 25,
+        "mdc_byp_chicks": 30,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 80,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q1_Apr_Jun",
+    "Income_info": {
+      "mdc_byp_birds_sold": 2,
+      "mdc_byp_income_birds_sold": 2600,
+      "mdc_byp_chicken_sold_kgs": 4,
+      "mdc_byp_chicken_sold_income": 120,
+      "mdc_byp_birds_own_consumption": 1,
+      "mdc_byp_birds_own_consumption_value_rs": 1300,
+      "mdc_byp_eggs_own_consumption": 12
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 2,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 8,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:8961fb97-f419-4415-b55b-273edef39422"
+    },
+    "__id": "uuid:8961fb97-f419-4415-b55b-273edef39422",
+    "__system": {
+      "submissionDate": "2026-09-10T16:15:51.868Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-10",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "BFE",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "sannaicolony"
+    },
+    "personal_info": {
+      "NS_farmer_name": null,
+      "NS_Project": null,
+      "BFE_farmer_name": "1170205082465-Palaka. Maigi [HDFC BFE]_Jujaru",
+      "BFE_Project": "HDFC - P0552"
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2026-07-13",
+        "mdc_byp_birds_vaccinated": 86,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 21,
+        "mdc_byp_no_cocks": 10,
+        "mdc_byp_growers": 25,
+        "mdc_byp_chicks": 30,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 86,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 3,
+      "mdc_byp_income_birds_sold": 3250,
+      "mdc_byp_chicken_sold_kgs": 5,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 1,
+      "mdc_byp_birds_own_consumption_value_rs": 1300,
+      "mdc_byp_eggs_own_consumption": 3
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 0,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:06eb55d0-e7d9-4dfb-b54f-e279051e7277"
+    },
+    "__id": "uuid:06eb55d0-e7d9-4dfb-b54f-e279051e7277",
+    "__system": {
+      "submissionDate": "2026-09-10T15:43:01.072Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-10",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "BFE",
+      "Monthly_MIS": "Mortality Income Service"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "sannaicolony"
+    },
+    "personal_info": {
+      "NS_farmer_name": null,
+      "NS_Project": null,
+      "BFE_farmer_name": "1170205082465-Palaka. Maigi [HDFC BFE]_Jujaru",
+      "BFE_Project": "HDFC - P0552"
+    },
+    "service_info": {
+      "byp_service_type": "Deworming Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2026-01-03",
+        "mdc_byp_birds_vaccinated": 93,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": "2026-01-16",
+        "mdc_byp_birds_dewormed": 93,
+        "mdc_byp_birds_deworm_name": "nelavemu",
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 22,
+        "mdc_byp_no_cocks": 10,
+        "mdc_byp_growers": 28,
+        "mdc_byp_chicks": 35,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 95,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q1_Apr_Jun",
+    "Income_info": {
+      "mdc_byp_birds_sold": 5,
+      "mdc_byp_income_birds_sold": 5200,
+      "mdc_byp_chicken_sold_kgs": 8,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 2,
+      "mdc_byp_birds_own_consumption_value_rs": 2600,
+      "mdc_byp_eggs_own_consumption": 5
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 6,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:3b3e3fa4-91da-4285-a999-5a38a947a048"
+    },
+    "__id": "uuid:3b3e3fa4-91da-4285-a999-5a38a947a048",
+    "__system": {
+      "submissionDate": "2026-09-10T15:27:01.637Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-10",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "BFE",
+      "Monthly_MIS": "Mortality Service Income"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "sannaicolony"
+    },
+    "personal_info": {
+      "NS_farmer_name": null,
+      "NS_Project": null,
+      "BFE_farmer_name": "1170205082465-Palaka. Maigi [HDFC BFE]_Jujaru",
+      "BFE_Project": "HDFC - P0552"
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2025-10-03",
+        "mdc_byp_birds_vaccinated": 96,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 20,
+        "mdc_byp_no_cocks": 16,
+        "mdc_byp_growers": 25,
+        "mdc_byp_chicks": 35,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 96,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q3_October_December",
+    "Income_info": {
+      "mdc_byp_birds_sold": 12,
+      "mdc_byp_income_birds_sold": 15600,
+      "mdc_byp_chicken_sold_kgs": 24,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 3,
+      "mdc_byp_birds_own_consumption_value_rs": 3900,
+      "mdc_byp_eggs_own_consumption": 10
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 3,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:c926b34d-046b-4633-b17d-fc751eefb666"
+    },
+    "__id": "uuid:c926b34d-046b-4633-b17d-fc751eefb666",
+    "__system": {
+      "submissionDate": "2026-09-10T15:12:35.045Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-10",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "BFE",
+      "Monthly_MIS": "Service Mortality Income"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "sannaicolony"
+    },
+    "personal_info": {
+      "NS_farmer_name": null,
+      "NS_Project": null,
+      "BFE_farmer_name": "1170205082465-Palaka. Maigi [HDFC BFE]_Jujaru",
+      "BFE_Project": "HDFC - P0552"
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2025-07-04",
+        "mdc_byp_birds_vaccinated": 85,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 20,
+        "mdc_byp_no_cocks": 13,
+        "mdc_byp_growers": 25,
+        "mdc_byp_chicks": 25,
+        "mdc_byp_birds_added_this_month": 2,
+        "mdc_byp_total_birds": 85,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q2_July_September",
+    "Income_info": {
+      "mdc_byp_birds_sold": 8,
+      "mdc_byp_income_birds_sold": 10400,
+      "mdc_byp_chicken_sold_kgs": 16,
+      "mdc_byp_chicken_sold_income": 0,
+      "mdc_byp_birds_own_consumption": 2,
+      "mdc_byp_birds_own_consumption_value_rs": 2000,
+      "mdc_byp_eggs_own_consumption": 6
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 0,
+      "mdc_byp_birds_predation": 0,
+      "mdc_byp_chicks_died": 5,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:65ccdeec-fd5c-4e18-98bc-1d47babb6ce4"
+    },
+    "__id": "uuid:65ccdeec-fd5c-4e18-98bc-1d47babb6ce4",
+    "__system": {
+      "submissionDate": "2026-09-10T14:58:07.663Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  },
+  {
+    "survey_date": "2026-09-10",
+    "table_list_df": {
+      "data_type": "Monthly_MIS",
+      "byp_farmer_type": "BFE",
+      "Monthly_MIS": "Service Income Mortality"
+    },
+    "location_info": {
+      "block": "bhamini",
+      "cluster": "bhamini_internal",
+      "gp": "boddaguda",
+      "village": "sannaicolony"
+    },
+    "personal_info": {
+      "NS_farmer_name": null,
+      "NS_Project": null,
+      "BFE_farmer_name": "1170205082465-Palaka. Maigi [HDFC BFE]_Jujaru",
+      "BFE_Project": "HDFC - P0552"
+    },
+    "service_info": {
+      "byp_service_type": "Vaccination",
+      "vacn_info": {
+        "date_vaccination": "2025-04-16",
+        "mdc_byp_birds_vaccinated": 90,
+        "mdc_byp_vaccine_name": "lasota_F1",
+        "other_vaccine_names": null
+      },
+      "dewarming_info": {
+        "date_deworming": null,
+        "mdc_byp_birds_dewormed": null,
+        "mdc_byp_birds_deworm_name": null,
+        "other_dewarming_names": null
+      },
+      "Birds_status": {
+        "mdc_byp_no_hens": 15,
+        "mdc_byp_no_cocks": 15,
+        "mdc_byp_growers": 20,
+        "mdc_byp_chicks": 40,
+        "mdc_byp_birds_added_this_month": 0,
+        "mdc_byp_total_birds": 90,
+        "mdc_byp_health_expense": 0
+      }
+    },
+    "Quarter": "Q1_Apr_Jun",
+    "Income_info": {
+      "mdc_byp_birds_sold": 6,
+      "mdc_byp_income_birds_sold": 6600,
+      "mdc_byp_chicken_sold_kgs": 11,
+      "mdc_byp_chicken_sold_income": 120,
+      "mdc_byp_birds_own_consumption": 3,
+      "mdc_byp_birds_own_consumption_value_rs": 2400,
+      "mdc_byp_eggs_own_consumption": 12
+    },
+    "Mortality_info": {
+      "mdc_byp_birds_died": 3,
+      "mdc_byp_birds_predation": 5,
+      "mdc_byp_chicks_died": 10,
+      "mdc_byp_chicks_predation": 0
+    },
+    "chicks_distribution": {
+      "date_chicks_distribution": null,
+      "chicks_distributed_nos": null,
+      "village_received_chicks": null,
+      "Chicks_dist_hhs": null,
+      "HHs_names_received_chicks": null,
+      "image": null
+    },
+    "data_submitter": "Lokanadham",
+    "meta": {
+      "instanceID": "uuid:6c3b7f9a-d28b-4075-9ed2-dd3d6be34a64"
+    },
+    "__id": "uuid:6c3b7f9a-d28b-4075-9ed2-dd3d6be34a64",
+    "__system": {
+      "submissionDate": "2026-09-10T14:34:07.296Z",
+      "updatedAt": null,
+      "submitterId": "359",
+      "submitterName": "Lokesh",
+      "attachmentsPresent": 0,
+      "attachmentsExpected": 0,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:tYns6iOJaYfGEgyW",
+      "edits": 0,
+      "formVersion": "02092026.02",
+      "deletedAt": null
+    }
+  }
+]

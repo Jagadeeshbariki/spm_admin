@@ -41,6 +41,8 @@ const aboutRegionItems = [
 
 const cropsItems = [
   { name: 'Crops Dashboard', path: '/admin/about-region/crops/dashboard', icon: LayoutDashboard },
+  { name: 'BYP Dashboard', path: '/admin/about-region/byp/dashboard', icon: LayoutDashboard },
+
 ];
 
 export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCollapsed: (val: boolean) => void }) {

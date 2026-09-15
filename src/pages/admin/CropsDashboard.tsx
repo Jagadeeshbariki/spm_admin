@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FlaskConical, Wheat, Filter, Search, Loader2, Sprout, MapPin, Users, Database, ChevronDown, ChevronUp, Calendar, ArrowLeft, ArrowRight, Info, Layers, Activity, TrendingUp, BarChart3, PieChart as PieChartIcon, ExternalLink, X, ZoomIn } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList } from 'recharts';
 import { cn } from '../../lib/utils';
+import { ExpandableChartBox } from '../../components/ExpandableChartBox';
 import { flatten } from 'flat';
 import { NFValidationPage } from './NFValidationPage';
 import { NFDashboard } from './NFDashboard';
@@ -1279,13 +1280,8 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
       
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
-          <div className="flex items-center gap-2 mb-4 shrink-0">
-            <PieChartIcon className="w-4 h-4 text-slate-400" />
-            <h3 className="font-bold text-slate-800 text-sm">Crop Modes Distribution</h3>
-          </div>
-          <div className="flex-1 min-h-0 relative">
-            {stats.cropModeData.length > 0 ? (
+        <ExpandableChartBox title={<div className="flex items-center gap-2"><PieChartIcon className="w-4 h-4 text-slate-400" />
+            <h3 className="font-bold text-slate-800 text-sm">Crop Modes Distribution</h3></div>} className="p-4 h-[300px]">{stats.cropModeData.length > 0 ? (
               <div className="absolute inset-0">
               <ResponsiveContainer width="100%" height="100%" debounce={50}>
                 <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 20 }}>
@@ -1318,17 +1314,10 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
-            )}
-          </div>
-        </div>
+            )}</ExpandableChartBox>
         
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
-          <div className="flex items-center gap-2 mb-4 shrink-0">
-            <BarChart3 className="w-4 h-4 text-slate-400" />
-            <h3 className="font-bold text-slate-800 text-sm">Crop-wise Farmers Count</h3>
-          </div>
-          <div className="flex-1 min-h-0 relative">
-            {stats.mainCropData.length > 0 ? (
+        <ExpandableChartBox title={<div className="flex items-center gap-2"><BarChart3 className="w-4 h-4 text-slate-400" />
+            <h3 className="font-bold text-slate-800 text-sm">Crop-wise Farmers Count</h3></div>} className="p-4 h-[300px]">{stats.mainCropData.length > 0 ? (
               <div className="absolute inset-0">
               <ResponsiveContainer width="100%" height="100%" debounce={50}>
                 <BarChart data={stats.mainCropData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
@@ -1360,21 +1349,14 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
-            )}
-          </div>
-        </div>
+            )}</ExpandableChartBox>
       </div>
 
             {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Village-wise Farmers Count */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
-          <div className="flex items-center gap-2 mb-4 shrink-0">
-            <BarChart3 className="w-4 h-4 text-slate-400" />
-            <h3 className="font-bold text-slate-800 text-sm">Top 10 Villages by Farmer Count</h3>
-          </div>
-          <div className="flex-1 min-h-0 relative">
-            {stats.villageData.length > 0 ? (
+        <ExpandableChartBox title={<div className="flex items-center gap-2"><BarChart3 className="w-4 h-4 text-slate-400" />
+            <h3 className="font-bold text-slate-800 text-sm">Top 10 Villages by Farmer Count</h3></div>} className="p-4 h-[300px]">{stats.villageData.length > 0 ? (
               <div className="absolute inset-0">
               <ResponsiveContainer width="100%" height="100%" debounce={50}>
                 <BarChart data={stats.villageData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
@@ -1406,18 +1388,11 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
-            )}
-          </div>
-        </div>
+            )}</ExpandableChartBox>
 
         {/* Season-wise Farmers Count */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
-          <div className="flex items-center gap-2 mb-4 shrink-0">
-            <PieChartIcon className="w-4 h-4 text-slate-400" />
-            <h3 className="font-bold text-slate-800 text-sm">Season-wise Plots</h3>
-          </div>
-          <div className="flex-1 min-h-0 relative">
-            {stats.seasonData.length > 0 ? (
+        <ExpandableChartBox title={<div className="flex items-center gap-2"><PieChartIcon className="w-4 h-4 text-slate-400" />
+            <h3 className="font-bold text-slate-800 text-sm">Season-wise Plots</h3></div>} className="p-4 h-[300px]">{stats.seasonData.length > 0 ? (
               <div className="absolute inset-0">
               <ResponsiveContainer width="100%" height="100%" debounce={50}>
                 <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 20 }}>
@@ -1450,26 +1425,19 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
-            )}
-          </div>
-        </div>
+            )}</ExpandableChartBox>
       </div>
 
       {/* Charts Row 3 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         {/* Bio Inputs Applied */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
-          <div className="flex items-center gap-2 mb-4 shrink-0">
-            <FlaskConical className="w-4 h-4 text-slate-400" />
+        <ExpandableChartBox title={<div className="flex items-center gap-2"><FlaskConical className="w-4 h-4 text-slate-400" />
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               Bio Inputs Quantity Used
               <span className="bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-full">
                 from {stats.bioInputFarmersCount} farmers
               </span>
-            </h3>
-          </div>
-          <div className="flex-1 min-h-0 relative">
-            {stats.bioInputData && stats.bioInputData.length > 0 ? (
+            </h3></div>} className="p-4 h-[300px]">{stats.bioInputData && stats.bioInputData.length > 0 ? (
               <div className="absolute inset-0">
               <ResponsiveContainer width="100%" height="100%" debounce={50}>
                 <BarChart data={stats.bioInputData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
@@ -1501,23 +1469,16 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
-            )}
-          </div>
-        </div>
+            )}</ExpandableChartBox>
 
         {/* Harvest Data */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[300px] overflow-hidden min-w-0">
-          <div className="flex items-center gap-2 mb-4 shrink-0">
-            <Wheat className="w-4 h-4 text-slate-400" />
+        <ExpandableChartBox title={<div className="flex items-center gap-2"><Wheat className="w-4 h-4 text-slate-400" />
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               Harvest Quantity by Crop
               <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full">
                 from {stats.harvestFarmersCount} farmers
               </span>
-            </h3>
-          </div>
-          <div className="flex-1 min-h-0 relative">
-            {stats.harvestData && stats.harvestData.length > 0 ? (
+            </h3></div>} className="p-4 h-[300px]">{stats.harvestData && stats.harvestData.length > 0 ? (
               <div className="absolute inset-0">
               <ResponsiveContainer width="100%" height="100%" debounce={50}>
                 <BarChart data={stats.harvestData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
@@ -1549,9 +1510,7 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data available</div>
-            )}
-          </div>
-        </div>
+            )}</ExpandableChartBox>
       </div>
 
       {/* HDFC Insights */}

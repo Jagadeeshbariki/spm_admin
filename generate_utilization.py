@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import re
+
+content = """import React, { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell 
 } from 'recharts';
@@ -664,3 +666,7 @@ function KpiCard({ title, value, subtitle, icon: Icon, color }: any) {
     </div>
   );
 }
+"""
+
+with open('src/components/UtilizationDashboard.tsx', 'w') as f:
+    f.write(content)

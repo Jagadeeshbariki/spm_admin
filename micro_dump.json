@@ -1,0 +1,317 @@
+[
+  {
+    "table_list_pd": {
+      "district": "Manyam",
+      "block": "bhamini",
+      "gp": "Thalada",
+      "village": "Tatimanuguda"
+    },
+    "table_list_pd1": {
+      "farmer_select": "1170226023379-rice_cum_pulverizer_usd_model",
+      "farmer_name": "Biddika Jagadeesh",
+      "mobile_no": "8618130739",
+      "Machine_type": "rice_cum_pulverizer_usd_model",
+      "Date_issued": "8-May-26",
+      "two_in_one_type": "flour_mill",
+      "processing_date": "2026-08-01",
+      "processed_for": "rent"
+    },
+    "table_list_pd2": {
+      "processing_farmer_village": "Thatimanuguda ",
+      "processing_farmer": "A.Kamesh ",
+      "processing_qty_kgs": 3,
+      "time_mins": 14,
+      "rent_type": "amount",
+      "rent_amount": 30,
+      "rice_kgs": null,
+      "dice_kgs": null,
+      "ricebran_kgs": null
+    },
+    "table_list_md": {
+      "mixi_process_date": null,
+      "mixi_hh_name": null,
+      "millet_grain_type": null,
+      "millet_type": null,
+      "millet_qty_processed_kgs": null,
+      "millet_processed_rice_kgs": null,
+      "millet_processed_husk_kgs": null,
+      "millet_processed_time_hrs": null,
+      "millets_processed_amount_charged_rs": null
+    },
+    "table_list_pd3": {
+      "processinghub_photo": "1789141663205.jpg",
+      "ex_file_widget": null,
+      "Data_sub_by": "sampath"
+    },
+    "meta": {
+      "instanceID": "uuid:98c5fff0-bca2-4ae5-beb1-2f847893bebf"
+    },
+    "__id": "uuid:98c5fff0-bca2-4ae5-beb1-2f847893bebf",
+    "__system": {
+      "submissionDate": "2026-09-11T15:47:54.566Z",
+      "updatedAt": null,
+      "submitterId": "272",
+      "submitterName": "Sampath",
+      "attachmentsPresent": 1,
+      "attachmentsExpected": 1,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:5z8usuFerbxZa2Hu",
+      "edits": 0,
+      "formVersion": "19.04.26.14",
+      "deletedAt": null
+    }
+  },
+  {
+    "table_list_pd": {
+      "district": "Manyam",
+      "block": "bhamini",
+      "gp": "Thalada",
+      "village": "Tatimanuguda"
+    },
+    "table_list_pd1": {
+      "farmer_select": "1170226023379-rice_cum_pulverizer_usd_model",
+      "farmer_name": "Biddika Jagadeesh",
+      "mobile_no": "8618130739",
+      "Machine_type": "rice_cum_pulverizer_usd_model",
+      "Date_issued": "8-May-26",
+      "two_in_one_type": "flour_mill",
+      "processing_date": "2026-08-01",
+      "processed_for": "rent"
+    },
+    "table_list_pd2": {
+      "processing_farmer_village": "Thatimanuguda ",
+      "processing_farmer": "A.Lakshmanrao ",
+      "processing_qty_kgs": 3,
+      "time_mins": 16,
+      "rent_type": "amount",
+      "rent_amount": 30,
+      "rice_kgs": null,
+      "dice_kgs": null,
+      "ricebran_kgs": null
+    },
+    "table_list_md": {
+      "mixi_process_date": null,
+      "mixi_hh_name": null,
+      "millet_grain_type": null,
+      "millet_type": null,
+      "millet_qty_processed_kgs": null,
+      "millet_processed_rice_kgs": null,
+      "millet_processed_husk_kgs": null,
+      "millet_processed_time_hrs": null,
+      "millets_processed_amount_charged_rs": null
+    },
+    "table_list_pd3": {
+      "processinghub_photo": "1789141516378.jpg",
+      "ex_file_widget": null,
+      "Data_sub_by": "sampath"
+    },
+    "meta": {
+      "instanceID": "uuid:ecf2cd41-1bee-4868-a6bf-c136905e735a"
+    },
+    "__id": "uuid:ecf2cd41-1bee-4868-a6bf-c136905e735a",
+    "__system": {
+      "submissionDate": "2026-09-11T15:45:51.133Z",
+      "updatedAt": null,
+      "submitterId": "272",
+      "submitterName": "Sampath",
+      "attachmentsPresent": 1,
+      "attachmentsExpected": 1,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:5z8usuFerbxZa2Hu",
+      "edits": 0,
+      "formVersion": "19.04.26.14",
+      "deletedAt": null
+    }
+  },
+  {
+    "table_list_pd": {
+      "district": "Manyam",
+      "block": "veeraghattam",
+      "gp": "k_ichapuram",
+      "village": "vankayalagedda"
+    },
+    "table_list_pd1": {
+      "farmer_select": "1171510050868-rice_cum_pulverizer_usd_model",
+      "farmer_name": "Biddika Venkatesh",
+      "mobile_no": "7036946092",
+      "Machine_type": "rice_cum_pulverizer_usd_model",
+      "Date_issued": "8-May-26",
+      "two_in_one_type": "flour_mill",
+      "processing_date": "2026-08-01",
+      "processed_for": "rent"
+    },
+    "table_list_pd2": {
+      "processing_farmer_village": "Vankayalageda",
+      "processing_farmer": "11",
+      "processing_qty_kgs": 13,
+      "time_mins": 140,
+      "rent_type": "amount",
+      "rent_amount": 260,
+      "rice_kgs": null,
+      "dice_kgs": null,
+      "ricebran_kgs": null
+    },
+    "table_list_md": {
+      "mixi_process_date": null,
+      "mixi_hh_name": null,
+      "millet_grain_type": null,
+      "millet_type": null,
+      "millet_qty_processed_kgs": null,
+      "millet_processed_rice_kgs": null,
+      "millet_processed_husk_kgs": null,
+      "millet_processed_time_hrs": null,
+      "millets_processed_amount_charged_rs": null
+    },
+    "table_list_pd3": {
+      "processinghub_photo": "1789006789955.jpg",
+      "ex_file_widget": null,
+      "Data_sub_by": "vinod"
+    },
+    "meta": {
+      "instanceID": "uuid:2fa49d88-541c-4458-880f-5e7e1895fcde"
+    },
+    "__id": "uuid:2fa49d88-541c-4458-880f-5e7e1895fcde",
+    "__system": {
+      "submissionDate": "2026-09-10T02:20:06.505Z",
+      "updatedAt": null,
+      "submitterId": "329",
+      "submitterName": "Vinod Kumar",
+      "attachmentsPresent": 1,
+      "attachmentsExpected": 1,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:58NaUvQjgTnzeWrZ",
+      "edits": 0,
+      "formVersion": "19.04.26.13",
+      "deletedAt": null
+    }
+  },
+  {
+    "table_list_pd": {
+      "district": "Manyam",
+      "block": "seethampeta",
+      "gp": "pedarama",
+      "village": "pedarama"
+    },
+    "table_list_pd1": {
+      "farmer_select": "1171339141599-rice_cum_pulverizer_usd_model",
+      "farmer_name": "Tadangi Navaneeth",
+      "mobile_no": "9390468302",
+      "Machine_type": "rice_cum_pulverizer_usd_model",
+      "Date_issued": "8-Mar-25",
+      "two_in_one_type": "flour_mill",
+      "processing_date": "2026-08-01",
+      "processed_for": "rent"
+    },
+    "table_list_pd2": {
+      "processing_farmer_village": "Pedarama ",
+      "processing_farmer": "5",
+      "processing_qty_kgs": 11,
+      "time_mins": 90,
+      "rent_type": "amount",
+      "rent_amount": 110,
+      "rice_kgs": null,
+      "dice_kgs": null,
+      "ricebran_kgs": null
+    },
+    "table_list_md": {
+      "mixi_process_date": null,
+      "mixi_hh_name": null,
+      "millet_grain_type": null,
+      "millet_type": null,
+      "millet_qty_processed_kgs": null,
+      "millet_processed_rice_kgs": null,
+      "millet_processed_husk_kgs": null,
+      "millet_processed_time_hrs": null,
+      "millets_processed_amount_charged_rs": null
+    },
+    "table_list_pd3": {
+      "processinghub_photo": "1788961236778.jpg",
+      "ex_file_widget": null,
+      "Data_sub_by": "adinarayana"
+    },
+    "meta": {
+      "instanceID": "uuid:b89ffb07-2b1d-4113-977c-6d5f0042bc99"
+    },
+    "__id": "uuid:b89ffb07-2b1d-4113-977c-6d5f0042bc99",
+    "__system": {
+      "submissionDate": "2026-09-09T13:40:43.331Z",
+      "updatedAt": null,
+      "submitterId": "370",
+      "submitterName": "Meenaka_Ganapathi",
+      "attachmentsPresent": 1,
+      "attachmentsExpected": 1,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:iHVwcczbVGqJ5Gk5",
+      "edits": 0,
+      "formVersion": "19.04.26.13",
+      "deletedAt": null
+    }
+  },
+  {
+    "table_list_pd": {
+      "district": "Manyam",
+      "block": "seethampeta",
+      "gp": "pedarama",
+      "village": "pedarama"
+    },
+    "table_list_pd1": {
+      "farmer_select": "1171339141599-rice_cum_pulverizer_usd_model",
+      "farmer_name": "Tadangi Navaneeth",
+      "mobile_no": "9390468302",
+      "Machine_type": "rice_cum_pulverizer_usd_model",
+      "Date_issued": "8-Mar-25",
+      "two_in_one_type": "flour_mill",
+      "processing_date": "2026-07-01",
+      "processed_for": "rent"
+    },
+    "table_list_pd2": {
+      "processing_farmer_village": "Pedarama ",
+      "processing_farmer": "2",
+      "processing_qty_kgs": 6,
+      "time_mins": 55,
+      "rent_type": "amount",
+      "rent_amount": 60,
+      "rice_kgs": null,
+      "dice_kgs": null,
+      "ricebran_kgs": null
+    },
+    "table_list_md": {
+      "mixi_process_date": null,
+      "mixi_hh_name": null,
+      "millet_grain_type": null,
+      "millet_type": null,
+      "millet_qty_processed_kgs": null,
+      "millet_processed_rice_kgs": null,
+      "millet_processed_husk_kgs": null,
+      "millet_processed_time_hrs": null,
+      "millets_processed_amount_charged_rs": null
+    },
+    "table_list_pd3": {
+      "processinghub_photo": "1788961123306.jpg",
+      "ex_file_widget": null,
+      "Data_sub_by": "adinarayana"
+    },
+    "meta": {
+      "instanceID": "uuid:64d624e5-e4f9-4a72-87f3-ab69623bd0bd"
+    },
+    "__id": "uuid:64d624e5-e4f9-4a72-87f3-ab69623bd0bd",
+    "__system": {
+      "submissionDate": "2026-09-09T13:38:49.995Z",
+      "updatedAt": null,
+      "submitterId": "370",
+      "submitterName": "Meenaka_Ganapathi",
+      "attachmentsPresent": 1,
+      "attachmentsExpected": 1,
+      "status": null,
+      "reviewState": null,
+      "deviceId": "collect:iHVwcczbVGqJ5Gk5",
+      "edits": 0,
+      "formVersion": "19.04.26.13",
+      "deletedAt": null
+    }
+  }
+]

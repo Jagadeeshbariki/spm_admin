@@ -27,6 +27,8 @@ import VillageGIS from './pages/admin/VillageGIS';
 import VillageGISManagement from './pages/admin/VillageGISManagement';
 import TeamTravel from './pages/admin/TeamTravel';
 import CropsDashboard from './pages/admin/CropsDashboard';
+import BYPDashboard from './pages/admin/BYPDashboard';
+
 
 export default function App() {
   useEffect(() => {
@@ -64,6 +66,8 @@ export default function App() {
               <Route path="about-region/working-villages" element={<VillageGIS tab="assets" />} />
               <Route path="about-region/processing-hubs" element={<VillageGIS tab="hubs" />} />
               <Route path="about-region/crops/dashboard" element={<CropsDashboard />} />
+              <Route path="about-region/byp/dashboard" element={<BYPDashboard />} />
+
               <Route path="village-gis-management" element={<VillageGISManagement />} />
               <Route path="team-travel" element={<TeamTravel />} />
 

@@ -77,7 +77,7 @@ export async function fetchWithFallback(
 const PROCESSING_HUBS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTmXCBpa6shu6HG0groD4a5VZwtwpnkrpb8_epyjxauOm_35o0jyWl3IwbxVm7m4unV29ZTu2GkW45-/pub?gid=0&single=true&output=csv";
 
 function getWriteApiBase(sheetName: string) {
-  if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
+      if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
     return TEAM_TRAVEL_API_BASE;
   }
   return API_BASE;
@@ -88,6 +88,26 @@ const MASTER_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/13inc1LrMAj
 export async function fetchSheet(sheetName: string) {
   try {
     if (sheetName === "village_assets") return [];
+    if (sheetName === "Polygons_manyam") {
+      const res = await fetchWithFallback(`https://docs.google.com/spreadsheets/d/1n2qE-rdkVefVieM1z0C0Ah_Z04Gg6b7MrRca-LcNrvo/gviz/tq?tqx=out:csv&sheet=${sheetName}&t=${Date.now()}`);
+      if (!res.ok) throw new Error("Failed to fetch Polygons CSV");
+      const text = await res.text();
+      return new Promise<any[]>((resolve, reject) => {
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          transformHeader: (h) => h.trim(),
+          complete: (results) => {
+            const data = results.data.map((row: any, index: number) => ({
+              ...row,
+              _rowIndex: index + 2,
+            }));
+            resolve(data);
+          },
+          error: (err: any) => reject(err),
+        });
+      });
+    }
     if (sheetName === "Processing Hubs" || sheetName === "Master") {
       // Use the explicit Master sheet URL to avoid Google Apps Script permission issues
       const res = await fetchWithFallback(`${MASTER_SHEET_CSV_URL}&t=${Date.now()}`);
@@ -110,7 +130,7 @@ export async function fetchSheet(sheetName: string) {
       });
     }
 
-    if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
+        if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
       const res = await fetchWithFallback(`${TEAM_TRAVEL_CSV_URL}&t=${Date.now()}`);
       if (!res.ok) throw new Error("Failed to fetch Team Travel CSV");
       const text = await res.text();
@@ -166,7 +186,7 @@ export async function addRow(sheetName: string, data: any) {
     let targetSheetName = sheetName;
     let payload: any = { action: "add", sheetName, data };
     
-    if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
+        if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
       targetSheetName = "Team_Travel";
       payload = { action: "add", sheetName: targetSheetName, data }; // Omit spreadsheetId, new Apps script doesn't know it or need it
     } else {
@@ -202,7 +222,7 @@ export async function updateRow(
     let targetSheetName = sheetName;
     let payload: any = { action: "update", sheetName, rowIndex, data };
 
-    if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
+        if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
       targetSheetName = "Team_Travel";
       payload = { action: "update", sheetName: targetSheetName, rowIndex, data };
     } else {
@@ -234,7 +254,7 @@ export async function deleteRow(sheetName: string, rowIndex: number) {
     let targetSheetName = sheetName;
     let payload: any = { action: "delete", sheetName, rowIndex };
 
-    if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
+        if (sheetName === "team_travel" || sheetName === "Team Travel" || sheetName === "Team_Travel") {
       targetSheetName = "Team_Travel";
       payload = { action: "delete", sheetName: targetSheetName, rowIndex };
     } else {
@@ -263,8 +283,13 @@ export async function deleteRow(sheetName: string, rowIndex: number) {
 
 export async function fetchFileContent(fileId: string) {
   try {
-    const res = await fetch(`/api/drive/file/${encodeURIComponent(fileId)}`);
-    if (!res.ok) throw new Error("Failed to fetch file");
+    const cleanId = fileId.trim();
+    console.log(`Fetching file content for ID: "${cleanId}"`);
+    const res = await fetch(`/api/drive/file/${encodeURIComponent(cleanId)}`);
+    if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to fetch file: ${res.status} - ${errorText}`);
+    }
 
     const text = await res.text();
     // In case the response is JSON wrapped
