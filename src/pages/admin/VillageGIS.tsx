@@ -121,6 +121,26 @@ const CustomXTick = (props: any) => {
 function MapController({ center, zoom, bounds }: { center: [number, number], zoom: number, bounds?: L.LatLngBoundsExpression }) {
   const map = useMap();
   useEffect(() => {
+    // Force a resize calculation to avoid grey tile rendering bugs
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    const container = map.getContainer();
+    if (container) {
+      resizeObserver.observe(container);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      resizeObserver.disconnect();
+    };
+  }, [map]);
+
+  useEffect(() => {
     if (bounds) {
       map.fitBounds(bounds, { padding: [20, 20] });
     } else {
@@ -805,7 +825,7 @@ function AssetMarker({ asset, idx, selectedAssetId, setSelectedAssetId }: { asse
     </Marker>
   )}
 
-function VillageMarker({ village, idx }: { village: any; idx: number, key?: any }) {
+function VillageMarker({ village, idx, isWorking = false }: { village: any; idx: number, key?: any, isWorking?: boolean }) {
   let lat: number, lng: number;
 
   if (village.geometry.type === 'Point') {
@@ -825,17 +845,21 @@ function VillageMarker({ village, idx }: { village: any; idx: number, key?: any 
   const activity = props['Activity Name'] || props['activity'] || props['Activity'] || null;
   const details = props['Details'] || props['details'] || props['Description'] || props['desc'] || props['REMARK'] || null;
 
-  const icon = useMemo(() => L.divIcon({
-      className: 'custom-dot-green',
-      html: `<div style="color: #10b981; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); cursor: pointer;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#10b981" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  const icon = useMemo(() => {
+    const color = isWorking ? '#10b981' : '#94a3b8'; // Emerald 500 for working, Slate 400 for others
+    const className = isWorking ? 'custom-dot-green' : 'custom-dot-grey';
+    return L.divIcon({
+      className,
+      html: `<div style="color: ${color}; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); cursor: pointer; opacity: ${isWorking ? 1 : 0.6};">
+        <svg xmlns="http://www.w3.org/2000/svg" width="${isWorking ? '28' : '20'}" height="${isWorking ? '28' : '20'}" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
           <circle cx="12" cy="10" r="3" fill="white"></circle>
         </svg>
       </div>`,
       iconSize: [24, 24], 
       iconAnchor: [12, 24], // Anchor at the bottom tip of the pin
-    }), []);
+    });
+  }, [isWorking]);
 
   return (
     <Marker 
@@ -918,7 +942,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
   const [selectedHubGP, setSelectedHubGP] = useState('All GPs');
   const [selectedHubVillage, setSelectedHubVillage] = useState('All Villages');
   const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
-  const [showActivityLayer, setShowActivityLayer] = useState(false);
+  const [showActivityLayer, setShowActivityLayer] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default to false on mobile, will expand initially
   const [mapCenter, setMapCenter] = useState<[number, number]>([18.85, 83.8]); // Centered on Manyam area
@@ -1057,7 +1081,19 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
         fetchSheet('Master').catch(() => []),
         fetch('/api/odk/data?formId=Micro Enterprizes').catch(() => ({ json: async () => ({ value: [] }) }))
       ]);
-      setVillageAssets([]);
+      const mappedAssets = hubsData.map((h: any, i: number) => ({
+        id: h['HH_id'] || h['Key'] || i.toString(),
+        Mandal: h['Cluster'] || '',
+        'Activity Name': h['Unit name'] || h['Activity'] || '',
+        'Village Name': h['Village'] || h['village'] || h['entr_location-village'] || '',
+        Latitude: h.lat,
+        Longitude: h.long,
+        status: h['status '] || h['Status'] || h['status_of_unit-status'] || '',
+        Remarks: h['entr_name'] || h['Name'] || '',
+        Details: h['entr_name'] || h['Name'] || '',
+        _rowIndex: h._rowIndex || i.toString()
+      }));
+      setVillageAssets(mappedAssets);
       let microEnterprisesData = [];
       try {
         const json = await microEnterprisesDataReq.json();
@@ -1179,6 +1215,18 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
   const totalHubUnits = filteredHubs.length;
 
   // Final filtered list of village points for marker rendering
+  const workingVillagesSet = useMemo(() => {
+    const set = new Set<string>();
+    processingHubs.forEach(hub => {
+      const status = (hub['status '] || hub['status_of_unit-status'] || hub['Status'] || '').toString().toLowerCase();
+      if (status.includes('working')) {
+        const village = (hub['Village'] || hub['entr_location-village'] || hub['village'] || '').toString().trim().toLowerCase();
+        if (village) set.add(village);
+      }
+    });
+    return set;
+  }, [processingHubs]);
+
   const filteredGeoVillages = useMemo(() => {
     const selMandal = selectedMandal.toLowerCase().trim();
     const search = searchTerm.toLowerCase().trim();
@@ -1447,7 +1495,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
       )}
 
       {/* Map Content */}
-      <div className="flex-1 relative z-0">
+      <div className="flex-1 relative z-0 min-h-[500px] md:min-h-0 w-full h-full">
         {loading && (
           <div className="absolute inset-0 z-[2000] bg-white/60 backdrop-blur-sm flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
@@ -1521,9 +1569,10 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
 
           {/* GeoJSON Village Points - Flattened React rendering for maximum reliability */}
           {filteredGeoVillages.map((village, idx) => {
-            const villageName = village.properties?.Name || village.properties?.village || 'N/A';
+            const villageName = village.properties?.['Name of Village'] || village.properties?.village || village.properties?.Name || 'N/A';
+            const isWorking = workingVillagesSet.has(villageName.toString().trim().toLowerCase());
             return (
-              <VillageMarker key={`geo-v-${village.id || village.properties?.id || idx}-${villageName}-${village.geometry?.coordinates?.[0]}-${village.geometry?.coordinates?.[1]}`} village={village} idx={idx} />
+              <VillageMarker key={`geo-v-${village.id || village.properties?.id || idx}-${villageName}-${village.geometry?.coordinates?.[0]}-${village.geometry?.coordinates?.[1]}`} village={village} idx={idx} isWorking={isWorking} />
             );
           })}
         </MapContainer>

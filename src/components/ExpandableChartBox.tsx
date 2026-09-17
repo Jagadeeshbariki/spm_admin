@@ -53,7 +53,7 @@ export function ExpandableChartBox({
         )}
         <button 
           onClick={() => setIsExpanded(true)}
-          className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-slate-100 rounded text-slate-400 transition-all absolute right-2 top-2 z-10"
+          className="p-1.5 hover:bg-slate-100 bg-slate-50 border border-slate-100 rounded text-slate-500 transition-all absolute right-2 top-2 z-10"
           title="Maximize"
         >
           <Maximize2 className="w-3.5 h-3.5" />

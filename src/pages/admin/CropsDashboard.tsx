@@ -4,6 +4,18 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import { cn } from '../../lib/utils';
 import { ExpandableChartBox } from '../../components/ExpandableChartBox';
 import { flatten } from 'flat';
+
+const formatDisplayDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr || dateStr === '-') return '-';
+  try {
+     const d = new Date(dateStr);
+     if (isNaN(d.getTime())) return dateStr;
+     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch(e) { 
+     return dateStr; 
+  }
+};
+
 import { NFValidationPage } from './NFValidationPage';
 import { NFDashboard } from './NFDashboard';
 import { CropMapTab } from './CropMapTab';
@@ -89,8 +101,9 @@ export default function CropsDashboard() {
           const yearRaw = String(flat['plot_reg-year_only'] || flat['plot_reg-year'] || flat['year'] || '').trim();
           const yearOnly = yearRaw.length >= 4 ? yearRaw.substring(0, 4) : yearRaw;
           const regSeason = String(flat['plot_reg-season'] || flat['season'] || '').trim();
+          const regMainCrop = String(flat['main_crop'] || flat['plot_reg_main_crop'] || flat['plot_reg-main_crop'] || flat['Main_Crop'] || '').trim();
           
-          const registration_id = `${farmerId}-${yearOnly}-${regSeason}`.toLowerCase();
+          const registration_id = `${farmerId}-${yearOnly}-${regSeason}-${regMainCrop}`.toLowerCase().replace(/\s+/g, '_');
           
           // 2. Filter NF - Activities based on FK
           const matchedActivities = activities.filter((act: any) => {
@@ -100,10 +113,11 @@ export default function CropsDashboard() {
             const textYear = String(pDetails.text_year || '');
             const actYear = textYear.length >= 4 ? textYear.substring(0, 4) : textYear;
             const actDataSeason = String(pDetails.data_season || '').trim();
+            const actMainCrop = String(pDetails.main_crop || '').trim();
             
-            const activity_fk = `${actFarmerName}-${actYear}-${actDataSeason}`.toLowerCase();
+            const activity_fk = `${actFarmerName}-${actYear}-${actDataSeason}-${actMainCrop}`.toLowerCase().replace(/\s+/g, '_');
             
-            return registration_id === activity_fk && registration_id !== '--';
+            return registration_id === activity_fk && !!farmerId;
           });
 
           let harvests: any[] = [];
@@ -123,7 +137,7 @@ export default function CropsDashboard() {
                 photo: actPhoto,
                 submissionId,
                 formId: 'NF- Activities',
-                date: act.Primary_details?.date_visit || act.date || flatAct['date_visit'] || '-'
+                date: formatDisplayDate(act.crop_activity === 'bio_inputs_application' && act.application_bio_input?.length > 0 ? (act.application_bio_input[0].application_date_bio_input || act.Primary_details?.date_visit || act.date || flatAct['date_visit'] || '-') : (act.Primary_details?.date_visit || act.date || flatAct['date_visit'] || '-'))
               });
             }
             
@@ -213,7 +227,12 @@ export default function CropsDashboard() {
                 ...act,
                 displayPhoto: act.gps?.photo || flatAct['gps_photo'] || flatAct['gps-photo'] || flatAct['photo'] || act.photo,
                 displaySubmissionId: act.__id || parentKey.replace('uuid:', ''),
-                displayDate: act.Primary_details?.date_visit || act.Primary_details?.date || flatAct['date_visit'] || '-',
+                displayDate: formatDisplayDate((() => {
+                  if (act.crop_activity === 'bio_inputs_application' && act.application_bio_input?.length > 0) {
+                     return act.application_bio_input[0].application_date_bio_input || act.Primary_details?.date_visit || act.Primary_details?.date || flatAct['date_visit'] || '-';
+                  }
+                  return act.Primary_details?.date_visit || act.Primary_details?.date || flatAct['date_visit'] || '-';
+                })()),
                 displayActivity: act.crop_activity || flatAct['crop_activity'] || 'Activity'
               };
             }),
@@ -801,7 +820,7 @@ export default function CropsDashboard() {
                                                                       <div className="text-slate-600 flex flex-col gap-1 mt-1.5 border-t border-blue-100/50 pt-1.5">
                                                                         <div className="flex justify-between">
                                                                           <span className="text-slate-500">Date:</span>
-                                                                          <span className="font-medium text-slate-700">{bi.application_date_bio_input || bi.date_applied || bi.date || '-'}</span>
+                                                                          <span className="font-medium text-slate-700">{formatDisplayDate(bi.application_date_bio_input || bi.date_applied || bi.date || '-')}</span>
                                                                         </div>
                                                                         <div className="flex justify-between">
                                                                           <span className="text-slate-500">Quantity:</span>
@@ -811,6 +830,12 @@ export default function CropsDashboard() {
                                                                           <div className="flex justify-between">
                                                                             <span className="text-slate-500">Source:</span>
                                                                             <span className="font-medium text-slate-700 capitalize">{String(bi.bioinputs_source).replace(/_/g, ' ')}</span>
+                                                                          </div>
+                                                                        )}
+                                                                        {(act.Primary_details?.crop_stage || act.crop_stage || bi.crop_stage) && (
+                                                                          <div className="flex justify-between">
+                                                                            <span className="text-slate-500">Crop Stage:</span>
+                                                                            <span className="font-medium text-slate-700 capitalize">{String(act.Primary_details?.crop_stage || act.crop_stage || bi.crop_stage).replace(/_/g, ' ')}</span>
                                                                           </div>
                                                                         )}
                                                                       </div>

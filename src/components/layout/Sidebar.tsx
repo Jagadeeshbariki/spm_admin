@@ -45,6 +45,10 @@ const cropsItems = [
 
 ];
 
+const rainfedFisheriesItems = [
+  { name: 'Assessment of WB', path: '/admin/about-region/rainfed-fisheries/assessment', icon: LayoutDashboard },
+];
+
 export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCollapsed: (val: boolean) => void }) {
   const { user } = useAuth();
   const location = useLocation();
@@ -134,6 +138,26 @@ export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolea
 
               {!collapsed && <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-4">Crops</p>}
               {cropsItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  onClick={() => isMobile && setCollapsed(true)}
+                  to={item.path}
+                  className={({ isActive }) => cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-sm group",
+                    isActive 
+                      ? "bg-white text-blue-600 shadow-sm border border-slate-100" 
+                      : "text-slate-600 hover:bg-white hover:text-slate-900 hover:shadow-sm",
+                    collapsed && !isMobile && "justify-center px-0"
+                  )}
+                  title={collapsed && !isMobile ? item.name : undefined}
+                >
+                  <item.icon className={cn("w-5 h-5 shrink-0 transition-transform group-hover:scale-110", collapsed && !isMobile ? "mx-auto" : "")} />
+                  {(!collapsed || isMobile) && <span>{item.name}</span>}
+                </NavLink>
+              ))}
+
+              {!collapsed && <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-4">Rainfed Fisheries</p>}
+              {rainfedFisheriesItems.map((item) => (
                 <NavLink
                   key={item.path}
                   onClick={() => isMobile && setCollapsed(true)}

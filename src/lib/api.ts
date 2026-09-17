@@ -88,26 +88,7 @@ const MASTER_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/13inc1LrMAj
 export async function fetchSheet(sheetName: string) {
   try {
     if (sheetName === "village_assets") return [];
-    if (sheetName === "Polygons_manyam") {
-      const res = await fetchWithFallback(`https://docs.google.com/spreadsheets/d/1n2qE-rdkVefVieM1z0C0Ah_Z04Gg6b7MrRca-LcNrvo/gviz/tq?tqx=out:csv&sheet=${sheetName}&t=${Date.now()}`);
-      if (!res.ok) throw new Error("Failed to fetch Polygons CSV");
-      const text = await res.text();
-      return new Promise<any[]>((resolve, reject) => {
-        Papa.parse(text, {
-          header: true,
-          skipEmptyLines: true,
-          transformHeader: (h) => h.trim(),
-          complete: (results) => {
-            const data = results.data.map((row: any, index: number) => ({
-              ...row,
-              _rowIndex: index + 2,
-            }));
-            resolve(data);
-          },
-          error: (err: any) => reject(err),
-        });
-      });
-    }
+
     if (sheetName === "Processing Hubs" || sheetName === "Master") {
       // Use the explicit Master sheet URL to avoid Google Apps Script permission issues
       const res = await fetchWithFallback(`${MASTER_SHEET_CSV_URL}&t=${Date.now()}`);
