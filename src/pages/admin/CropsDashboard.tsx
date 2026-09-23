@@ -17,25 +17,27 @@ const formatDisplayDate = (dateStr: string | null | undefined): string => {
 };
 
 import { NFValidationPage } from './NFValidationPage';
-import { NFDashboard } from './NFDashboard';
+import { WaterCollectivesTab } from './WaterCollectivesTab';
 import { CropMapTab } from './CropMapTab';
 
 export default function CropsDashboard() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [waterCollectivesData, setWaterCollectivesData] = useState<any[]>([]);
 
   // Filters
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
   const [selectedGp, setSelectedGp] = useState<string[]>([]);
   const [selectedVillage, setSelectedVillage] = useState<string[]>([]);
+  const [selectedCluster, setSelectedCluster] = useState<string[]>([]);
   const [selectedCropMode, setSelectedCropMode] = useState<string[]>([]);
   const [hasActivities, setHasActivities] = useState('All');
   const [selectedYear, setSelectedYear] = useState<string[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'frp' | 'hdfc' | 'nf-validation' | 'nf-dashboard' | 'map'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'frp' | 'hdfc' | 'nf-validation' | 'water-collectives' | 'map'>('overview');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Pagination & Accordion
@@ -47,9 +49,10 @@ export default function CropsDashboard() {
     async function loadData() {
       try {
         setLoading(true);
-        const [regResponse, actResponse] = await Promise.all([
+        const [regResponse, actResponse, wcResponse] = await Promise.all([
           fetch('/api/odk/data?formId=NF-%20Register'),
-          fetch('/api/odk/data?formId=NF-%20Activities')
+          fetch('/api/odk/data?formId=NF-%20Activities'),
+          fetch('/api/odk/entities?datasetId=Water_Collectives_DB')
         ]);
         if (!regResponse.ok) {
           const regErrText = await regResponse.text();
@@ -60,7 +63,7 @@ export default function CropsDashboard() {
           } catch (e) {}
           throw new Error(`Failed to fetch data from ODK Central (${regResponse.status}): ${errDetail}`);
         }
-        let json, actJson;
+        let json, actJson, wcJson;
         try {
           const regText = await regResponse.text();
           if (regText.trim().startsWith('<')) {
@@ -74,11 +77,21 @@ export default function CropsDashboard() {
           } else {
             actJson = { value: [] };
           }
+
+          if (wcResponse.ok) {
+            const wcText = await wcResponse.text();
+            wcJson = wcText.trim().startsWith('<') ? { value: [] } : JSON.parse(wcText);
+          } else {
+            wcJson = { value: [] };
+          }
         } catch (e: any) {
           throw new Error('Failed to parse API response: ' + e.message);
         }
         const submissions = json.value || [];
         const activities = actJson.value || [];
+        const wcEntities = wcJson.value || [];
+        
+        setWaterCollectivesData(wcEntities);
         
         const flatten = (obj: any, prefix = ''): any => {
           return Object.keys(obj).reduce((acc: any, k: string) => {
@@ -251,66 +264,15 @@ export default function CropsDashboard() {
     loadData();
   }, []);
 
-  const { blocks, gps, villages, cropModes, years, seasons } = useMemo(() => {
+  const { blocks, gps, villages, cropModes, years, seasons, clusters } = useMemo(() => {
     const bSet = new Set<string>();
     const gSet = new Set<string>();
     const vSet = new Set<string>();
     const cSet = new Set<string>();
     const ySet = new Set<string>();
     const sSet = new Set<string>();
+    const clSet = new Set<string>();
     
-
-    const bioInputTotals: Record<string, number> = {};
-    const harvestTotals: Record<string, number> = {};
-
-    data.forEach(item => {
-      if (item.bioInputs && Array.isArray(item.bioInputs)) {
-        item.bioInputs.forEach((bi: any) => {
-            const name = String(bi.inputs_applied || bi.bio_input_name || bi.input_name || 'Unknown').trim();
-            const qty = parseFloat(bi.Dhravajeevamrutham_Quantity || bi.qty_applied || bi.qty || bi.qty_units || '0');
-            if (name && name !== 'undefined' && name !== '-' && name !== 'Unknown') {
-                if (!bioInputTotals[name]) bioInputTotals[name] = 0;
-                bioInputTotals[name] += isNaN(qty) ? 0 : qty;
-            }
-        });
-      }
-
-      if (item.harvests && Array.isArray(item.harvests)) {
-        item.harvests.forEach((h: any) => {
-            const name = String(h.crop_harvested || h.crop || 'Unknown').trim();
-            const qty = parseFloat(h.yield_quantity || h.qty || h.yield_Qntl || h.yield_qntl || '0');
-            if (name && name !== 'undefined' && name !== '-' && name !== 'Unknown') {
-                if (!harvestTotals[name]) harvestTotals[name] = 0;
-                harvestTotals[name] += isNaN(qty) ? 0 : qty;
-            }
-        });
-      }
-
-      const yearMatch = selectedYear.length === 0 || selectedYear.includes(item.year);
-      const seasonMatch = selectedSeason.length === 0 || selectedSeason.includes(item.season);
-      const blockMatch = selectedBlock.length === 0 || selectedBlock.includes(item.block);
-      const gpMatch = selectedGp.length === 0 || selectedGp.includes(item.gp);
-      const villMatch = selectedVillage.length === 0 || selectedVillage.includes(item.village);
-      
-      if (item.year) ySet.add(item.year);
-      if (yearMatch && item.season) sSet.add(item.season);
-      if (yearMatch && seasonMatch && item.block) bSet.add(item.block);
-      if (yearMatch && seasonMatch && blockMatch && item.gp) gSet.add(item.gp);
-      if (yearMatch && seasonMatch && blockMatch && gpMatch && item.village) vSet.add(item.village);
-      if (yearMatch && seasonMatch && blockMatch && gpMatch && villMatch && item.cropMode) cSet.add(item.cropMode);
-    });
-    
-    return { 
-      blocks: Array.from(bSet).sort(), 
-      gps: Array.from(gSet).sort(), 
-      villages: Array.from(vSet).sort(), 
-      cropModes: Array.from(cSet).sort(),
-      years: Array.from(ySet).sort(),
-      seasons: Array.from(sSet).sort()
-    };
-  }, [data, selectedYear, selectedSeason, selectedBlock, selectedGp, selectedVillage]);
-
-  const filteredData = useMemo(() => {
     const hdfcTargetSubmitters = [
       { names: ['sampath'], cluster: 'Cluster 1' },
       { names: ['mani'], cluster: 'Cluster 2' },
@@ -328,20 +290,51 @@ export default function CropsDashboard() {
       return null;
     };
 
-    return data.filter(item => {
-      // HDFC Tab specific filter
-      if (activeTab === 'hdfc') {
-         const cluster = getSubmitterCluster(item.submitterName);
-         if (!cluster) return false;
-         item.cluster = cluster;
-      }
+    data.forEach(item => {
+      const cluster = getSubmitterCluster(item.submitterName);
+      item.cluster = cluster; // Enrich item with cluster
 
+      if (item.year) ySet.add(item.year);
+      
+      const yearMatch = selectedYear.length === 0 || selectedYear.includes(item.year);
+      if (yearMatch && item.season) sSet.add(item.season);
+
+      const seasonMatch = yearMatch && (selectedSeason.length === 0 || selectedSeason.includes(item.season));
+      if (seasonMatch && cluster) clSet.add(cluster);
+
+      const clusterMatch = seasonMatch && (selectedCluster.length === 0 || (cluster && selectedCluster.includes(cluster)));
+      if (clusterMatch && item.block) bSet.add(item.block);
+
+      const blockMatch = clusterMatch && (selectedBlock.length === 0 || selectedBlock.includes(item.block));
+      if (blockMatch && item.gp) gSet.add(item.gp);
+
+      const gpMatch = blockMatch && (selectedGp.length === 0 || selectedGp.includes(item.gp));
+      if (gpMatch && item.village) vSet.add(item.village);
+
+      const villMatch = gpMatch && (selectedVillage.length === 0 || selectedVillage.includes(item.village));
+      if (villMatch && item.cropMode) cSet.add(item.cropMode);
+    });
+    
+    return { 
+      blocks: Array.from(bSet).sort(), 
+      gps: Array.from(gSet).sort(), 
+      villages: Array.from(vSet).sort(), 
+      cropModes: Array.from(cSet).sort(),
+      years: Array.from(ySet).sort(),
+      seasons: Array.from(sSet).sort(),
+      clusters: Array.from(clSet).sort()
+    };
+  }, [data, selectedYear, selectedSeason, selectedCluster, selectedBlock, selectedGp, selectedVillage]);
+
+  const filteredData = useMemo(() => {
+    return data.filter(item => {
       if (selectedBlock.length > 0 && !selectedBlock.includes(item.block)) return false;
       if (selectedGp.length > 0 && !selectedGp.includes(item.gp)) return false;
       if (selectedVillage.length > 0 && !selectedVillage.includes(item.village)) return false;
       if (selectedCropMode.length > 0 && !selectedCropMode.includes(item.cropMode)) return false;
       if (selectedYear.length > 0 && !selectedYear.includes(item.year)) return false;
       if (selectedSeason.length > 0 && !selectedSeason.includes(item.season)) return false;
+      if (selectedCluster.length > 0 && (!item.cluster || !selectedCluster.includes(item.cluster))) return false;
       
       if (hasActivities === 'Yes') {
         if (item.activityCount === 0) return false;
@@ -360,10 +353,73 @@ export default function CropsDashboard() {
     });
   }, [data, selectedBlock, selectedGp, selectedVillage, selectedCropMode, hasActivities, selectedYear, selectedSeason, searchTerm, activeTab]);
 
-  // Reset pagination when filters change
+  const filteredWaterCollectives = useMemo(() => {
+    // If clusters are selected, get all GPs/Villages that belong to those clusters
+    const clusterGps = new Set<string>();
+    const clusterVillages = new Set<string>();
+    
+    if (selectedCluster.length > 0) {
+      data.forEach(d => {
+        if (d.cluster && selectedCluster.includes(d.cluster)) {
+          if (d.gp) clusterGps.add(d.gp);
+          if (d.village) clusterVillages.add(d.village);
+        }
+      });
+    }
+
+    return waterCollectivesData.filter(item => {
+      const props = item.properties || item;
+      const b = props.block || props.Block || '';
+      const g = props.gp || props.GP || '';
+      const v = props.village || props.Village || '';
+
+      if (selectedBlock.length > 0 && !selectedBlock.includes(b)) return false;
+      if (selectedGp.length > 0 && !selectedGp.includes(g)) return false;
+      if (selectedVillage.length > 0 && !selectedVillage.includes(v)) return false;
+      
+      if (selectedCluster.length > 0) {
+        if (!clusterGps.has(g) && !clusterVillages.has(v)) return false;
+      }
+      
+      return true;
+    });
+  }, [waterCollectivesData, selectedBlock, selectedGp, selectedVillage, selectedCluster, data]);
+
+  // Reset pagination and dependent selections when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBlock, selectedGp, selectedVillage, selectedCropMode, hasActivities, selectedYear, selectedSeason, searchTerm]);
+  }, [selectedBlock, selectedGp, selectedVillage, selectedCluster, selectedCropMode, hasActivities, selectedYear, selectedSeason, searchTerm]);
+
+  // Clear child filters when parent changes
+  useEffect(() => {
+    setSelectedSeason([]);
+    setSelectedCluster([]);
+    setSelectedBlock([]);
+    setSelectedGp([]);
+    setSelectedVillage([]);
+  }, [selectedYear]);
+
+  useEffect(() => {
+    setSelectedCluster([]);
+    setSelectedBlock([]);
+    setSelectedGp([]);
+    setSelectedVillage([]);
+  }, [selectedSeason]);
+
+  useEffect(() => {
+    setSelectedBlock([]);
+    setSelectedGp([]);
+    setSelectedVillage([]);
+  }, [selectedCluster]);
+
+  useEffect(() => {
+    setSelectedGp([]);
+    setSelectedVillage([]);
+  }, [selectedBlock]);
+
+  useEffect(() => {
+    setSelectedVillage([]);
+  }, [selectedGp]);
 
   
   const groupedData = useMemo(() => {
@@ -461,13 +517,13 @@ export default function CropsDashboard() {
             HDFC Crops
           </button>
           <button 
-            onClick={() => setActiveTab('nf-dashboard')}
+            onClick={() => setActiveTab('water-collectives')}
             className={cn(
               "px-4 py-3 text-sm font-semibold border-b-2 transition-colors",
-              activeTab === 'nf-dashboard' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
+              activeTab === 'water-collectives' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
           >
-            NF Dashboard
+            Water Collectives
           </button>
           <button 
             onClick={() => setActiveTab('map')}
@@ -506,6 +562,13 @@ export default function CropsDashboard() {
               onChange={setSelectedSeason} 
               options={seasons} 
               className="flex-1 min-w-[130px]"
+            />
+            <MultiSelectDropdown 
+              label="Cluster" 
+              selected={selectedCluster} 
+              onChange={setSelectedCluster} 
+              options={clusters} 
+              className="flex-1 min-w-[140px]"
             />
             <MultiSelectDropdown 
               label="Block" 
@@ -565,6 +628,7 @@ export default function CropsDashboard() {
                     setSelectedBlock([]);
                     setSelectedGp([]);
                     setSelectedVillage([]);
+                    setSelectedCluster([]);
                     setSelectedCropMode([]);
                     setSelectedYear([]);
                     setSelectedSeason([]);
@@ -581,14 +645,14 @@ export default function CropsDashboard() {
         </div>
 
         {/* Content Area */}
-        <div className="flex flex-col gap-4 flex-1 min-h-0">
+        <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto pr-2">
         
         {activeTab === 'nf-validation' && (
           <NFValidationPage />
         )}
 
-        {activeTab === 'nf-dashboard' && (
-          <NFDashboard />
+        {activeTab === 'water-collectives' && (
+          <WaterCollectivesTab data={filteredData} waterCollectives={filteredWaterCollectives} />
         )}
 
         {activeTab === 'map' && (
@@ -1145,8 +1209,8 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
       cropModeCount[mode] = (cropModeCount[mode] || 0) + 1;
 
       // Cluster
-      if (isHdfc) {
-        const cluster = item.cluster || 'Unknown';
+      const cluster = item.cluster || null;
+      if (cluster) {
         if (!clusterFarmers[cluster]) {
           clusterFarmers[cluster] = new Set<string>();
         }

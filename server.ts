@@ -455,6 +455,32 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
   }
 });
 
+app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
+  try {
+    const { datasetId } = req.query;
+    if (!datasetId || typeof datasetId !== "string") {
+      return res.status(400).json({ error: "Missing or invalid datasetId parameter" });
+    }
+    
+    const token = await getOdkToken();
+    const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities?$expand=*`;
+    
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("ODK Entity Fetch Error:", response.status, errText);
+      return res.status(response.status).json({ error: "Failed to fetch entities from ODK", details: errText });
+    }
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Error proxying ODK entities:", error);
+    res.status(500).json({ error: error.message || "Internal server error fetching ODK entities" });
+  }
+});
+
 app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
   try {
     const { submissionId, filename, formId } = req.query;
