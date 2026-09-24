@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { google } from 'googleapis';
-import fetch from 'node-fetch';
+import axios from 'axios';
 
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -29,6 +29,17 @@ const PORT = 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Add diagnostic route
+app.get('/api/odk-status', (req, res) => {
+  res.json({
+    email_configured: !!process.env.ODK_EMAIL,
+    password_configured: !!process.env.ODK_PASSWORD,
+    project_id: "3",
+    node_version: process.version,
+    env: process.env.NODE_ENV || 'production'
+  });
+});
 
 // Set up multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -397,22 +408,20 @@ async function getOdkToken() {
     throw new Error('ODK credentials not configured (ODK_EMAIL, ODK_PASSWORD)');
   }
 
-  tokenPromise = fetch('https://central.wassan.org/v1/sessions', {
-    method: 'POST',
+  tokenPromise = axios.post('https://central.wassan.org/v1/sessions', {
+    email, password
+  }, {
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  }).then(async (response) => {
-    if (!response.ok) {
-      tokenPromise = null;
-      throw new Error('Failed to authenticate with ODK Central');
-    }
-    const data = await response.json();
+    timeout: 10000
+  }).then((response) => {
+    const data = response.data;
     odkToken = data.token;
     odkTokenExpiresAt = new Date(data.expiresAt).getTime() - 60000;
     tokenPromise = null;
     return odkToken;
   }).catch(err => {
     tokenPromise = null;
+    console.error("ODK Auth Error:", err.response?.status, err.response?.data || err.message);
     throw err;
   });
 
@@ -437,22 +446,22 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
     let url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(cleanFormId)}.svc/Submissions?$expand=*`;
     
     if (table && typeof table === 'string') {
-      // e.g., table = "Submissions.application_bio_input"
       url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(cleanFormId)}.svc/${table}`;
     }
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` }
+    
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 30000
     });
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("ODK Data Fetch Error:", response.status, errText);
-      return res.status(response.status).json({ error: "Failed to fetch data from ODK", details: errText });
-    }
-    const data = await response.json();
-    res.json(data);
+    res.json(response.data);
   } catch (error: any) {
-    console.error("Error proxying ODK data:", error);
-    res.status(500).json({ error: error.message || "Internal server error fetching ODK data" });
+    const status = error.response?.status || 500;
+    const details = error.response?.data || error.message;
+    console.error("Error proxying ODK data:", status, details);
+    res.status(status).json({ 
+      error: "Failed to fetch data from ODK", 
+      details: typeof details === 'string' ? details.slice(0, 500) : details 
+    });
   }
 });
 
@@ -463,66 +472,50 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
       return res.status(400).json({ error: "Missing or invalid datasetId parameter" });
     }
     
-    const email = process.env.ODK_EMAIL;
-    const password = process.env.ODK_PASSWORD;
-    if (!email || !password) {
-      return res.status(500).json({ error: "ODK credentials (email/password) are not configured on the server." });
-    }
-
     const token = await getOdkToken();
-    // Standard endpoint: /v1/projects/{projectId}/datasets/{name}/entities
+    // Standard endpoint
     const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}/entities`;
     
     console.log(`[ODK Proxy] Requesting entities from: ${url}`);
     
-    const response = await fetch(url, {
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-        'X-Extended-Metadata': 'true'
-      },
-      timeout: 30000
-    });
-    
-    if (!response.ok) {
-      // Try OData fallback if standard fails
-      const odataUrl = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
-      console.log(`[ODK Proxy] Standard failed (${response.status}), trying OData fallback: ${odataUrl}`);
-      
-      const odataRes = await fetch(odataUrl, {
+    try {
+      const response = await axios.get(url, {
         headers: { 
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-Extended-Metadata': 'true'
         },
         timeout: 30000
       });
-
-      if (!odataRes.ok) {
-        const errText = await odataRes.text();
-        console.error(`[ODK Proxy] OData Fallback Error: ${odataRes.status}`, errText);
-        return res.status(odataRes.status).json({ 
-          error: `ODK Central error: ${odataRes.status}`, 
-          details: errText.slice(0, 500) 
-        });
-      }
       
-      const odataData = await odataRes.json();
-      return res.json(odataData);
+      const data = response.data;
+      const normalizedData = Array.isArray(data) ? { value: data } : data;
+      console.log(`[ODK Proxy] Successfully fetched ${normalizedData.value ? normalizedData.value.length : 0} entities`);
+      return res.json(normalizedData);
+    } catch (err: any) {
+      if (err.response?.status === 404 || err.response?.status === 405) {
+        // Fallback to OData
+        const odataUrl = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
+        console.log(`[ODK Proxy] Standard failed (${err.response?.status}), trying OData fallback: ${odataUrl}`);
+        
+        const odataRes = await axios.get(odataUrl, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          },
+          timeout: 30000
+        });
+        return res.json(odataRes.data);
+      }
+      throw err;
     }
-    
-    const data = await response.json();
-    // The standard /entities endpoint returns an array directly, 
-    // but the OData endpoint returns { value: [] }. 
-    // We should normalize it to { value: [] } for the frontend.
-    const normalizedData = Array.isArray(data) ? { value: data } : data;
-    
-    console.log(`[ODK Proxy] Successfully fetched ${normalizedData.value ? normalizedData.value.length : 0} entities`);
-    res.json(normalizedData);
   } catch (error: any) {
-    console.error("Error proxying ODK entities:", error);
-    res.status(500).json({ 
+    const status = error.response?.status || 500;
+    const details = error.response?.data || error.message;
+    console.error("Error proxying ODK entities:", status, details);
+    res.status(status).json({ 
       error: `Proxy error: ${error.message || "Unknown error"}`,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      details: typeof details === 'string' ? details.slice(0, 500) : details,
       type: error.name
     });
   }
@@ -701,6 +694,16 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // Global error handler
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error("GLOBAL ERROR:", err);
+    res.status(500).json({ 
+      error: "Global server error", 
+      message: err.message,
+      type: err.name
+    });
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);

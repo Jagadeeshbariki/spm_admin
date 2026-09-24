@@ -59,6 +59,10 @@ export default function CropsDashboard() {
     async function loadData() {
       try {
         setLoading(true);
+        
+        // Diagnostic check
+        fetch('/api/odk-status').then(r => r.json()).then(s => console.log('ODK Status:', s)).catch(e => console.error('Status check failed:', e));
+
         const [regResponse, actResponse, wcResponse] = await Promise.all([
           fetch('/api/odk/data?formId=NF-%20Register'),
           fetch('/api/odk/data?formId=NF-%20Activities'),
@@ -94,11 +98,20 @@ export default function CropsDashboard() {
           } else {
             let errorMsg = `Fetch failed: ${wcResponse.status}`;
             try {
-              const errData = await wcResponse.json();
-              if (errData.error) errorMsg = errData.error;
-              if (errData.details) errorMsg += `: ${errData.details}`;
+              const contentType = wcResponse.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                const errData = await wcResponse.json();
+                if (errData.error) errorMsg = errData.error;
+                if (errData.details) {
+                  const detailsStr = typeof errData.details === 'object' ? JSON.stringify(errData.details) : String(errData.details);
+                  errorMsg += `: ${detailsStr}`;
+                }
+              } else {
+                const text = await wcResponse.text();
+                errorMsg += `: ${text.slice(0, 200)}`;
+              }
             } catch (e) {
-              // fallback to status if not json
+              // fallback to status
             }
             console.error('WC Fetch Error:', wcResponse.status, errorMsg);
             wcJson = { value: [], error: errorMsg };
