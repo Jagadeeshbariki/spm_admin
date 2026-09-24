@@ -490,50 +490,48 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
     }
     
     const token = await getOdkToken();
-    // Standard endpoint
-    const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}/entities`;
     
-    console.log(`[ODK Proxy] Requesting entities from: ${url}`);
+    // Prioritize the .svc/Entities endpoint as requested by the user
+    const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
+    
+    console.log(`[ODK Proxy] Requesting entities from primary OData endpoint: ${url}`);
     
     try {
-      console.log(`[ODK Proxy] Requesting entities from: ${url}`);
       const response = await axios.get(url, {
         headers: { 
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'X-Extended-Metadata': 'true'
+          'Accept': 'application/json'
         },
         timeout: 25000
       });
       
-      const data = response.data;
-      const normalizedData = Array.isArray(data) ? { value: data } : data;
-      console.log(`[ODK Proxy] Successfully fetched ${normalizedData.value ? normalizedData.value.length : 0} entities`);
-      return res.json(normalizedData);
+      console.log(`[ODK Proxy] Successfully fetched entities from OData endpoint`);
+      return res.json(response.data);
     } catch (err: any) {
-      console.error(`[ODK Proxy] Standard endpoint failed for ${datasetId}:`, err.response?.status, err.message);
+      console.error(`[ODK Proxy] OData endpoint failed for ${datasetId}:`, err.response?.status, err.message);
       
-      if (err.response?.status === 404 || err.response?.status === 405 || err.response?.status === 500 || !err.response) {
-        // Fallback to OData
-        const odataUrl = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
-        console.log(`[ODK Proxy] Attempting OData fallback: ${odataUrl}`);
+      // Fallback to standard entities endpoint
+      const fallbackUrl = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}/entities`;
+      console.log(`[ODK Proxy] Attempting fallback to standard endpoint: ${fallbackUrl}`);
+      
+      try {
+        const response = await axios.get(fallbackUrl, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'X-Extended-Metadata': 'true'
+          },
+          timeout: 25000
+        });
         
-        try {
-          const odataRes = await axios.get(odataUrl, {
-            headers: { 
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/json'
-            },
-            timeout: 25000
-          });
-          console.log(`[ODK Proxy] OData fallback success for ${datasetId}`);
-          return res.json(odataRes.data);
-        } catch (odataErr: any) {
-          console.error(`[ODK Proxy] OData fallback also failed for ${datasetId}:`, odataErr.response?.status, odataErr.message);
-          throw odataErr;
-        }
+        const data = response.data;
+        const normalizedData = Array.isArray(data) ? { value: data } : data;
+        console.log(`[ODK Proxy] Fallback success. Fetched ${normalizedData.value ? normalizedData.value.length : 0} entities`);
+        return res.json(normalizedData);
+      } catch (fallbackErr: any) {
+        console.error(`[ODK Proxy] All endpoints failed for ${datasetId}`);
+        throw fallbackErr;
       }
-      throw err;
     }
   } catch (error: any) {
     const status = error.response?.status || 500;
