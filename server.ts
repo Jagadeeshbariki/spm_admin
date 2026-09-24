@@ -49,6 +49,8 @@ app.get('/api/odk-status', (req, res) => {
     project_id: "3",
     node_version: process.version,
     env: process.env.NODE_ENV || 'production',
+    is_vercel: !!process.env.VERCEL,
+    vercel_region: process.env.VERCEL_REGION || 'unknown',
     uptime: process.uptime(),
     memory: process.memoryUsage(),
     timestamp: new Date().toISOString()
@@ -428,7 +430,7 @@ async function getOdkToken() {
     email, password
   }, {
     headers: { 'Content-Type': 'application/json' },
-    timeout: 15000
+    timeout: 9000
   }).then((response) => {
     console.log(`[ODK Auth] Success. Token expires at: ${response.data.expiresAt}`);
     const data = response.data;
@@ -468,7 +470,7 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
     
     const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${token}` },
-      timeout: 30000
+      timeout: 9000
     });
     res.json(response.data);
   } catch (error: any) {
@@ -502,7 +504,7 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
         },
-        timeout: 25000
+        timeout: 9000
       });
       
       console.log(`[ODK Proxy] Successfully fetched entities from OData endpoint`);
@@ -521,7 +523,7 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
             'Accept': 'application/json',
             'X-Extended-Metadata': 'true'
           },
-          timeout: 25000
+          timeout: 9000
         });
         
         const data = response.data;
@@ -696,6 +698,19 @@ app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
 // Export for Vercel
 export default app;
 
+// Global error handler
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error("GLOBAL ERROR:", err);
+  const status = err.response?.status || err.status || 500;
+  res.status(status).json({ 
+    error: "Server error", 
+    message: err.message,
+    details: err.response?.data || null,
+    type: err.name,
+    is_timeout: err.code === 'ECONNABORTED' || err.message?.includes('timeout')
+  });
+});
+
 async function startServer() {
   // If running in Vercel, do not start the server manually
   if (process.env.VERCEL) {
@@ -718,16 +733,6 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
-
-  // Global error handler
-  app.use((err: any, req: any, res: any, next: any) => {
-    console.error("GLOBAL ERROR:", err);
-    res.status(500).json({ 
-      error: "Global server error", 
-      message: err.message,
-      type: err.name
-    });
-  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
