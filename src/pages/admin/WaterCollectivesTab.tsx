@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Waves, MapPin, Database, Users, TrendingUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-export function WaterCollectivesTab({ data, waterCollectives }: { data: any[], waterCollectives: any[] }) {
+export function WaterCollectivesTab({ data, waterCollectives, loading, error, totalCount = 0 }: { data: any[], waterCollectives: any[], loading?: boolean, error?: string, totalCount?: number }) {
   // data is the crops data (submissions)
   // waterCollectives is the dataset entities
   
@@ -86,12 +86,29 @@ export function WaterCollectivesTab({ data, waterCollectives }: { data: any[], w
     }), { target: 0, covered: 0, hhs: 0, coveredHhs: 0 });
   }, [collectiveStats]);
 
-  if (waterCollectives.length === 0) {
+  if (error || (waterCollectives.length === 0 && !loading)) {
+    const isFiltered = totalCount > 0 && waterCollectives.length === 0;
     return (
       <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-dashed border-slate-300">
         <Waves className="w-12 h-12 text-slate-300 mb-4" />
-        <h3 className="text-lg font-bold text-slate-800">No Water Collective Data Found</h3>
-        <p className="text-slate-500 text-sm">Make sure the Water_Collectives_DB dataset is populated in ODK Central.</p>
+        <h3 className="text-lg font-bold text-slate-800">
+          {error ? 'Error Fetching Data' : isFiltered ? 'No Matches Found' : 'No Water Collective Data Found'}
+        </h3>
+        <p className="text-slate-500 text-sm mb-4">
+          {error 
+            ? `API Error: ${error}. Please check ODK Central permissions.`
+            : isFiltered 
+              ? `No water collectives in the current selection. (Total available: ${totalCount})`
+              : 'The Water_Collectives_DB dataset appears to be empty in ODK Central.'}
+        </p>
+        {isFiltered && (
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+          >
+            Reset All Filters
+          </button>
+        )}
       </div>
     );
   }

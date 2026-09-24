@@ -41,8 +41,8 @@ const aboutRegionItems = [
 
 const cropsItems = [
   { name: 'Crops Dashboard', path: '/admin/about-region/crops/dashboard', icon: LayoutDashboard },
+  { name: 'Water Collectives', path: '/admin/about-region/crops/dashboard?tab=water-collectives', icon: Droplets },
   { name: 'BYP Dashboard', path: '/admin/about-region/byp/dashboard', icon: LayoutDashboard },
-
 ];
 
 const rainfedFisheriesItems = [

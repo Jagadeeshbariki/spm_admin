@@ -20,11 +20,15 @@ import { NFValidationPage } from './NFValidationPage';
 import { WaterCollectivesTab } from './WaterCollectivesTab';
 import { CropMapTab } from './CropMapTab';
 
+import { useSearchParams } from 'react-router-dom';
+
 export default function CropsDashboard() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [waterCollectivesData, setWaterCollectivesData] = useState<any[]>([]);
+  const [wcError, setWcError] = useState<string | null>(null);
 
   // Filters
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
@@ -37,7 +41,13 @@ export default function CropsDashboard() {
   const [selectedSeason, setSelectedSeason] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'frp' | 'hdfc' | 'nf-validation' | 'water-collectives' | 'map'>('overview');
+  const activeTab = (searchParams.get('tab') as any) || 'overview';
+  const setActiveTab = (tab: string) => {
+    setSearchParams(prev => {
+      prev.set('tab', tab);
+      return prev;
+    });
+  };
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Pagination & Accordion
@@ -82,7 +92,9 @@ export default function CropsDashboard() {
             const wcText = await wcResponse.text();
             wcJson = wcText.trim().startsWith('<') ? { value: [] } : JSON.parse(wcText);
           } else {
-            wcJson = { value: [] };
+            const errText = await wcResponse.text();
+            console.error('WC Fetch Error:', wcResponse.status, errText);
+            wcJson = { value: [], error: `Fetch failed: ${wcResponse.status}` };
           }
         } catch (e: any) {
           throw new Error('Failed to parse API response: ' + e.message);
@@ -90,8 +102,8 @@ export default function CropsDashboard() {
         const submissions = json.value || [];
         const activities = actJson.value || [];
         const wcEntities = wcJson.value || [];
-        
         setWaterCollectivesData(wcEntities);
+        if (wcJson.error) setWcError(wcJson.error);
         
         const flatten = (obj: any, prefix = ''): any => {
           return Object.keys(obj).reduce((acc: any, k: string) => {
@@ -361,21 +373,30 @@ export default function CropsDashboard() {
     if (selectedCluster.length > 0) {
       data.forEach(d => {
         if (d.cluster && selectedCluster.includes(d.cluster)) {
-          if (d.gp) clusterGps.add(d.gp);
-          if (d.village) clusterVillages.add(d.village);
+          if (d.gp) clusterGps.add(String(d.gp).toLowerCase());
+          if (d.village) clusterVillages.add(String(d.village).toLowerCase());
         }
       });
     }
 
     return waterCollectivesData.filter(item => {
       const props = item.properties || item;
-      const b = props.block || props.Block || '';
-      const g = props.gp || props.GP || '';
-      const v = props.village || props.Village || '';
+      const b = String(props.block || props.Block || '').toLowerCase().trim();
+      const g = String(props.gp || props.GP || '').toLowerCase().trim();
+      const v = String(props.village || props.Village || '').toLowerCase().trim();
 
-      if (selectedBlock.length > 0 && !selectedBlock.includes(b)) return false;
-      if (selectedGp.length > 0 && !selectedGp.includes(g)) return false;
-      if (selectedVillage.length > 0 && !selectedVillage.includes(v)) return false;
+      if (selectedBlock.length > 0) {
+        const lowerSelected = selectedBlock.map(s => String(s).toLowerCase().trim());
+        if (!lowerSelected.includes(b)) return false;
+      }
+      if (selectedGp.length > 0) {
+        const lowerSelected = selectedGp.map(s => String(s).toLowerCase().trim());
+        if (!lowerSelected.includes(g)) return false;
+      }
+      if (selectedVillage.length > 0) {
+        const lowerSelected = selectedVillage.map(s => String(s).toLowerCase().trim());
+        if (!lowerSelected.includes(v)) return false;
+      }
       
       if (selectedCluster.length > 0) {
         if (!clusterGps.has(g) && !clusterVillages.has(v)) return false;
@@ -488,11 +509,11 @@ export default function CropsDashboard() {
       <div className="w-full h-full flex flex-col gap-4">
         
         {/* Tabs */}
-        <div className="flex items-center gap-4 border-b border-slate-200">
+        <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto no-scrollbar scroll-smooth">
           <button 
             onClick={() => setActiveTab('overview')}
             className={cn(
-              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors",
+              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
               activeTab === 'overview' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
           >
@@ -501,7 +522,7 @@ export default function CropsDashboard() {
           <button 
             onClick={() => setActiveTab('frp')}
             className={cn(
-              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors",
+              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
               activeTab === 'frp' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
           >
@@ -510,7 +531,7 @@ export default function CropsDashboard() {
           <button 
             onClick={() => setActiveTab('hdfc')}
             className={cn(
-              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors",
+              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
               activeTab === 'hdfc' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
           >
@@ -519,7 +540,7 @@ export default function CropsDashboard() {
           <button 
             onClick={() => setActiveTab('water-collectives')}
             className={cn(
-              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors",
+              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
               activeTab === 'water-collectives' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
           >
@@ -528,7 +549,7 @@ export default function CropsDashboard() {
           <button 
             onClick={() => setActiveTab('map')}
             className={cn(
-              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors",
+              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
               activeTab === 'map' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
           >
@@ -537,7 +558,7 @@ export default function CropsDashboard() {
           <button 
             onClick={() => setActiveTab('nf-validation')}
             className={cn(
-              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors",
+              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
               activeTab === 'nf-validation' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
           >
@@ -652,7 +673,13 @@ export default function CropsDashboard() {
         )}
 
         {activeTab === 'water-collectives' && (
-          <WaterCollectivesTab data={filteredData} waterCollectives={filteredWaterCollectives} />
+          <WaterCollectivesTab 
+            data={filteredData} 
+            waterCollectives={filteredWaterCollectives} 
+            loading={loading}
+            error={wcError || undefined}
+            totalCount={waterCollectivesData.length}
+          />
         )}
 
         {activeTab === 'map' && (
