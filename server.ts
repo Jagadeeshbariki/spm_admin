@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { google } from 'googleapis';
+import fetch from 'node-fetch';
 
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -469,26 +470,61 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
     }
 
     const token = await getOdkToken();
-    const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
+    // Standard endpoint: /v1/projects/{projectId}/datasets/{name}/entities
+    const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}/entities`;
     
-    console.log("Fetching ODK Entities from:", url);
+    console.log(`[ODK Proxy] Requesting entities from: ${url}`);
     
     const response = await fetch(url, {
       headers: { 
-        Authorization: `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'X-Extended-Metadata': 'true'
+      },
+      timeout: 30000
     });
+    
     if (!response.ok) {
-      const errText = await response.text();
-      console.error("ODK Entity Fetch Error:", response.status, errText);
-      return res.status(response.status).json({ error: "Failed to fetch entities from ODK", details: errText });
+      // Try OData fallback if standard fails
+      const odataUrl = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
+      console.log(`[ODK Proxy] Standard failed (${response.status}), trying OData fallback: ${odataUrl}`);
+      
+      const odataRes = await fetch(odataUrl, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        },
+        timeout: 30000
+      });
+
+      if (!odataRes.ok) {
+        const errText = await odataRes.text();
+        console.error(`[ODK Proxy] OData Fallback Error: ${odataRes.status}`, errText);
+        return res.status(odataRes.status).json({ 
+          error: `ODK Central error: ${odataRes.status}`, 
+          details: errText.slice(0, 500) 
+        });
+      }
+      
+      const odataData = await odataRes.json();
+      return res.json(odataData);
     }
+    
     const data = await response.json();
-    res.json(data);
+    // The standard /entities endpoint returns an array directly, 
+    // but the OData endpoint returns { value: [] }. 
+    // We should normalize it to { value: [] } for the frontend.
+    const normalizedData = Array.isArray(data) ? { value: data } : data;
+    
+    console.log(`[ODK Proxy] Successfully fetched ${normalizedData.value ? normalizedData.value.length : 0} entities`);
+    res.json(normalizedData);
   } catch (error: any) {
     console.error("Error proxying ODK entities:", error);
-    res.status(500).json({ error: error.message || "Internal server error fetching ODK entities" });
+    res.status(500).json({ 
+      error: `Proxy error: ${error.message || "Unknown error"}`,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      type: error.name
+    });
   }
 });
 
