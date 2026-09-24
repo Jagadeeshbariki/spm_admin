@@ -2,6 +2,29 @@ import React, { useMemo } from 'react';
 import { Waves, MapPin, Database, Users, TrendingUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
+// Helper to find a property by multiple possible keys, case-insensitively and ignoring underscores/spaces
+const getFuzzyProp = (props: any, keys: string[]) => {
+  if (!props) return undefined;
+  
+  // 1. Try exact matches first
+  for (const k of keys) {
+    if (props[k] !== undefined && props[k] !== null && props[k] !== '') return props[k];
+  }
+  
+  // 2. Try normalized matches (lowercase, no spaces, no underscores)
+  const normalizedKeys = keys.map(k => k.toLowerCase().replace(/[\s_-]/g, ''));
+  const actualKeys = Object.keys(props);
+  
+  for (const ak of actualKeys) {
+    const normalizedAk = ak.toLowerCase().replace(/[\s_-]/g, '');
+    if (normalizedKeys.includes(normalizedAk)) {
+      if (props[ak] !== undefined && props[ak] !== null && props[ak] !== '') return props[ak];
+    }
+  }
+  
+  return undefined;
+};
+
 export function WaterCollectivesTab({ data, waterCollectives, loading, error, totalCount = 0 }: { data: any[], waterCollectives: any[], loading?: boolean, error?: string, totalCount?: number }) {
   // data is the crops data (submissions)
   // waterCollectives is the dataset entities
@@ -16,14 +39,24 @@ export function WaterCollectivesTab({ data, waterCollectives, loading, error, to
       hhs: Set<string>;
     }> = {};
 
+    const NAME_KEYS = ['Water_collective_name', 'Water Collective Name', 'Irrigation_site', 'Irrigation Site', 'patch', 'Patch', 'Site_Name', 'Site Name', 'Name', 'label', 'Title', 'id'];
+    const TARGET_KEYS = ['Extent', 'Extention', 'Extension', 'target_extent', 'Target Extent', 'target_area', 'Target Area', 'Area', 'Target_Extent_Acres', 'Acres', 'Target', 'Goal'];
+    const HH_KEYS = ['HH_id', 'hh_id', 'HH ID', 'Farmer_ID', 'Farmer ID', 'HHID', 'Farmer_Id'];
+
+    if (waterCollectives.length > 0) {
+      console.log('Water Collectives First Item Keys:', Object.keys(waterCollectives[0].properties || waterCollectives[0]));
+    }
+
     waterCollectives.forEach(wc => {
       const props = wc.properties || wc;
       
-      const collectiveName = String(props.Water_collective_name || props.water_collective_name || props.Irrigation_site || props.irrigation_site || props.patch || props.Patch || 'Unknown').trim();
-      // Priority: Extent (capitalized per ODK Central), then others
-      const targetValue = props.Extent || props.Extention || props.extention || props.Extension || props.extension || props.target_extent || props.Target_Extent || props.extent || '0';
+      const rawName = getFuzzyProp(props, NAME_KEYS);
+      const collectiveName = String(rawName || 'Unknown').trim();
+      
+      const targetValue = getFuzzyProp(props, TARGET_KEYS) || '0';
       const target = parseFloat(String(targetValue).replace(/[^0-9.]/g, '')) || 0;
-      const hhId = String(props.HH_id || props.hh_id || '').trim();
+      
+      const hhId = String(getFuzzyProp(props, HH_KEYS) || '').trim();
 
       if (!collectives[collectiveName]) {
         collectives[collectiveName] = {
@@ -47,8 +80,9 @@ export function WaterCollectivesTab({ data, waterCollectives, loading, error, to
     const hhToCollective: Record<string, string> = {};
     waterCollectives.forEach(wc => {
       const props = wc.properties || wc;
-      const hhId = String(props.HH_id || props.hh_id || '').trim();
-      const collectiveName = String(props.Water_collective_name || props.water_collective_name || props.Irrigation_site || props.irrigation_site || props.patch || props.Patch || 'Unknown').trim();
+      const hhId = String(getFuzzyProp(props, HH_KEYS) || '').trim();
+      const rawName = getFuzzyProp(props, NAME_KEYS);
+      const collectiveName = String(rawName || 'Unknown').trim();
       if (hhId) hhToCollective[hhId] = collectiveName;
     });
 
