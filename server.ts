@@ -463,7 +463,9 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
     }
     
     const token = await getOdkToken();
-    const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities?$expand=*`;
+    const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
+    
+    console.log("Fetching ODK Entities from:", url);
     
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
