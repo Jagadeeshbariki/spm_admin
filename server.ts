@@ -462,13 +462,22 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
       return res.status(400).json({ error: "Missing or invalid datasetId parameter" });
     }
     
+    const email = process.env.ODK_EMAIL;
+    const password = process.env.ODK_PASSWORD;
+    if (!email || !password) {
+      return res.status(500).json({ error: "ODK credentials (email/password) are not configured on the server." });
+    }
+
     const token = await getOdkToken();
     const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
     
     console.log("Fetching ODK Entities from:", url);
     
     const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
     });
     if (!response.ok) {
       const errText = await response.text();

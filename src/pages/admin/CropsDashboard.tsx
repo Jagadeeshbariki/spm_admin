@@ -92,9 +92,16 @@ export default function CropsDashboard() {
             const wcText = await wcResponse.text();
             wcJson = wcText.trim().startsWith('<') ? { value: [] } : JSON.parse(wcText);
           } else {
-            const errText = await wcResponse.text();
-            console.error('WC Fetch Error:', wcResponse.status, errText);
-            wcJson = { value: [], error: `Fetch failed: ${wcResponse.status}` };
+            let errorMsg = `Fetch failed: ${wcResponse.status}`;
+            try {
+              const errData = await wcResponse.json();
+              if (errData.error) errorMsg = errData.error;
+              if (errData.details) errorMsg += `: ${errData.details}`;
+            } catch (e) {
+              // fallback to status if not json
+            }
+            console.error('WC Fetch Error:', wcResponse.status, errorMsg);
+            wcJson = { value: [], error: errorMsg };
           }
         } catch (e: any) {
           throw new Error('Failed to parse API response: ' + e.message);
