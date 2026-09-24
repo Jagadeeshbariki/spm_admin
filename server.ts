@@ -34,15 +34,24 @@ app.use(express.json());
 app.get('/api/odk-status', (req, res) => {
   const email = process.env.ODK_EMAIL;
   const password = process.env.ODK_PASSWORD;
+  
+  // Also check other essential env vars
+  const hasGoogleEmail = !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const hasGoogleKey = !!process.env.GOOGLE_PRIVATE_KEY;
+  const hasSpreadsheet = !!process.env.GOOGLE_SPREADSHEET_ID;
+
   res.json({
     email_configured: !!email,
     email_valid: email && email.includes('@'),
     password_configured: !!password,
     password_length: password ? password.length : 0,
+    google_configured: hasGoogleEmail && hasGoogleKey && hasSpreadsheet,
     project_id: "3",
     node_version: process.version,
     env: process.env.NODE_ENV || 'production',
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -487,13 +496,14 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
     console.log(`[ODK Proxy] Requesting entities from: ${url}`);
     
     try {
+      console.log(`[ODK Proxy] Requesting entities from: ${url}`);
       const response = await axios.get(url, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
           'X-Extended-Metadata': 'true'
         },
-        timeout: 60000
+        timeout: 25000
       });
       
       const data = response.data;
@@ -501,19 +511,27 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
       console.log(`[ODK Proxy] Successfully fetched ${normalizedData.value ? normalizedData.value.length : 0} entities`);
       return res.json(normalizedData);
     } catch (err: any) {
-      if (err.response?.status === 404 || err.response?.status === 405) {
+      console.error(`[ODK Proxy] Standard endpoint failed for ${datasetId}:`, err.response?.status, err.message);
+      
+      if (err.response?.status === 404 || err.response?.status === 405 || err.response?.status === 500 || !err.response) {
         // Fallback to OData
         const odataUrl = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
-        console.log(`[ODK Proxy] Standard failed (${err.response?.status}), trying OData fallback: ${odataUrl}`);
+        console.log(`[ODK Proxy] Attempting OData fallback: ${odataUrl}`);
         
-        const odataRes = await axios.get(odataUrl, {
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          },
-          timeout: 30000
-        });
-        return res.json(odataRes.data);
+        try {
+          const odataRes = await axios.get(odataUrl, {
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            },
+            timeout: 25000
+          });
+          console.log(`[ODK Proxy] OData fallback success for ${datasetId}`);
+          return res.json(odataRes.data);
+        } catch (odataErr: any) {
+          console.error(`[ODK Proxy] OData fallback also failed for ${datasetId}:`, odataErr.response?.status, odataErr.message);
+          throw odataErr;
+        }
       }
       throw err;
     }

@@ -17,7 +17,8 @@ import {
   Factory,
   Bird,
   Fish,
-  Sprout
+  Sprout,
+  Hand
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -40,13 +41,13 @@ const officeAdminItems = [
 
 const aboutRegionItems = [
   { name: 'Working Villages', path: '/admin/about-region/working-villages', icon: MapIcon },
-  { name: 'Processing Hubs', path: '/admin/about-region/processing-hubs', icon: Factory },
+  { name: 'Processing Hubs', path: '/admin/about-region/processing-hubs', icon: Hand },
 ];
 
 const cropsItems = [
   { name: 'Crops Dashboard', path: '/admin/about-region/crops/dashboard', icon: Sprout },
   { name: 'Water Collectives', path: '/admin/about-region/crops/dashboard?tab=water-collectives', icon: Droplets },
-  { name: 'BYP Dashboard', path: '/admin/about-region/byp/dashboard', icon: Bird },
+  { name: 'BYP Dashboard', path: '/admin/about-region/byp/dashboard', icon: Hand },
 ];
 
 const rainfedFisheriesItems = [
