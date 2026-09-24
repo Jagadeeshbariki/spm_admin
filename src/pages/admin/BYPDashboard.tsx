@@ -36,7 +36,7 @@ export default function BYPDashboard() {
     async function loadData() {
       try {
         setLoading(true);
-        const res = await fetch('/api/odk/data?formId=2026-08-04%2000%3A00%3A00');
+        const res = await fetch('/api/odk/data?projectId=3&formId=2026-08-04%2000%3A00%3A00');
         if (!res.ok) {
           throw new Error(`Failed to fetch data (${res.status})`);
         }

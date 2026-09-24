@@ -449,7 +449,9 @@ async function getOdkToken() {
 
 app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
   try {
-    const { formId, table } = req.query;
+    const { formId, table, projectId } = req.query;
+    const pid = (projectId && typeof projectId === 'string') ? projectId : "3";
+    
     if (!formId || typeof formId !== "string") {
       return res.status(400).json({ error: "Missing or invalid formId parameter" });
     }
@@ -462,10 +464,10 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
     } catch (e) {}
 
     const token = await getOdkToken();
-    let url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(cleanFormId)}.svc/Submissions?$expand=*`;
+    let url = `https://central.wassan.org/v1/projects/${pid}/forms/${encodeURIComponent(cleanFormId)}.svc/Submissions?$expand=*`;
     
     if (table && typeof table === 'string') {
-      url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(cleanFormId)}.svc/${table}`;
+      url = `https://central.wassan.org/v1/projects/${pid}/forms/${encodeURIComponent(cleanFormId)}.svc/${table}`;
     }
     
     const response = await axios.get(url, {
@@ -486,7 +488,9 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
 
 app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
   try {
-    const { datasetId } = req.query;
+    const { datasetId, projectId } = req.query;
+    const pid = (projectId && typeof projectId === 'string') ? projectId : "3";
+
     if (!datasetId || typeof datasetId !== "string") {
       return res.status(400).json({ error: "Missing or invalid datasetId parameter" });
     }
@@ -494,7 +498,7 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
     const token = await getOdkToken();
     
     // Prioritize the .svc/Entities endpoint as requested by the user
-    const url = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
+    const url = `https://central.wassan.org/v1/projects/${pid}/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
     
     console.log(`[ODK Proxy] Requesting entities from primary OData endpoint: ${url}`);
     
@@ -513,7 +517,7 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
       console.error(`[ODK Proxy] OData endpoint failed for ${datasetId}:`, err.response?.status, err.message);
       
       // Fallback to standard entities endpoint
-      const fallbackUrl = `https://central.wassan.org/v1/projects/3/datasets/${encodeURIComponent(datasetId)}/entities`;
+      const fallbackUrl = `https://central.wassan.org/v1/projects/${pid}/datasets/${encodeURIComponent(datasetId)}/entities`;
       console.log(`[ODK Proxy] Attempting fallback to standard endpoint: ${fallbackUrl}`);
       
       try {
@@ -549,7 +553,9 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
 
 app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
   try {
-    const { submissionId, filename, formId } = req.query;
+    const { submissionId, filename, formId, projectId } = req.query;
+    const pid = (projectId && typeof projectId === 'string') ? projectId : "3";
+
     if (!submissionId || !filename || typeof submissionId !== 'string' || typeof filename !== 'string') {
       return res.status(400).json({ error: 'Missing or invalid submissionId or filename parameter' });
     }
@@ -607,7 +613,7 @@ app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
     // Search across candidate forms and submission ID variants
     for (const form of candidateForms) {
       for (const subIdToTry of subIdVariants) {
-        const url = `https://central.wassan.org/v1/projects/3/forms/${encodeURIComponent(form)}/submissions/${encodeURIComponent(subIdToTry)}/attachments/${encodeURIComponent(cleanFilename)}`;
+        const url = `https://central.wassan.org/v1/projects/${pid}/forms/${encodeURIComponent(form)}/submissions/${encodeURIComponent(subIdToTry)}/attachments/${encodeURIComponent(cleanFilename)}`;
         
         try {
           let currentUrl = url;

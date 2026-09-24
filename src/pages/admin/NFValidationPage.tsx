@@ -11,8 +11,8 @@ export function NFValidationPage() {
     async function loadData() {
       try {
         const [regResponse, actResponse] = await Promise.all([
-          fetch('/api/odk/data?formId=NF-%20Register'),
-          fetch('/api/odk/data?formId=NF-%20Activities')
+          fetch('/api/odk/data?projectId=3&formId=NF-%20Register'),
+          fetch('/api/odk/data?projectId=3&formId=NF-%20Activities')
         ]);
 
         if (!regResponse.ok || !actResponse.ok) {

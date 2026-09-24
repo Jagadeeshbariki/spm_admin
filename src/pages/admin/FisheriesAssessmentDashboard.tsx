@@ -79,7 +79,7 @@ export default function FisheriesAssessmentDashboard() {
     async function loadData() {
       try {
         setLoading(true);
-        const res = await fetch('/api/odk/data?formId=Fishponds_Assessment%202025');
+        const res = await fetch('/api/odk/data?projectId=3&formId=Fishponds_Assessment%202025');
         if (!res.ok) {
           throw new Error(`Failed to fetch data (${res.status})`);
         }
@@ -406,10 +406,10 @@ export default function FisheriesAssessmentDashboard() {
               {item.pondImage ? (
                 <div 
                   className="relative group w-full h-40 rounded-lg overflow-hidden border border-slate-200 shadow-sm cursor-pointer bg-slate-100"
-                  onClick={() => setPreviewImage(`/api/odk/image?v=4&formId=Fishponds_Assessment%202025&submissionId=${encodeURIComponent(item.submissionId)}&filename=${encodeURIComponent(item.pondImage)}`)}
+                  onClick={() => setPreviewImage(`/api/odk/image?v=4&projectId=3&formId=Fishponds_Assessment%202025&submissionId=${encodeURIComponent(item.submissionId)}&filename=${encodeURIComponent(item.pondImage)}`)}
                 >
                   <img 
-                    src={`/api/odk/image?v=4&formId=Fishponds_Assessment%202025&submissionId=${encodeURIComponent(item.submissionId)}&filename=${encodeURIComponent(item.pondImage)}`}
+                    src={`/api/odk/image?v=4&projectId=3&formId=Fishponds_Assessment%202025&submissionId=${encodeURIComponent(item.submissionId)}&filename=${encodeURIComponent(item.pondImage)}`}
                     alt="Pond Assessment"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     loading="lazy"

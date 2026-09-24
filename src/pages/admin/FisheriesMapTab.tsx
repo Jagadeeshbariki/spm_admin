@@ -187,7 +187,7 @@ export function FisheriesMapTab({ data, setPreviewImage }: { data: any[], setPre
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setPreviewImage(`/api/odk/image?v=4&formId=Fishponds_Assessment%202025&submissionId=${encodeURIComponent(item.submissionId)}&filename=${encodeURIComponent(item.pondImage)}`);
+                        setPreviewImage(`/api/odk/image?v=4&projectId=3&formId=Fishponds_Assessment%202025&submissionId=${encodeURIComponent(item.submissionId)}&filename=${encodeURIComponent(item.pondImage)}`);
                       }}
                       className="mt-3 w-full py-1.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded hover:bg-blue-100 transition-colors"
                     >

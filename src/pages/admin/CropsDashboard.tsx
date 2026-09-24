@@ -64,9 +64,9 @@ export default function CropsDashboard() {
         fetch('/api/odk-status').then(r => r.json()).then(s => console.log('ODK Status:', s)).catch(e => console.error('Status check failed:', e));
 
         const [regResponse, actResponse, wcResponse] = await Promise.all([
-          fetch('/api/odk/data?formId=NF-%20Register'),
-          fetch('/api/odk/data?formId=NF-%20Activities'),
-          fetch('/api/odk/entities?datasetId=Water_Collectives_DB')
+          fetch('/api/odk/data?projectId=3&formId=NF-%20Register'),
+          fetch('/api/odk/data?projectId=3&formId=NF-%20Activities'),
+          fetch('/api/odk/entities?projectId=3&datasetId=Water_Collectives_DB')
         ]);
         if (!regResponse.ok) {
           const regErrText = await regResponse.text();
@@ -253,13 +253,13 @@ export default function CropsDashboard() {
             })(),
             farmerName: flat['farmer_name'] || flat['Farmer_Name'] || flat['name'] || flat['farmer'] || '',
             plotFarmerId: farmerId,
-            hhId: flat['plot_reg-farmer_Id'] || flat['plot_reg_farmer_Id'] || flat['farmer_Id'] || flat['HH_id'] || flat['HH_Id'] || flat['hh_id'] || flat['HH Id'] || flat['hhid'] || flat['farmer_id'] || flat['Farmer_Id'] || flat['Farmer ID'] || '',
+            hhId: flat['plot_reg-farmer_Id'] || flat['plot_reg_farmer_Id'] || flat['farmer_Id'] || flat['HH_id'] || flat['HH_Id'] || flat['hh_id'] || flat['HH Id'] || flat['hhid'] || '',
             year: finalYear || 'Unknown',
             season: finalSeason || 'Unknown',
-            mainCrop: flat['main_crop'] || flat['plot_reg_main_crop'] || flat['plot_reg-main_crop'] || flat['Main_Crop'] || flat['crop'] || '-',
+            mainCrop: flat['main_crop'] || flat['plot_reg_main_crop'] || flat['plot_reg-main_crop'] || flat['Main_Crop'] || '-',
             interCrops: flat['inter_crops'] || flat['plot_reg_inter_crops'] || flat['plot_reg-inter_crops'] || flat['Inter_Crops'] || '-',
             sowingDate: flat['sowing_date'] || flat['Sowing_Date'] || flat['date'] || '-',
-            area: flat['area_'] || flat['Area'] || flat['area'] || flat['plot_reg-area_'] || flat['plot_reg_area_'] || flat['extent'] || flat['Extent'] || '-',
+            area: flat['area_'] || flat['Area'] || flat['area'] || flat['plot_reg-area_'] || flat['plot_reg_area_'] || '-',
             harvests,
             bioInputs,
             cces,
@@ -840,7 +840,7 @@ export default function CropsDashboard() {
                                                     className="text-xs text-blue-600 hover:underline flex items-center gap-1.5 font-medium"
                                                     onClick={(e) => {
                                                       e.preventDefault();
-                                                      window.open(`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}`, '_blank');
+                                                      window.open(`/api/odk/image?v=4&projectId=3&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}`, '_blank');
                                                     }}
                                                   >
                                                     <ExternalLink className="w-3.5 h-3.5" /> Open Photo in New Tab
@@ -852,11 +852,11 @@ export default function CropsDashboard() {
                                                     className="relative group max-w-sm h-48 rounded-lg overflow-hidden border border-slate-300 shadow-sm cursor-pointer bg-slate-100"
                                                     onClick={(e) => { 
                                                       e.stopPropagation(); 
-                                                      setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}`); 
+                                                      setPreviewImage(`/api/odk/image?v=4&projectId=3&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}`); 
                                                     }}
                                                   >
                                                     <img 
-                                                      src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}`} 
+                                                      src={`/api/odk/image?v=4&projectId=3&submissionId=${encodeURIComponent(plot.plotSubmissionId)}&filename=${encodeURIComponent(plot.plotPhoto)}`} 
                                                       alt="Plot Registration" 
                                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
                                                       loading="lazy" 
@@ -891,11 +891,11 @@ export default function CropsDashboard() {
                                                               className="relative group w-full h-40 rounded-lg overflow-hidden border border-slate-300 shadow-sm cursor-pointer bg-slate-100"
                                                               onClick={(e) => { 
                                                                 e.stopPropagation(); 
-                                                                setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(act.displaySubmissionId)}&filename=${encodeURIComponent(act.displayPhoto)}`); 
+                                                                setPreviewImage(`/api/odk/image?v=4&projectId=3&submissionId=${encodeURIComponent(act.displaySubmissionId)}&filename=${encodeURIComponent(act.displayPhoto)}`); 
                                                               }}
                                                             >
                                                               <img 
-                                                                src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(act.displaySubmissionId)}&filename=${encodeURIComponent(act.displayPhoto)}`} 
+                                                                src={`/api/odk/image?v=4&projectId=3&submissionId=${encodeURIComponent(act.displaySubmissionId)}&filename=${encodeURIComponent(act.displayPhoto)}`} 
                                                                 alt="Activity Photo" 
                                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" 
                                                                 loading="lazy" 

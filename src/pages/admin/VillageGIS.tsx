@@ -615,11 +615,11 @@ export function ProcessingHubsDashboard({
                        <div className="flex justify-center md:justify-start">
                          <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm ring-1 ring-slate-100 mt-2 w-full md:w-[320px]">
                            <img 
-                             src={`/api/odk/image?v=4&submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`} 
+                             src={`/api/odk/image?v=4&projectId=3&submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`} 
                              alt="Hub photo" 
                              className="w-full h-auto max-h-48 object-cover bg-slate-100 cursor-pointer hover:opacity-90 transition-opacity"
                              loading="lazy"
-                             onClick={() => setPreviewImage(`/api/odk/image?v=4&submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`)}
+                             onClick={() => setPreviewImage(`/api/odk/image?v=4&projectId=3&submissionId=${encodeURIComponent(hub.Key || hub.KEY || hub['meta-instanceID'] || '')}&filename=${encodeURIComponent(hub['Photo'])}`)}
                            />
                          </div>
                        </div>
@@ -1079,7 +1079,7 @@ export default function VillageGIS({ tab = 'assets' }: { tab?: 'assets' | 'hubs'
       setLoading(true);
       const [hubsData, microEnterprisesDataReq] = await Promise.all([
         fetchSheet('Master').catch(() => []),
-        fetch('/api/odk/data?formId=Micro Enterprizes').catch(() => ({ json: async () => ({ value: [] }) }))
+        fetch('/api/odk/data?projectId=3&formId=Micro Enterprizes').catch(() => ({ json: async () => ({ value: [] }) }))
       ]);
       const mappedAssets = hubsData.map((h: any, i: number) => ({
         id: h['HH_id'] || h['Key'] || i.toString(),
