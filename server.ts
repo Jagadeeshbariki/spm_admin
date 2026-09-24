@@ -32,12 +32,17 @@ app.use(express.json());
 
 // Add diagnostic route
 app.get('/api/odk-status', (req, res) => {
+  const email = process.env.ODK_EMAIL;
+  const password = process.env.ODK_PASSWORD;
   res.json({
-    email_configured: !!process.env.ODK_EMAIL,
-    password_configured: !!process.env.ODK_PASSWORD,
+    email_configured: !!email,
+    email_valid: email && email.includes('@'),
+    password_configured: !!password,
+    password_length: password ? password.length : 0,
     project_id: "3",
     node_version: process.version,
-    env: process.env.NODE_ENV || 'production'
+    env: process.env.NODE_ENV || 'production',
+    uptime: process.uptime()
   });
 });
 
@@ -408,12 +413,15 @@ async function getOdkToken() {
     throw new Error('ODK credentials not configured (ODK_EMAIL, ODK_PASSWORD)');
   }
 
+  console.log(`[ODK Auth] Attempting login for ${email}...`);
+
   tokenPromise = axios.post('https://central.wassan.org/v1/sessions', {
     email, password
   }, {
     headers: { 'Content-Type': 'application/json' },
-    timeout: 10000
+    timeout: 15000
   }).then((response) => {
+    console.log(`[ODK Auth] Success. Token expires at: ${response.data.expiresAt}`);
     const data = response.data;
     odkToken = data.token;
     odkTokenExpiresAt = new Date(data.expiresAt).getTime() - 60000;
@@ -485,7 +493,7 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
           'Accept': 'application/json',
           'X-Extended-Metadata': 'true'
         },
-        timeout: 30000
+        timeout: 60000
       });
       
       const data = response.data;
