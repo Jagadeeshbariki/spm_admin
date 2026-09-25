@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { google } from 'googleapis';
-import axios from 'axios';
+import { Readable } from 'stream';
+import fetch from 'node-fetch';
 
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -11,17 +12,16 @@ import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-// Try to use import.meta.url if available (ESM), fallback to process.cwd() (CJS bundle)
-let __dirname = '';
+// Safe __dirname and __filename for ESM/CJS compatibility
+let __dirname = process.cwd();
 try {
-  const metaUrl = typeof import.meta !== 'undefined' ? (import.meta as any).url : null;
-  if (metaUrl) {
-    __dirname = path.dirname(fileURLToPath(metaUrl));
-  } else {
-    __dirname = process.cwd();
+  // Use a string check to avoid syntax errors in some environments
+  const isESM = typeof import.meta !== 'undefined';
+  if (isESM && import.meta.url) {
+    __dirname = path.dirname(fileURLToPath(import.meta.url));
   }
 } catch (e) {
-  __dirname = process.cwd();
+  // Fallback to process.cwd()
 }
 
 const app = express();
@@ -32,29 +32,31 @@ app.use(express.json());
 
 // Add diagnostic route
 app.get('/api/odk-status', (req, res) => {
-  const email = process.env.ODK_EMAIL;
-  const password = process.env.ODK_PASSWORD;
-  
-  // Also check other essential env vars
-  const hasGoogleEmail = !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const hasGoogleKey = !!process.env.GOOGLE_PRIVATE_KEY;
-  const hasSpreadsheet = !!process.env.GOOGLE_SPREADSHEET_ID;
+  try {
+    const email = process.env.ODK_EMAIL;
+    const password = process.env.ODK_PASSWORD;
+    
+    // Also check other essential env vars
+    const hasGoogleEmail = !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const hasGoogleKey = !!process.env.GOOGLE_PRIVATE_KEY;
+    const hasSpreadsheet = !!process.env.GOOGLE_SPREADSHEET_ID;
 
-  res.json({
-    email_configured: !!email,
-    email_valid: email && email.includes('@'),
-    password_configured: !!password,
-    password_length: password ? password.length : 0,
-    google_configured: hasGoogleEmail && hasGoogleKey && hasSpreadsheet,
-    project_id: "3",
-    node_version: process.version,
-    env: process.env.NODE_ENV || 'production',
-    is_vercel: !!process.env.VERCEL,
-    vercel_region: process.env.VERCEL_REGION || 'unknown',
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    timestamp: new Date().toISOString()
-  });
+    const odkConfigured = !!email && !!password;
+    const odkUrl = "https://central.wassan.org";
+
+    res.json({
+      status: "online",
+      email_configured: !!email,
+      password_configured: !!password,
+      odk_configured: odkConfigured,
+      google_configured: hasGoogleEmail && hasGoogleKey && hasSpreadsheet,
+      env: process.env.NODE_ENV || 'production',
+      is_vercel: !!process.env.VERCEL,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "Diagnostic failed", message: err.message });
+  }
 });
 
 // Set up multer for file uploads
@@ -361,7 +363,6 @@ app.post(['/api/upload', '/api/upload/'], upload.single('file'), async (req, res
     }
 
     // Convert buffer to stream
-    const { Readable } = require('stream');
     const stream = new Readable();
     stream.push(req.file.buffer);
     stream.push(null);
@@ -421,28 +422,49 @@ async function getOdkToken() {
   const password = process.env.ODK_PASSWORD;
 
   if (!email || !password) {
+    console.error("[ODK Auth] Missing credentials");
     throw new Error('ODK credentials not configured (ODK_EMAIL, ODK_PASSWORD)');
   }
 
-  console.log(`[ODK Auth] Attempting login for ${email}...`);
+  console.log(`[ODK Auth] Attempting login for ${email.substring(0, 3)}...`);
 
-  tokenPromise = axios.post('https://central.wassan.org/v1/sessions', {
-    email, password
-  }, {
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 9000
-  }).then((response) => {
-    console.log(`[ODK Auth] Success. Token expires at: ${response.data.expiresAt}`);
-    const data = response.data;
-    odkToken = data.token;
-    odkTokenExpiresAt = new Date(data.expiresAt).getTime() - 60000;
-    tokenPromise = null;
-    return odkToken;
-  }).catch(err => {
-    tokenPromise = null;
-    console.error("ODK Auth Error:", err.response?.status, err.response?.data || err.message);
-    throw err;
-  });
+  tokenPromise = (async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout for auth
+
+      const response = await fetch('https://central.wassan.org/v1/sessions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'User-Agent': 'Wassan-App/1.0 (Vercel Node.js)'
+        },
+        body: JSON.stringify({ email, password }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[ODK Auth] Login failed with status ${response.status}:`, errorText);
+        throw new Error(`ODK Auth failed: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log(`[ODK Auth] Success. Token received.`);
+      
+      odkToken = data.token;
+      // ExpiresAt is usually 24h, we'll refresh 1 minute early
+      odkTokenExpiresAt = new Date(data.expiresAt).getTime() - 60000;
+      tokenPromise = null;
+      return odkToken as string;
+    } catch (err: any) {
+      tokenPromise = null;
+      console.error("[ODK Auth] Error:", err.message);
+      throw err;
+    }
+  })();
 
   return tokenPromise;
 }
@@ -469,19 +491,40 @@ app.get(["/api/odk/data", "/api/odk/data/"], async (req, res) => {
     if (table && typeof table === 'string') {
       url = `https://central.wassan.org/v1/projects/${pid}/forms/${encodeURIComponent(cleanFormId)}.svc/${table}`;
     }
+
+    console.log(`[ODK Proxy] Fetching data: ${url}`);
     
-    const response = await axios.get(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      timeout: 9000
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout for data
+
+    const response = await fetch(url, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'User-Agent': 'Wassan-App/1.0 (Vercel Node.js)'
+      },
+      signal: controller.signal
     });
-    res.json(response.data);
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const details = await response.text();
+      console.error(`[ODK Proxy] Data fetch failed: ${response.status}`, details);
+      return res.status(response.status).json({ 
+        error: "Failed to fetch data from ODK", 
+        details: details.slice(0, 500)
+      });
+    }
+
+    const data = await response.json();
+    res.json(data);
   } catch (error: any) {
-    const status = error.response?.status || 500;
-    const details = error.response?.data || error.message;
-    console.error("Error proxying ODK data:", status, details);
-    res.status(status).json({ 
+    console.error("Error proxying ODK data:", error.message);
+    res.status(500).json({ 
       error: "Failed to fetch data from ODK", 
-      details: typeof details === 'string' ? details.slice(0, 500) : details 
+      details: error.message,
+      is_timeout: error.name === 'AbortError'
     });
   }
 });
@@ -497,56 +540,70 @@ app.get(["/api/odk/entities", "/api/odk/entities/"], async (req, res) => {
     
     const token = await getOdkToken();
     
-    // Prioritize the .svc/Entities endpoint as requested by the user
     const url = `https://central.wassan.org/v1/projects/${pid}/datasets/${encodeURIComponent(datasetId)}.svc/Entities`;
+    console.log(`[ODK Proxy] Requesting entities: ${url}`);
     
-    console.log(`[ODK Proxy] Requesting entities from primary OData endpoint: ${url}`);
-    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     try {
-      const response = await axios.get(url, {
+      const response = await fetch(url, {
         headers: { 
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'Wassan-App/1.0 (Vercel Node.js)'
         },
-        timeout: 9000
+        signal: controller.signal
       });
       
-      console.log(`[ODK Proxy] Successfully fetched entities from OData endpoint`);
-      return res.json(response.data);
-    } catch (err: any) {
-      console.error(`[ODK Proxy] OData endpoint failed for ${datasetId}:`, err.response?.status, err.message);
-      
-      // Fallback to standard entities endpoint
-      const fallbackUrl = `https://central.wassan.org/v1/projects/${pid}/datasets/${encodeURIComponent(datasetId)}/entities`;
-      console.log(`[ODK Proxy] Attempting fallback to standard endpoint: ${fallbackUrl}`);
-      
-      try {
-        const response = await axios.get(fallbackUrl, {
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'X-Extended-Metadata': 'true'
-          },
-          timeout: 9000
-        });
-        
-        const data = response.data;
-        const normalizedData = Array.isArray(data) ? { value: data } : data;
-        console.log(`[ODK Proxy] Fallback success. Fetched ${normalizedData.value ? normalizedData.value.length : 0} entities`);
-        return res.json(normalizedData);
-      } catch (fallbackErr: any) {
-        console.error(`[ODK Proxy] All endpoints failed for ${datasetId}`);
-        throw fallbackErr;
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`[ODK Proxy] Success fetching entities`);
+        clearTimeout(timeoutId);
+        return res.json(data);
       }
+
+      const errorText = await response.text();
+      console.warn(`[ODK Proxy] OData endpoint returned ${response.status}:`, errorText);
+      
+      // Fallback
+      const fallbackUrl = `https://central.wassan.org/v1/projects/${pid}/datasets/${encodeURIComponent(datasetId)}/entities`;
+      console.log(`[ODK Proxy] Attempting fallback: ${fallbackUrl}`);
+      
+      const fallbackResponse = await fetch(fallbackUrl, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'X-Extended-Metadata': 'true',
+          'User-Agent': 'Wassan-App/1.0 (Vercel Node.js)'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (fallbackResponse.ok) {
+        const data = await fallbackResponse.json();
+        const normalizedData = Array.isArray(data) ? { value: data } : data;
+        return res.json(normalizedData);
+      }
+
+      const fallbackError = await fallbackResponse.text();
+      console.error(`[ODK Proxy] Fallback failed: ${fallbackResponse.status}`, fallbackError);
+      return res.status(fallbackResponse.status).json({
+        error: "Failed to fetch entities from ODK",
+        details: fallbackError.slice(0, 500)
+      });
+
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      throw err;
     }
   } catch (error: any) {
-    const status = error.response?.status || 500;
-    const details = error.response?.data || error.message;
-    console.error("Error proxying ODK entities:", status, details);
-    res.status(status).json({ 
+    console.error("Error proxying ODK entities:", error.message);
+    res.status(500).json({ 
       error: `Proxy error: ${error.message || "Unknown error"}`,
-      details: typeof details === 'string' ? details.slice(0, 500) : details,
-      type: error.name
+      is_timeout: error.name === 'AbortError'
     });
   }
 });
@@ -700,10 +757,6 @@ app.get(['/api/odk/image', '/api/odk/image/'], async (req, res) => {
   }
 });
 
-// --- Vite Integration ---
-// Export for Vercel
-export default app;
-
 // Global error handler
 app.use((err: any, req: any, res: any, next: any) => {
   console.error("GLOBAL ERROR:", err);
@@ -717,32 +770,4 @@ app.use((err: any, req: any, res: any, next: any) => {
   });
 });
 
-async function startServer() {
-  // If running in Vercel, do not start the server manually
-  if (process.env.VERCEL) {
-    return;
-  }
-  
-  if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = fs.existsSync(path.join(process.cwd(), 'dist')) 
-      ? path.join(process.cwd(), 'dist')
-      : (fs.existsSync(path.join(__dirname, 'dist')) ? path.join(__dirname, 'dist') : __dirname);
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-startServer();
+export default app;
