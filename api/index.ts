@@ -1,8 +1,12 @@
-import app from '../server';
+import app from '../server.js';
 
-// Add a direct route here to bypass any issues in server.ts if they exist
+// Minimal health check that runs before any complex logic
 app.get('/api/health-check', (req, res) => {
-  res.json({ status: 'ok', message: 'API index is alive' });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    message: 'The backend is alive and responding on Vercel.' 
+  });
 });
 
 export default app;
