@@ -18,7 +18,6 @@ const formatDisplayDate = (dateStr: string | null | undefined): string => {
 };
 
 import { NFValidationPage } from './NFValidationPage';
-import { WaterCollectivesTab } from './WaterCollectivesTab';
 import { CropMapTab } from './CropMapTab';
 
 import { useSearchParams } from 'react-router-dom';
@@ -28,8 +27,6 @@ export default function CropsDashboard() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [waterCollectivesData, setWaterCollectivesData] = useState<any[]>([]);
-  const [wcError, setWcError] = useState<string | null>(null);
 
   // Filters
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
@@ -64,10 +61,9 @@ export default function CropsDashboard() {
         // Diagnostic check
         fetch('/api/odk-status').then(r => r.json()).then(s => console.log('ODK Status:', s)).catch(e => console.error('Status check failed:', e));
 
-        const [regResponse, actResponse, wcResponse] = await Promise.all([
+        const [regResponse, actResponse] = await Promise.all([
           fetch('/api/odk/data?projectId=3&formId=NF-%20Register'),
-          fetch('/api/odk/data?projectId=3&formId=NF-%20Activities'),
-          fetch('/api/odk/entities?projectId=3&datasetId=Water_Collectives_DB')
+          fetch('/api/odk/data?projectId=3&formId=NF-%20Activities')
         ]);
         if (!regResponse.ok) {
           const regErrText = await regResponse.text();
@@ -78,7 +74,7 @@ export default function CropsDashboard() {
           } catch (e) {}
           throw new Error(`Failed to fetch data from ODK Central (${regResponse.status}): ${errDetail}`);
         }
-        let json, actJson, wcJson;
+        let json, actJson;
         try {
           const regText = await regResponse.text();
           if (regText.trim().startsWith('<')) {
@@ -92,39 +88,11 @@ export default function CropsDashboard() {
           } else {
             actJson = { value: [] };
           }
-
-          if (wcResponse.ok) {
-            const wcText = await wcResponse.text();
-            wcJson = wcText.trim().startsWith('<') ? { value: [] } : JSON.parse(wcText);
-          } else {
-            let errorMsg = `Fetch failed: ${wcResponse.status}`;
-            try {
-              const contentType = wcResponse.headers.get('content-type');
-              if (contentType && contentType.includes('application/json')) {
-                const errData = await wcResponse.json();
-                if (errData.error) errorMsg = errData.error;
-                if (errData.details) {
-                  const detailsStr = typeof errData.details === 'object' ? JSON.stringify(errData.details) : String(errData.details);
-                  errorMsg += `: ${detailsStr}`;
-                }
-              } else {
-                const text = await wcResponse.text();
-                errorMsg += `: ${text.slice(0, 200)}`;
-              }
-            } catch (e) {
-              // fallback to status
-            }
-            console.error('WC Fetch Error:', wcResponse.status, errorMsg);
-            wcJson = { value: [], error: errorMsg };
-          }
         } catch (e: any) {
           throw new Error('Failed to parse API response: ' + e.message);
         }
         const submissions = json.value || [];
         const activities = actJson.value || [];
-        const wcEntities = wcJson.value || [];
-        setWaterCollectivesData(wcEntities);
-        if (wcJson.error) setWcError(wcJson.error);
         
         const flatten = (obj: any, prefix = ''): any => {
           return Object.keys(obj).reduce((acc: any, k: string) => {
@@ -387,46 +355,19 @@ export default function CropsDashboard() {
     });
   }, [data, selectedBlock, selectedGp, selectedVillage, selectedCropMode, hasActivities, selectedYear, selectedSeason, searchTerm, activeTab]);
 
-  const filteredWaterCollectives = useMemo(() => {
-    // If clusters are selected, get all GPs/Villages that belong to those clusters
-    const clusterGps = new Set<string>();
-    const clusterVillages = new Set<string>();
-    
-    if (selectedCluster.length > 0) {
-      data.forEach(d => {
-        if (d.cluster && selectedCluster.includes(d.cluster)) {
-          if (d.gp) clusterGps.add(String(d.gp).toLowerCase());
-          if (d.village) clusterVillages.add(String(d.village).toLowerCase());
-        }
-      });
+  const tabFilteredData = useMemo(() => {
+    let base = filteredData;
+    if (activeTab === 'bio-inputs') {
+      base = base.filter(item => item.bioInputs && item.bioInputs.length > 0);
+    } else if (activeTab === 'harvested') {
+      base = base.filter(item => item.harvests && item.harvests.length > 0);
+    } else if (activeTab === 'cces') {
+      base = base.filter(item => item.cces && item.cces.length > 0);
     }
+    return base;
+  }, [filteredData, activeTab]);
 
-    return waterCollectivesData.filter(item => {
-      const props = item.properties || item;
-      const b = String(props.block || props.Block || '').toLowerCase().trim();
-      const g = String(props.gp || props.GP || '').toLowerCase().trim();
-      const v = String(props.village || props.Village || '').toLowerCase().trim();
 
-      if (selectedBlock.length > 0) {
-        const lowerSelected = selectedBlock.map(s => String(s).toLowerCase().trim());
-        if (!lowerSelected.includes(b)) return false;
-      }
-      if (selectedGp.length > 0) {
-        const lowerSelected = selectedGp.map(s => String(s).toLowerCase().trim());
-        if (!lowerSelected.includes(g)) return false;
-      }
-      if (selectedVillage.length > 0) {
-        const lowerSelected = selectedVillage.map(s => String(s).toLowerCase().trim());
-        if (!lowerSelected.includes(v)) return false;
-      }
-      
-      if (selectedCluster.length > 0) {
-        if (!clusterGps.has(g) && !clusterVillages.has(v)) return false;
-      }
-      
-      return true;
-    });
-  }, [waterCollectivesData, selectedBlock, selectedGp, selectedVillage, selectedCluster, data]);
 
   // Reset pagination and dependent selections when filters change
   useEffect(() => {
@@ -467,7 +408,7 @@ export default function CropsDashboard() {
   
   const groupedData = useMemo(() => {
     const groups = {};
-    filteredData.forEach(item => {
+    tabFilteredData.forEach(item => {
       const key = `${item.hhId}-${item.farmerName}`;
       if (!groups[key]) {
         groups[key] = {
@@ -486,7 +427,7 @@ export default function CropsDashboard() {
       groups[key].totalActivities += (item.activityCount || 0);
     });
     return Object.values(groups);
-  }, [filteredData]);
+  }, [tabFilteredData]);
 
   const totalPages = Math.ceil(groupedData.length / itemsPerPage);
 
@@ -496,7 +437,7 @@ export default function CropsDashboard() {
   }, [groupedData, currentPage]);
 
   const handleExport = () => {
-    const exportData = filteredData.flatMap(plot => {
+    const exportData = tabFilteredData.flatMap(plot => {
       const basePlot = {
         'HH ID': plot.hhId,
         'Farmer Name': plot.farmerName,
@@ -514,30 +455,43 @@ export default function CropsDashboard() {
         'Submitter': plot.submitterName || '-'
       };
 
-      if (plot.activitiesData.length === 0) {
+      let actsToExport = plot.activitiesData;
+      if (activeTab === 'bio-inputs') {
+        actsToExport = actsToExport.filter((a: any) => a.application_bio_input && a.application_bio_input.length > 0);
+      } else if (activeTab === 'harvested') {
+        actsToExport = actsToExport.filter((a: any) => a.harvesting && a.harvesting.length > 0);
+      } else if (activeTab === 'cces') {
+        actsToExport = actsToExport.filter((a: any) => a.cce && (a.cce.date_cce || a.cce.sqmtr_5_5_kgs));
+      }
+
+      if (actsToExport.length === 0) {
+        if (activeTab === 'bio-inputs' || activeTab === 'harvested' || activeTab === 'cces') {
+          return [];
+        }
         return [{ ...basePlot, 'Activity Type': 'No Activity' }];
       }
 
-      return plot.activitiesData.map((act: any) => {
-        // Bio Inputs summary
+      return actsToExport.map((act: any) => {
         const bioInputs = (act.application_bio_input || []).map((bi: any) => 
           `${bi.inputs_applied || bi.bio_input_name || '-'}(${bi.Dhravajeevamrutham_Quantity || bi.qty || '-'})`
         ).join(', ');
 
-        // Harvesting summary
         const harvests = (act.harvesting || []).map((h: any) => 
           `${h.crop_harvested || h.crop || '-'}(${h.yield_quantity || h.yield_Qntl || '-'})`
         ).join(', ');
 
-        // Pests summary
-        const pestsArr = Array.isArray(act.diseases_pests) ? act.diseases_pests : [];
+        const pestsArr = Array.isArray(act.diseases_pests) ? act.diseases_pests : act.diseases_pests ? [act.diseases_pests] : [];
         const pests = pestsArr.map((p: any) => 
           p.pests_diseases_observed || p['diseases_pests-pests_diseases_observed'] || p.pests_diseases || ''
-        ).join(', ') || act.pests_diseases_observed || act['diseases_pests-pests_diseases_observed'] || act['diseases_pests_pests_diseases_observed'] || '';
+        ).filter(Boolean).join(', ') || act.pests_diseases_observed || act['diseases_pests-pests_diseases_observed'] || act['diseases_pests_pests_diseases_observed'] || '';
+
+        const pestDate = pestsArr.map((p: any) => 
+          p.date_activity || p['diseases_pests-date_activity'] || p.date || ''
+        ).filter(Boolean).join(', ') || act['diseases_pests-date_activity'] || act.date_activity || '';
 
         const pestManagement = pestsArr.map((p: any) => 
           p.inputs_applied_disease_management || p['diseases_pests-inputs_applied_disease_management'] || ''
-        ).join(', ') || act.inputs_applied_disease_management || act['diseases_pests-inputs_applied_disease_management'] || act['diseases_pests_inputs_applied_disease_management'] || '';
+        ).filter(Boolean).join(', ') || act.inputs_applied_disease_management || act['diseases_pests-inputs_applied_disease_management'] || '';
 
         return {
           ...basePlot,
@@ -547,6 +501,7 @@ export default function CropsDashboard() {
           'Harvest Yield': harvests,
           'CCE Yield (Kg)': act.cce?.sqmtr_5_5_kgs || '',
           'Pests & Diseases Observed': pests,
+          'Pest Activity Date': formatDisplayDate(pestDate),
           'Pest Management Inputs': pestManagement
         };
       });
@@ -557,7 +512,7 @@ export default function CropsDashboard() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Crops_Consolidated_Data_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `Crops_${activeTab}_Data_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
   
@@ -617,23 +572,33 @@ export default function CropsDashboard() {
             FRP Dashboard
           </button>
           <button 
-            onClick={() => setActiveTab('hdfc')}
+            onClick={() => setActiveTab('bio-inputs')}
             className={cn(
               "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
-              activeTab === 'hdfc' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
+              activeTab === 'bio-inputs' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
           >
-            HDFC Crops
+            Bio Inputs Applied Farmers
           </button>
           <button 
-            onClick={() => setActiveTab('water-collectives')}
+            onClick={() => setActiveTab('harvested')}
             className={cn(
               "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
-              activeTab === 'water-collectives' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
+              activeTab === 'harvested' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
             )}
           >
-            Water Collectives
+            Harvested Farmers
           </button>
+          <button 
+            onClick={() => setActiveTab('cces')}
+            className={cn(
+              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
+              activeTab === 'cces' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
+            )}
+          >
+            CCE's Farmers
+          </button>
+
           <button 
             onClick={() => setActiveTab('map')}
             className={cn(
@@ -642,15 +607,6 @@ export default function CropsDashboard() {
             )}
           >
             Crop Map
-          </button>
-          <button 
-            onClick={() => setActiveTab('nf-validation')}
-            className={cn(
-              "px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
-              activeTab === 'nf-validation' ? "border-emerald-500 text-emerald-600" : "border-transparent text-slate-500 hover:text-slate-700"
-            )}
-          >
-            Data Validation
           </button>
         </div>
 
@@ -767,15 +723,7 @@ export default function CropsDashboard() {
           <NFValidationPage />
         )}
 
-        {activeTab === 'water-collectives' && (
-          <WaterCollectivesTab 
-            data={filteredData} 
-            waterCollectives={filteredWaterCollectives} 
-            loading={loading}
-            error={wcError || undefined}
-            totalCount={waterCollectivesData.length}
-          />
-        )}
+
 
         {activeTab === 'map' && (
           <CropMapTab data={filteredData} />
@@ -785,8 +733,17 @@ export default function CropsDashboard() {
           <OverviewTab data={filteredData} isHdfc={activeTab === 'hdfc'} yearFilter={selectedYear} seasonFilter={selectedSeason} />
         )}
         
-        {(activeTab === 'frp' || activeTab === 'hdfc') && (
+        {(activeTab === 'frp' || activeTab === 'bio-inputs' || activeTab === 'harvested' || activeTab === 'cces') && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div className="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center justify-between">
+            <span>
+              {activeTab === 'bio-inputs' && 'Bio Inputs Applied Farmers Section'}
+              {activeTab === 'harvested' && 'Harvested Farmers Section'}
+              {activeTab === 'cces' && 'CCE\'s Farmers Section'}
+              {activeTab === 'frp' && 'FRP Dashboard Farmers Section'}
+            </span>
+            <span className="text-slate-500 font-normal">Showing {groupedData.length} farmers</span>
+          </div>
           <div className="overflow-auto custom-scrollbar">
             <table className="w-full text-left text-sm whitespace-nowrap min-w-[800px]">
               <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
@@ -1321,11 +1278,11 @@ function OverviewTab({ data, isHdfc = false, yearFilter = 'All', seasonFilter = 
     data.forEach(item => {
       if (item.bioInputs && Array.isArray(item.bioInputs)) {
         item.bioInputs.forEach((bi: any) => {
-            const name = String(bi.inputs_applied || bi.bio_input_name || bi.input_name || 'Unknown').trim();
+            const rawName = String(bi.inputs_applied || bi.bio_input_name || bi.input_name || 'Unknown').trim();
             const qty = parseFloat(bi.Dhravajeevamrutham_Quantity || bi.qty_applied || bi.qty || bi.qty_units || '0');
-            if (name && name !== 'undefined' && name !== '-' && name !== 'Unknown') {
-                if (!bioInputTotals[name]) bioInputTotals[name] = 0;
-                bioInputTotals[name] += isNaN(qty) ? 0 : qty;
+            if (rawName && rawName !== 'undefined' && rawName !== '-' && rawName !== 'Unknown') {
+                if (!bioInputTotals[rawName]) bioInputTotals[rawName] = 0;
+                bioInputTotals[rawName] += isNaN(qty) ? 0 : qty;
             }
         });
       }
