@@ -29,6 +29,8 @@ import TeamTravel from './pages/admin/TeamTravel';
 import CropsDashboard from './pages/admin/CropsDashboard';
 import BYPDashboard from './pages/admin/BYPDashboard';
 import FisheriesAssessmentDashboard from './pages/admin/FisheriesAssessmentDashboard';
+import FingerlingsDashboard from './pages/admin/FingerlingsDashboard';
+import FishHarvestDashboard from './pages/admin/FishHarvestDashboard';
 
 
 export default function App() {
@@ -69,6 +71,8 @@ export default function App() {
               <Route path="about-region/crops/dashboard" element={<CropsDashboard />} />
               <Route path="about-region/byp/dashboard" element={<BYPDashboard />} />
               <Route path="about-region/rainfed-fisheries/assessment" element={<FisheriesAssessmentDashboard />} />
+              <Route path="about-region/rainfed-fisheries/fingerlings" element={<FingerlingsDashboard />} />
+              <Route path="about-region/rainfed-fisheries/harvest" element={<FishHarvestDashboard />} />
 
               <Route path="village-gis-management" element={<VillageGISManagement />} />
               <Route path="team-travel" element={<TeamTravel />} />

@@ -3,6 +3,7 @@ import { Plus, Search, Filter, Download, Edit, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
 import { useAuth } from '@/lib/AuthContext';
+import { DocumentPreviewModal } from '../../components/common/DocumentPreviewModal';
 
 export default function Expenses() {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ export default function Expenses() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -244,9 +246,12 @@ export default function Expenses() {
                     <td className="px-6 py-4 text-slate-600">{expense.Description}</td>
                     <td className="px-6 py-4">
                       {expense.Bill_url && (
-                        <a href={expense.Bill_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                          <Download className="w-4 h-4" /> View
-                        </a>
+                        <button 
+                          onClick={() => setPreviewUrl(expense.Bill_url)}
+                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium text-xs bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition-colors"
+                        >
+                          <Search className="w-3.5 h-3.5" /> Preview Bill
+                        </button>
                       )}
                     </td>
                     <td className="px-6 py-4 text-slate-600">{expense.Paid_by}</td>
@@ -341,9 +346,12 @@ export default function Expenses() {
                 {selectedItem.Bill_url && (
                   <div className="pt-2">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Attachment</p>
-                    <a href={selectedItem.Bill_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
-                      <Download className="w-4 h-4" /> View Bill/Document
-                    </a>
+                    <button 
+                      onClick={() => setPreviewUrl(selectedItem.Bill_url)}
+                      className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm bg-blue-50 px-3 py-2 rounded-xl border border-blue-200 transition-colors"
+                    >
+                      <Search className="w-4 h-4" /> Preview Bill/Document
+                    </button>
                   </div>
                 )}
               </div>
@@ -354,6 +362,13 @@ export default function Expenses() {
           </div>
         </div>
       )}
+
+      <DocumentPreviewModal 
+        isOpen={!!previewUrl} 
+        onClose={() => setPreviewUrl(null)} 
+        url={previewUrl || ''} 
+        title="Bill / Document Preview" 
+      />
     </div>
   );
 }

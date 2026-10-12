@@ -3,6 +3,7 @@ import { Plus, Search, Filter, Eye, Download, Edit2, Trash2, Loader2 } from 'luc
 import toast from 'react-hot-toast';
 import { fetchSheet, addRow, updateRow, deleteRow, uploadFile } from '../../lib/api';
 import { useAuth } from '@/lib/AuthContext';
+import { DocumentPreviewModal } from '../../components/common/DocumentPreviewModal';
 
 interface Meeting {
   _rowIndex?: number;
@@ -52,6 +53,9 @@ export default function Meetings() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All Types');
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('Document Preview');
 
   const [projectNames, setProjectNames] = useState<string[]>([]);
 
@@ -388,24 +392,36 @@ export default function Meetings() {
                     <td className="px-6 py-4 text-slate-600">{meeting['Participants']}</td>
                     <td className="px-6 py-4">
                       {meeting['Minutes of Meeting'] ? (
-                        <a href={meeting['Minutes of Meeting']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                          <Download className="w-4 h-4" /> MoM
-                        </a>
+                        <button 
+                          onClick={() => { setPreviewUrl(meeting['Minutes of Meeting']); setPreviewTitle('Minutes of Meeting'); }}
+                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium text-xs bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> MoM
+                        </button>
                       ) : <span className="text-slate-400">-</span>}
                     </td>
                     <td className="px-6 py-4">
                       {meeting['Photo Upload (link)'] ? (
-                        <a href={meeting['Photo Upload (link)']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                          <Download className="w-4 h-4" /> Photo
-                        </a>
+                        <button 
+                          onClick={() => { setPreviewUrl(meeting['Photo Upload (link)'].split(',')[0].trim()); setPreviewTitle('Meeting Photo'); }}
+                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium text-xs bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Photo
+                        </button>
                       ) : <span className="text-slate-400">-</span>}
                     </td>
                     <td className="px-6 py-4">
-                      {meeting['Bill Upload'] || meeting['Bill Upload (link)'] || meeting['Bill'] || meeting['Bill_link'] ? (
-                        <a href={meeting['Bill Upload'] || meeting['Bill Upload (link)'] || meeting['Bill'] || meeting['Bill_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                          <Download className="w-4 h-4" /> View bill
-                        </a>
-                      ) : <span className="text-slate-400">-</span>}
+                      {(() => {
+                        const bill = meeting['Bill Upload'] || meeting['Bill Upload (link)'] || meeting['Bill'] || meeting['Bill_link'];
+                        return bill ? (
+                          <button 
+                            onClick={() => { setPreviewUrl(bill); setPreviewTitle('Meeting Bill'); }}
+                            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium text-xs bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> View bill
+                          </button>
+                        ) : <span className="text-slate-400">-</span>;
+                      })()}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -528,8 +544,8 @@ export default function Meetings() {
                     onChange={(e) => setMinutesFile(e.target.files?.[0] || null)}
                   />
                   {formData['Minutes of Meeting'] && !minutesFile && (
-                    <p className="text-xs text-slate-500 mt-1 truncate">
-                      Current: <a href={formData['Minutes of Meeting']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{formData['Minutes of Meeting']}</a>
+                    <p className="text-xs text-slate-500 mt-1 truncate flex items-center gap-2">
+                      Current: <button type="button" onClick={() => { setPreviewUrl(formData['Minutes of Meeting']); setPreviewTitle('Minutes of Meeting'); }} className="text-blue-600 hover:underline font-medium">Preview file</button>
                     </p>
                   )}
                 </div>
@@ -562,8 +578,8 @@ export default function Meetings() {
                     onChange={(e) => setAquFile(e.target.files?.[0] || null)}
                   />
                   {formData['Aqu_link'] && !aquFile && (
-                    <p className="text-xs text-slate-500 mt-1 truncate">
-                      Current: <a href={formData['Aqu_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{formData['Aqu_link']}</a>
+                    <p className="text-xs text-slate-500 mt-1 truncate flex items-center gap-2">
+                      Current: <button type="button" onClick={() => { setPreviewUrl(formData['Aqu_link']); setPreviewTitle('Aqu File'); }} className="text-blue-600 hover:underline font-medium">Preview file</button>
                     </p>
                   )}
                 </div>
@@ -575,8 +591,8 @@ export default function Meetings() {
                     onChange={(e) => setBillFile(e.target.files?.[0] || null)}
                   />
                   {(formData['Bill Upload'] || formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']) && !billFile && (
-                    <p className="text-xs text-slate-500 mt-1 truncate">
-                      Current: <a href={formData['Bill Upload'] || formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{formData['Bill Upload'] || formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']}</a>
+                    <p className="text-xs text-slate-500 mt-1 truncate flex items-center gap-2">
+                      Current: <button type="button" onClick={() => { setPreviewUrl(formData['Bill Upload'] || formData['Bill Upload (link)'] || formData['Bill'] || formData['Bill_link']); setPreviewTitle('Bill Upload'); }} className="text-blue-600 hover:underline font-medium">Preview file</button>
                     </p>
                   )}
                 </div>
@@ -625,9 +641,12 @@ export default function Meetings() {
                 {selectedItem['Minutes of Meeting'] && (
                   <div className="pt-2">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Minutes of Meeting</p>
-                    <a href={selectedItem['Minutes of Meeting']} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
-                      <Download className="w-4 h-4" /> View Document
-                    </a>
+                    <button 
+                      onClick={() => { setPreviewUrl(selectedItem['Minutes of Meeting']); setPreviewTitle('Minutes of Meeting'); }}
+                      className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
+                    >
+                      <Eye className="w-4 h-4" /> Preview Minutes of Meeting
+                    </button>
                   </div>
                 )}
                 {selectedItem['Photo Upload (link)'] && (
@@ -635,9 +654,13 @@ export default function Meetings() {
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Photos</p>
                     <div className="flex flex-wrap gap-2">
                       {selectedItem['Photo Upload (link)'].split(',').map((url: string, i: number) => (
-                        <a key={i} href={url.trim()} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                        <button 
+                          key={i} 
+                          onClick={() => { setPreviewUrl(url.trim()); setPreviewTitle(`Photo ${i + 1}`); }}
+                          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
+                        >
                           <Eye className="w-4 h-4" /> Photo {i + 1}
-                        </a>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -645,19 +668,28 @@ export default function Meetings() {
                 {selectedItem['Aqu_link'] && (
                   <div className="pt-2">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Aqu File</p>
-                    <a href={selectedItem['Aqu_link']} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
-                      <Download className="w-4 h-4" /> View Aqu File
-                    </a>
+                    <button 
+                      onClick={() => { setPreviewUrl(selectedItem['Aqu_link']); setPreviewTitle('Aqu File'); }}
+                      className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
+                    >
+                      <Eye className="w-4 h-4" /> Preview Aqu File
+                    </button>
                   </div>
                 )}
-                {(selectedItem['Bill Upload'] || selectedItem['Bill Upload (link)'] || selectedItem['Bill'] || selectedItem['Bill_link']) && (
-                  <div className="pt-2">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Bill Upload</p>
-                    <a href={selectedItem['Bill Upload'] || selectedItem['Bill Upload (link)'] || selectedItem['Bill'] || selectedItem['Bill_link']} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
-                      <Download className="w-4 h-4" /> View Bill File
-                    </a>
-                  </div>
-                )}
+                {(() => {
+                  const bill = selectedItem['Bill Upload'] || selectedItem['Bill Upload (link)'] || selectedItem['Bill'] || selectedItem['Bill_link'];
+                  return bill ? (
+                    <div className="pt-2">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Bill Upload</p>
+                      <button 
+                        onClick={() => { setPreviewUrl(bill); setPreviewTitle('Bill Upload'); }}
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
+                      >
+                        <Eye className="w-4 h-4" /> Preview Bill
+                      </button>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             </div>
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0">
@@ -666,6 +698,12 @@ export default function Meetings() {
           </div>
         </div>
       )}
+      <DocumentPreviewModal 
+        isOpen={Boolean(previewUrl)} 
+        onClose={() => setPreviewUrl(null)} 
+        url={previewUrl || ''} 
+        title={previewTitle} 
+      />
     </div>
   );
 }

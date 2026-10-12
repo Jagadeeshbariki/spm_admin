@@ -18,7 +18,9 @@ import {
   Bird,
   Fish,
   Sprout,
-  Hand
+  Hand,
+  Waves,
+  Anchor
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -46,12 +48,14 @@ const aboutRegionItems = [
 
 const cropsItems = [
   { name: 'Crops Dashboard', path: '/admin/about-region/crops/dashboard', icon: Sprout },
-  { name: 'Water Collectives', path: '/admin/about-region/crops/dashboard?tab=water-collectives', icon: Droplets },
+  { name: 'Water Collectives', path: '/admin/water-collective', icon: Droplets },
   { name: 'BYP Dashboard', path: '/admin/about-region/byp/dashboard', icon: Hand },
 ];
 
 const rainfedFisheriesItems = [
   { name: 'Assessment of WB', path: '/admin/about-region/rainfed-fisheries/assessment', icon: Fish },
+  { name: 'Fingerlings Release', path: '/admin/about-region/rainfed-fisheries/fingerlings', icon: Waves },
+  { name: 'Fish Harvest', path: '/admin/about-region/rainfed-fisheries/harvest', icon: Anchor },
 ];
 
 export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolean, setCollapsed: (val: boolean) => void }) {
@@ -60,7 +64,7 @@ export default function Sidebar({ collapsed, setCollapsed }: { collapsed: boolea
   const role = user?.role?.toLowerCase().trim();
   const isOfficeAccess = role === 'admin' || role === 'office admin';
   
-  const isAboutRegion = location.pathname.startsWith('/admin/about-region');
+  const isAboutRegion = location.pathname.startsWith('/admin/about-region') || location.pathname.startsWith('/admin/water-collective');
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 

@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
-import { Loader2, Map as MapIcon, Layers, Info, Settings, Filter, X, Calendar } from 'lucide-react';
+import { Loader2, Map as MapIcon, Layers, Info, Settings, Filter, X, Calendar, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
 import Papa from 'papaparse';
 import { fetchSheet, fetchGeoJson, fetchFileContent } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
+import { WaterCollectivesTab } from './WaterCollectivesTab';
 
 // Fix for default marker icons in Leaflet with Webpack/Vite
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -40,10 +41,9 @@ export default function WaterCollective() {
   const [availableSites, setAvailableSites] = useState<any[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
-  const [csvData, setCsvData] = useState<Record<string, any[]>>({}); // filename -> rows
+  const [csvData, setCsvData] = useState<Record<string, any[]>>({});
   const [selectedSeason, setSelectedSeason] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>('');
-
   const [selectedMandal, setSelectedMandal] = useState<string>('');
   const [selectedGP, setSelectedGP] = useState<string>('');
 
@@ -51,18 +51,55 @@ export default function WaterCollective() {
   const userRole = user?.role?.toLowerCase();
   const canEdit = userRole === 'admin';
 
+  const [cropSubmissions, setCropSubmissions] = useState<any[]>([]);
+  const [odkError, setOdkError] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<'dashboard' | 'map'>('dashboard');
+
   useEffect(() => {
     loadSites();
   }, []);
 
+  const flattenObj = (obj: any, prefix = ''): any => {
+    return Object.keys(obj).reduce((acc: any, k: string) => {
+      const pre = prefix.length ? prefix + '_' : '';
+      if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
+        Object.assign(acc, flattenObj(obj[k], pre + k));
+      } else {
+        acc[pre + k] = obj[k];
+      }
+      return acc;
+    }, {});
+  };
+
   const loadSites = async () => {
     try {
       setIsInitialLoading(true);
-      const data = await fetchSheet('water_collectives');
-      setAvailableSites(data);
+      const [data, regRes] = await Promise.all([
+        fetchSheet('water_collectives'),
+        fetch('/api/odk/data?projectId=3&formId=NF-%20Register').catch(() => ({ ok: false }))
+      ]);
+      setAvailableSites(data || []);
+
+      if (regRes && (regRes as any).ok) {
+        const json = await (regRes as any).json();
+        const submissions = json.value || [];
+        const flattened = submissions.map((item: any) => {
+          const flat = flattenObj(item);
+          return {
+            ...flat,
+            area: parseFloat(flat.Area || flat.extent || flat.plot_extent || flat.area || '0'),
+            hhId: flat.plot_reg_farmer_Id || flat.HH_id || flat.farmer_id || flat.id || '',
+            mainCrop: flat.Crops || flat.Crop || flat.main_crop || 'Unknown'
+          };
+        });
+        setCropSubmissions(flattened);
+      } else {
+        setOdkError('Failed to fetch ODK Central registration data');
+      }
     } catch (error) {
       console.error('Failed to load sites:', error);
       toast.error('Failed to load water collectives');
+      setOdkError(String(error));
     } finally {
       setIsInitialLoading(false);
     }
@@ -233,26 +270,57 @@ export default function WaterCollective() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-6">
-      <div className="flex justify-between items-center">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 min-h-[calc(100vh-100px)] flex flex-col">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Water Collective</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Water Collective Dashboard & GIS</h1>
           <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
             <Info className="w-4 h-4" />
-            <span>Visualize irrigation sites managed in the admin section</span>
+            <span>Target vs Achievement cluster & irrigation site crop coverage</span>
           </div>
         </div>
-        {canEdit && (
-          <Link 
-            to="/admin/water-collective-management"
-            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
-          >
-            <Settings className="w-4 h-4" /> Manage Sites
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          <div className="bg-slate-100 p-1 rounded-xl flex items-center">
+            <button
+              onClick={() => setActiveView('dashboard')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                activeView === 'dashboard' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" /> Coverage Dashboard
+            </button>
+            <button
+              onClick={() => setActiveView('map')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                activeView === 'map' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <MapIcon className="w-4 h-4" /> GIS Map View
+            </button>
+          </div>
+          {canEdit && (
+            <Link 
+              to="/admin/water-collective-management"
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-sm"
+            >
+              <Settings className="w-4 h-4" /> Manage Sites
+            </Link>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
+      {activeView === 'dashboard' && (
+        <WaterCollectivesTab 
+          data={cropSubmissions} 
+          waterCollectives={availableSites} 
+          loading={isInitialLoading} 
+          error={odkError || undefined}
+          totalCount={availableSites.length}
+        />
+      )}
+
+      {activeView === 'map' && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 h-[700px]">
         {/* Sidebar for layers */}
         <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col gap-6 overflow-y-auto">
           <div className="flex items-center gap-2 font-semibold text-slate-800">
@@ -480,6 +548,7 @@ export default function WaterCollective() {
           )}
         </div>
       </div>
+      )}
 
       {/* Feature Details Modal */}
       {selectedFeature && (
