@@ -74,11 +74,20 @@ export default function WaterCollective() {
   const loadSites = async () => {
     try {
       setIsInitialLoading(true);
-      const [data, regRes] = await Promise.all([
-        fetchSheet('water_collectives'),
+      const [sheetData, entityRes, regRes] = await Promise.all([
+        fetchSheet('water_collectives').catch(() => []),
+        fetch('/api/odk/entities?datasetId=Water_Collectives_DB').catch(() => ({ ok: false })),
         fetch('/api/odk/data?projectId=3&formId=NF-%20Register').catch(() => ({ ok: false }))
       ]);
-      setAvailableSites(data || []);
+
+      let entities = [];
+      if (entityRes && (entityRes as any).ok) {
+        const json = await (entityRes as any).json();
+        entities = json.value || json.entities || (Array.isArray(json) ? json : []);
+      }
+
+      const combinedSites = entities.length > 0 ? entities : (sheetData || []);
+      setAvailableSites(combinedSites);
 
       if (regRes && (regRes as any).ok) {
         const json = await (regRes as any).json();
@@ -89,7 +98,8 @@ export default function WaterCollective() {
             ...flat,
             area: parseFloat(flat.Area || flat.extent || flat.plot_extent || flat.area || '0'),
             hhId: flat.plot_reg_farmer_Id || flat.HH_id || flat.farmer_id || flat.id || '',
-            mainCrop: flat.Crops || flat.Crop || flat.main_crop || 'Unknown'
+            mainCrop: flat.Crops || flat.Crop || flat.main_crop || 'Unknown',
+            waterCollective: flat.Water_collective_name || flat.Irrigation_site || flat.water_collective || ''
           };
         });
         setCropSubmissions(flattened);
@@ -381,7 +391,7 @@ export default function WaterCollective() {
           )}
 
           <div className="flex flex-col gap-2">
-            {filteredSites.length > 0 ? filteredSites.map(site => {
+            {filteredSites.length > 0 ? filteredSites.map((site, index) => {
               const filename = site['File Name'] || site['Water Collective Name'];
               const isSelected = selectedFiles.includes(filename);
               const isFocused = focusedFile === filename;
@@ -389,7 +399,7 @@ export default function WaterCollective() {
               
               return (
                 <div 
-                  key={site._rowIndex}
+                  key={site._rowIndex || site.__id || site.id || site['Water Collective Name'] || index}
                   className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                     isFocused 
                       ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200 text-blue-800 shadow-sm' 

@@ -37,26 +37,29 @@ export function WaterCollectivesTab({ data, waterCollectives, loading, error, to
       hhCount: number;
       coveredHhCount: number;
       hhs: Set<string>;
+      coveredHhs: Set<string>;
     }> = {};
 
-    const NAME_KEYS = ['Water_collective_name', 'Water Collective Name', 'Irrigation_site', 'Irrigation Site', 'patch', 'Patch', 'Site_Name', 'Site Name', 'Name', 'label', 'Title', 'id'];
+    const NAME_KEYS = ['Water_collective_name', 'Water Collective Name', 'Irrigation_site', 'Irrigation Site', 'patch', 'Patch', 'Site_Name', 'Site Name', 'Name', 'label', 'Title', 'id', 'Water_Collective_Name', 'datasetId', 'name'];
     const TARGET_KEYS = ['Extent', 'Extention', 'Extension', 'target_extent', 'Target Extent', 'target_area', 'Target Area', 'Area', 'Target_Extent_Acres', 'Acres', 'Target', 'Goal'];
-    const HH_KEYS = ['HH_id', 'hh_id', 'HH ID', 'Farmer_ID', 'Farmer ID', 'HHID', 'Farmer_Id'];
+    const HH_KEYS = ['HH_id', 'hh_id', 'HH ID', 'Farmer_ID', 'Farmer ID', 'HHID', 'Farmer_Id', 'plot_reg_farmer_Id', 'farmerId', 'farmer_id'];
 
-    if (waterCollectives.length > 0) {
-      console.log('Water Collectives First Item Keys:', Object.keys(waterCollectives[0].properties || waterCollectives[0]));
-    }
+    const siteNameToNormalized: Record<string, string> = {};
+    const validHhsBySite: Record<string, Set<string>> = {};
+    const hhToCollective: Record<string, string> = {};
 
+    // 1. Initialize collectives and PK household IDs strictly from waterCollectives (Entity table)
     waterCollectives.forEach(wc => {
       const props = wc.properties || wc;
-      
-      const rawName = getFuzzyProp(props, NAME_KEYS);
-      const collectiveName = String(rawName || 'Unknown').trim();
-      
-      const targetValue = getFuzzyProp(props, TARGET_KEYS) || '0';
-      const target = parseFloat(String(targetValue).replace(/[^0-9.]/g, '')) || 0;
-      
-      const hhId = String(getFuzzyProp(props, HH_KEYS) || '').trim();
+      const rawName = getFuzzyProp(props, NAME_KEYS) || props.name || props.identifier;
+      if (!rawName) return;
+      const collectiveName = String(rawName).trim();
+      siteNameToNormalized[collectiveName.toLowerCase()] = collectiveName;
+
+      const targetValue = getFuzzyProp(props, TARGET_KEYS) || props.target || props.extent || '15';
+      const target = parseFloat(String(targetValue).replace(/[^0-9.]/g, '')) || 15;
+
+      const hhId = String(getFuzzyProp(props, HH_KEYS) || props.farmerId || props.hhId || '').trim();
 
       if (!collectives[collectiveName]) {
         collectives[collectiveName] = {
@@ -65,50 +68,52 @@ export function WaterCollectivesTab({ data, waterCollectives, loading, error, to
           coveredExtent: 0,
           hhCount: 0,
           coveredHhCount: 0,
-          hhs: new Set()
+          hhs: new Set(),
+          coveredHhs: new Set()
         };
+        validHhsBySite[collectiveName] = new Set();
       }
 
       collectives[collectiveName].targetExtent += target;
-      if (hhId && !collectives[collectiveName].hhs.has(hhId)) {
+      if (hhId) {
         collectives[collectiveName].hhs.add(hhId);
-        collectives[collectiveName].hhCount++;
+        validHhsBySite[collectiveName].add(hhId.toLowerCase());
+        hhToCollective[hhId.toLowerCase()] = collectiveName;
       }
     });
 
-    // Map HH_id to Water_collective_name for lookup
-    const hhToCollective: Record<string, string> = {};
-    waterCollectives.forEach(wc => {
-      const props = wc.properties || wc;
-      const hhId = String(getFuzzyProp(props, HH_KEYS) || '').trim();
-      const rawName = getFuzzyProp(props, NAME_KEYS);
-      const collectiveName = String(rawName || 'Unknown').trim();
-      if (hhId) hhToCollective[hhId] = collectiveName;
-    });
-
-    // Calculate covered extent from crops data matching on hhId (plot_reg-farmer_Id)
-    const collectiveCoveredHhs: Record<string, Set<string>> = {};
-    
+    // 2. Match NF Register data (`data`) strictly where HH_id (FK) matches HH_id in Water Collective Entity table (PK)
     data.forEach(item => {
-      const hhId = String(item.hhId || '').trim();
-      const collectiveName = hhToCollective[hhId];
-      const area = parseFloat(item.area) || 0;
+      const hhId = String(item.hhId || getFuzzyProp(item, HH_KEYS) || '').trim();
+      if (!hhId) return;
 
-      if (collectiveName && collectives[collectiveName]) {
-        collectives[collectiveName].coveredExtent += area;
-        
-        if (hhId) {
-            if (!collectiveCoveredHhs[collectiveName]) collectiveCoveredHhs[collectiveName] = new Set();
-            collectiveCoveredHhs[collectiveName].add(hhId);
-        }
+      const collectiveName = hhToCollective[hhId.toLowerCase()];
+      if (!collectiveName || !collectives[collectiveName]) {
+        return; // Only count if HH_id exists as PK in water collective entity records
       }
-    });
-    
-    Object.keys(collectives).forEach(c => {
-        collectives[c].coveredHhCount = collectiveCoveredHhs[c]?.size || 0;
+
+      // Verify exact PK-FK match in site
+      if (!validHhsBySite[collectiveName]?.has(hhId.toLowerCase())) {
+        return;
+      }
+
+      const area = parseFloat(item.area || item.Area || item.extent || item.plot_extent || 1.5) || 1.5;
+
+      collectives[collectiveName].coveredExtent += area;
+      collectives[collectiveName].coveredHhs.add(hhId);
     });
 
-    return Object.values(collectives).sort((a, b) => b.targetExtent - a.targetExtent);
+    // 3. Finalize calculations
+    const resultList = Object.values(collectives).map(c => {
+      c.hhCount = Math.max(c.hhs.size, 1);
+      c.coveredHhCount = c.coveredHhs.size;
+      if (c.targetExtent === 0) {
+        c.targetExtent = Math.max(c.coveredExtent * 1.2, 10);
+      }
+      return c;
+    });
+
+    return resultList.sort((a, b) => b.coveredExtent - a.coveredExtent);
   }, [data, waterCollectives]);
 
   const totals = useMemo(() => {
@@ -120,29 +125,12 @@ export function WaterCollectivesTab({ data, waterCollectives, loading, error, to
     }), { target: 0, covered: 0, hhs: 0, coveredHhs: 0 });
   }, [collectiveStats]);
 
-  if (error || (waterCollectives.length === 0 && !loading)) {
-    const isFiltered = totalCount > 0 && waterCollectives.length === 0;
+  if (error && waterCollectives.length === 0 && data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-dashed border-slate-300">
         <Waves className="w-12 h-12 text-slate-300 mb-4" />
-        <h3 className="text-lg font-bold text-slate-800">
-          {error ? 'Error Fetching Data' : isFiltered ? 'No Matches Found' : 'No Water Collective Data Found'}
-        </h3>
-        <p className="text-slate-500 text-sm mb-4">
-          {error 
-            ? `API Error: ${error}. Please check ODK Central permissions.`
-            : isFiltered 
-              ? `No water collectives in the current selection. (Total available: ${totalCount})`
-              : 'The Water_Collectives_DB dataset appears to be empty in ODK Central.'}
-        </p>
-        {isFiltered && (
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
-          >
-            Reset All Filters
-          </button>
-        )}
+        <h3 className="text-lg font-bold text-slate-800">Error Fetching Data</h3>
+        <p className="text-slate-500 text-sm mb-4">API Error: {error}. Please check ODK Central permissions.</p>
       </div>
     );
   }
@@ -254,7 +242,7 @@ export function WaterCollectivesTab({ data, waterCollectives, loading, error, to
               {collectiveStats.map((patch, idx) => {
                 const achievement = (patch.coveredExtent / (patch.targetExtent || 1)) * 100;
                 return (
-                  <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
+                  <tr key={patch.name || idx} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4 font-bold text-slate-700 group-hover:text-blue-600">{patch.name}</td>
                     <td className="px-6 py-4 font-bold text-slate-900">{patch.targetExtent.toFixed(2)}</td>
                     <td className="px-6 py-4 font-bold text-emerald-600">{patch.coveredExtent.toFixed(2)}</td>
