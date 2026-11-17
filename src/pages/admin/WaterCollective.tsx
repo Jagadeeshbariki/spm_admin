@@ -92,17 +92,48 @@ export default function WaterCollective() {
       if (regRes && (regRes as any).ok) {
         const json = await (regRes as any).json();
         const submissions = json.value || [];
-        const flattened = submissions.map((item: any) => {
-          const flat = flattenObj(item);
-          return {
-            ...flat,
-            area: parseFloat(flat.Area || flat.extent || flat.plot_extent || flat.area || '0'),
-            hhId: flat.plot_reg_farmer_Id || flat.HH_id || flat.farmer_id || flat.id || '',
-            mainCrop: flat.Crops || flat.Crop || flat.main_crop || 'Unknown',
-            waterCollective: flat.Water_collective_name || flat.Irrigation_site || flat.water_collective || ''
-          };
+
+        const sortedSubs = [...submissions].sort((a: any, b: any) => {
+          const da = new Date(a.__system?.updatedAt || a.__system?.submissionDate || a.plot_reg?.date || 0).getTime();
+          const db = new Date(b.__system?.updatedAt || b.__system?.submissionDate || b.plot_reg?.date || 0).getTime();
+          return db - da;
         });
-        setCropSubmissions(flattened);
+
+        const seenKeys = new Set<string>();
+        const dedupedFlattened: any[] = [];
+
+        sortedSubs.forEach((item: any) => {
+          if (item.__system?.deletedAt || item.__system?.reviewState === 'rejected') return;
+          const flat = flattenObj(item);
+          const rawFid = String(flat.plot_reg_farmer_Id || flat.farmer_Id || flat.HH_id || flat.farmer_id || flat.id || '').trim();
+          const rawName = String(flat.plot_reg_farmer_name || flat.farmer_name || '').trim();
+          const hhId = rawFid || (/^\d{6,}$/.test(rawName) ? rawName : '');
+          const yearRaw = String(flat.plot_reg_year_only || flat.plot_reg_year || flat.year || '').trim();
+          const yearOnly = yearRaw.length >= 4 ? yearRaw.substring(0, 4) : yearRaw;
+          const season = String(flat.plot_reg_season || flat.season || '').trim().toLowerCase();
+          const mainCrop = String(flat.plot_reg_main_crop || flat.main_crop || flat.Crops || flat.Crop || '').trim().toLowerCase();
+          const village = String(flat.plot_reg_village || flat.village || '').trim().toLowerCase();
+
+          const dedupKey = hhId
+            ? `${hhId}|${yearOnly}|${season}|${mainCrop}`.toLowerCase()
+            : `${rawName.toLowerCase()}|${village}|${yearOnly}|${season}|${mainCrop}`;
+
+          if (seenKeys.has(dedupKey)) return;
+          seenKeys.add(dedupKey);
+
+          const rawArea = flat.plot_reg_area_ ?? flat.area_ ?? flat.Area ?? flat.extent ?? flat.plot_extent ?? flat.area ?? '0';
+          const parsedArea = parseFloat(String(rawArea));
+
+          dedupedFlattened.push({
+            ...flat,
+            area: isNaN(parsedArea) ? 0 : parsedArea,
+            hhId,
+            mainCrop: flat.Crops || flat.Crop || flat.plot_reg_main_crop || flat.main_crop || 'Unknown',
+            waterCollective: flat.Water_collective_name || flat.Irrigation_site || flat.water_collective || ''
+          });
+        });
+
+        setCropSubmissions(dedupedFlattened);
       } else {
         setOdkError('Failed to fetch ODK Central registration data');
       }

@@ -97,7 +97,9 @@ export function WaterCollectivesTab({ data, waterCollectives, loading, error, to
         return;
       }
 
-      const area = parseFloat(item.area || item.Area || item.extent || item.plot_extent || 1.5) || 1.5;
+      const rawArea = item.area ?? item.Area ?? item.extent ?? item.plot_extent ?? item.plot_reg_area_ ?? item.area_ ?? '0';
+      const parsedArea = parseFloat(String(rawArea));
+      const area = isNaN(parsedArea) ? 0 : parsedArea;
 
       collectives[collectiveName].coveredExtent += area;
       collectives[collectiveName].coveredHhs.add(hhId);

@@ -107,14 +107,80 @@ export default function CropsDashboard() {
           }, {});
         };
 
-        const mappedData = submissions.map((sub: any) => {
+        // Sort newest submissions first, preferring entries that have an explicit farmer_Id
+        const sortedSubmissions = [...submissions].sort((a: any, b: any) => {
+          const da = new Date(a.__system?.updatedAt || a.__system?.submissionDate || a.plot_reg?.date || 0).getTime();
+          const db = new Date(b.__system?.updatedAt || b.__system?.submissionDate || b.plot_reg?.date || 0).getTime();
+          if (db !== da) return db - da;
+          const fa = a.plot_reg?.farmer_Id ? 1 : 0;
+          const fb = b.plot_reg?.farmer_Id ? 1 : 0;
+          return fb - fa;
+        });
+
+        const seenPrimaryKeys = new Set<string>();
+        const seenNameVillageKeys = new Map<string, string>();
+        const uniqueSubmissions: any[] = [];
+
+        sortedSubmissions.forEach((sub: any) => {
+          if (sub.__system?.deletedAt || sub.__system?.reviewState === 'rejected') return;
+          const flat = flatten(sub);
+          const rawFarmerId = String(flat['plot_reg-farmer_Id'] || flat['plot_reg_farmer_Id'] || flat['farmer_Id'] || flat['HH_id'] || flat['HH_Id'] || flat['hh_id'] || flat['HH Id'] || flat['hhid'] || '').trim();
+          const rawFarmerName = String(flat['plot_reg-farmer_name'] || flat['plot_reg_farmer_name'] || flat['farmer_name'] || flat['Farmer_Name'] || flat['name'] || flat['farmer'] || '').trim();
+          const isNumericName = /^\d{6,}$/.test(rawFarmerName);
+          const farmerId = rawFarmerId || (isNumericName ? rawFarmerName : '');
+
+          const cropCycle = String(flat['plot_reg_crop_cycle'] || flat['plot_reg-crop_cycle'] || '').trim();
+          let yearOnly = String(flat['plot_reg-year_only'] || flat['plot_reg_year_only'] || flat['plot_reg-year'] || flat['plot_reg_year'] || flat['text_year'] || flat['year'] || '').trim();
+          yearOnly = yearOnly.length >= 4 ? yearOnly.substring(0, 4) : yearOnly;
+          let regSeason = String(flat['plot_reg-season'] || flat['plot_reg_season'] || flat['season'] || flat['Season'] || '').trim();
+          if (cropCycle) {
+            const parts = cropCycle.split('-');
+            if (parts.length >= 3) {
+              if (!yearOnly) yearOnly = parts[1];
+              if (!regSeason) regSeason = parts[2];
+            }
+          }
+          const regMainCrop = String(flat['main_crop'] || flat['plot_reg_main_crop'] || flat['plot_reg-main_crop'] || flat['Main_Crop'] || '').trim();
+          const village = String(flat['village'] || flat['Village'] || '').trim();
+          const normName = isNumericName ? '' : rawFarmerName.toLowerCase();
+
+          const primaryKey = farmerId
+            ? `${farmerId}-${yearOnly}-${regSeason}-${regMainCrop}`.toLowerCase().replace(/\s+/g, '_')
+            : '';
+          const nameVillageKey = normName
+            ? `${normName}-${village}-${yearOnly}-${regSeason}-${regMainCrop}`.toLowerCase().replace(/\s+/g, '_')
+            : '';
+
+          let isDuplicate = false;
+          if (primaryKey && seenPrimaryKeys.has(primaryKey)) {
+            isDuplicate = true;
+          } else if (nameVillageKey && seenNameVillageKeys.has(nameVillageKey)) {
+            const existingFid = seenNameVillageKeys.get(nameVillageKey) || '';
+            if (!farmerId || !existingFid || farmerId === existingFid) {
+              isDuplicate = true;
+            }
+          }
+
+          if (!isDuplicate) {
+            if (primaryKey) seenPrimaryKeys.add(primaryKey);
+            if (nameVillageKey && !seenNameVillageKeys.has(nameVillageKey)) {
+              seenNameVillageKeys.set(nameVillageKey, farmerId);
+            }
+            uniqueSubmissions.push(sub);
+          }
+        });
+
+        const mappedData = uniqueSubmissions.map((sub: any) => {
           const flat = flatten(sub);
           
           // 1. Create PK from NF - Register
-          const farmerId = String(flat['plot_reg-farmer_Id'] || flat['plot_reg_farmer_Id'] || flat['farmer_Id'] || '').trim();
-          const yearRaw = String(flat['plot_reg-year_only'] || flat['plot_reg-year'] || flat['year'] || '').trim();
+          const rawFarmerId = String(flat['plot_reg-farmer_Id'] || flat['plot_reg_farmer_Id'] || flat['farmer_Id'] || flat['HH_id'] || flat['HH_Id'] || flat['hh_id'] || flat['HH Id'] || flat['hhid'] || '').trim();
+          const rawFarmerName = String(flat['plot_reg-farmer_name'] || flat['plot_reg_farmer_name'] || flat['farmer_name'] || flat['Farmer_Name'] || flat['name'] || flat['farmer'] || '').trim();
+          const farmerId = rawFarmerId || (/^\d{6,}$/.test(rawFarmerName) ? rawFarmerName : '');
+
+          const yearRaw = String(flat['plot_reg-year_only'] || flat['plot_reg_year_only'] || flat['plot_reg-year'] || flat['plot_reg_year'] || flat['year'] || '').trim();
           const yearOnly = yearRaw.length >= 4 ? yearRaw.substring(0, 4) : yearRaw;
-          const regSeason = String(flat['plot_reg-season'] || flat['season'] || '').trim();
+          const regSeason = String(flat['plot_reg-season'] || flat['plot_reg_season'] || flat['season'] || '').trim();
           const regMainCrop = String(flat['main_crop'] || flat['plot_reg_main_crop'] || flat['plot_reg-main_crop'] || flat['Main_Crop'] || '').trim();
           
           const registration_id = `${farmerId}-${yearOnly}-${regSeason}-${regMainCrop}`.toLowerCase().replace(/\s+/g, '_');
@@ -188,27 +254,22 @@ export default function CropsDashboard() {
           });
 
           // Variables required for dashboard rendering
-          const hhId = farmerId || flat['HH_id'] || flat['hh_id'] || '';
-          const farmerName = flat['plot_reg-farmer_name'] || flat['farmer_name'] || flat['name'] || '';
-          const season = regSeason || flat['Season'] || 'Unknown';
-          const sowingDate = flat['plot_reg-sowing_date'] || flat['sowing_date'] || flat['date'] || '-';
-          const regYear = yearOnly;
-            const rawYear = flat['text_year'] || flat['year'];
-            const rawSeason = flat['season'] || flat['Season'];
-            const cropCycle = flat['plot_reg_crop_cycle'] || flat['plot_reg-crop_cycle'] || '';
-            
-            let finalYear = rawYear ? String(rawYear).substring(0, 4) : '';
-            let finalSeason = rawSeason || '';
-            
-            if (cropCycle) {
-               const parts = cropCycle.split('-');
-               if (parts.length >= 3) {
-                  if (!finalYear) finalYear = parts[1];
-                  if (!finalSeason) finalSeason = parts[2];
-               }
-            }
+          const rawYear = flat['text_year'] || flat['year'];
+          const rawSeason = flat['season'] || flat['Season'];
+          const cropCycle = flat['plot_reg_crop_cycle'] || flat['plot_reg-crop_cycle'] || '';
+          
+          let finalYear = rawYear ? String(rawYear).substring(0, 4) : '';
+          let finalSeason = rawSeason || '';
+          
+          if (cropCycle) {
+             const parts = cropCycle.split('-');
+             if (parts.length >= 3) {
+                if (!finalYear) finalYear = parts[1];
+                if (!finalSeason) finalSeason = parts[2];
+             }
+          }
 
-            return {
+          return {
             plotPhoto: flat['plot_reg_image'] || flat['plot_reg-image'] || flat['image'] || flat['photo'],
             coordinates: sub.plot_reg?.plot_gps?.coordinates || sub.plot_gps?.coordinates || sub.gps?.coordinates || null,
             plotSubmissionId: sub.__id || sub.meta?.instanceID?.replace('uuid:', ''),
@@ -220,9 +281,9 @@ export default function CropsDashboard() {
               const m = flat['crop_mode'] || flat['crop_model'] || flat['plot_reg_crop_model'] || flat['plot_reg-crop_model'] || '';
               return (m && m.toLowerCase() !== 'unknown') ? m : 'Other';
             })(),
-            farmerName: flat['farmer_name'] || flat['Farmer_Name'] || flat['name'] || flat['farmer'] || '',
+            farmerName: rawFarmerName,
             plotFarmerId: farmerId,
-            hhId: flat['plot_reg-farmer_Id'] || flat['plot_reg_farmer_Id'] || flat['farmer_Id'] || flat['HH_id'] || flat['HH_Id'] || flat['hh_id'] || flat['HH Id'] || flat['hhid'] || '',
+            hhId: farmerId,
             year: finalYear || 'Unknown',
             season: finalSeason || 'Unknown',
             mainCrop: flat['main_crop'] || flat['plot_reg_main_crop'] || flat['plot_reg-main_crop'] || flat['Main_Crop'] || '-',
@@ -353,7 +414,7 @@ export default function CropsDashboard() {
       
       return true;
     });
-  }, [data, selectedBlock, selectedGp, selectedVillage, selectedCropMode, hasActivities, selectedYear, selectedSeason, searchTerm, activeTab]);
+  }, [data, selectedBlock, selectedGp, selectedVillage, selectedCluster, selectedCropMode, hasActivities, selectedYear, selectedSeason, searchTerm, activeTab]);
 
   const tabFilteredData = useMemo(() => {
     let base = filteredData;
@@ -407,9 +468,9 @@ export default function CropsDashboard() {
 
   
   const groupedData = useMemo(() => {
-    const groups = {};
+    const groups: Record<string, any> = {};
     tabFilteredData.forEach(item => {
-      const key = `${item.hhId}-${item.farmerName}`;
+      const key = item.hhId ? item.hhId : `${String(item.farmerName || '').trim().toLowerCase()}-${String(item.village || '').trim().toLowerCase()}`;
       if (!groups[key]) {
         groups[key] = {
           id: key,
@@ -422,6 +483,8 @@ export default function CropsDashboard() {
           plots: [],
           totalActivities: 0
         };
+      } else if (/^\d{6,}$/.test(String(groups[key].farmerName || '').trim()) && item.farmerName && !/^\d{6,}$/.test(String(item.farmerName).trim())) {
+        groups[key].farmerName = item.farmerName;
       }
       groups[key].plots.push(item);
       groups[key].totalActivities += (item.activityCount || 0);
@@ -437,74 +500,51 @@ export default function CropsDashboard() {
   }, [groupedData, currentPage]);
 
   const handleExport = () => {
-    const exportData = tabFilteredData.flatMap(plot => {
-      const basePlot = {
-        'HH ID': plot.hhId,
-        'Farmer Name': plot.farmerName,
-        'Block': plot.block,
-        'GP': plot.gp,
-        'Village': plot.village,
-        'Cluster': plot.cluster || '-',
-        'Year': plot.year,
-        'Season': plot.season,
-        'Main Crop': plot.mainCrop,
-        'Inter Crops': plot.interCrops,
-        'Sowing Date': plot.sowingDate,
-        'Area': plot.area,
-        'Crop Mode': plot.cropMode,
-        'Submitter': plot.submitterName || '-'
+    const joinUnique = (vals: any[], fallback = '-') => {
+      const cleaned = Array.from(
+        new Set(
+          vals
+            .map(v => String(v ?? '').trim())
+            .filter(v => v && v !== '-' && v !== 'Unknown' && v !== 'null' && v !== 'undefined')
+        )
+      );
+      return cleaned.length > 0 ? cleaned.join(', ') : fallback;
+    };
+
+    const exportData = groupedData.map((group: any) => {
+      const plots = group.plots || [];
+      const totalArea = plots.reduce((sum: number, p: any) => {
+        const val = parseFloat(p.area);
+        return sum + (isNaN(val) ? 0 : val);
+      }, 0);
+      const hasNumericArea = plots.some((p: any) => !isNaN(parseFloat(p.area)));
+
+      const cropDetails = plots
+        .map((p: any) => {
+          const cropLabel = p.mainCrop && p.mainCrop !== '-' ? p.mainCrop : p.cropMode || 'Crop';
+          const interLabel = p.interCrops && p.interCrops !== '-' ? `, Inter: ${p.interCrops}` : '';
+          return `${cropLabel} (${p.cropMode || 'Other'}, ${p.season || '-'} ${p.year || '-'}, Area: ${p.area ?? '-'}${interLabel})`;
+        })
+        .join(' | ');
+
+      return {
+        'HH ID': group.hhId || '-',
+        'Farmer Name': group.farmerName || '-',
+        'Block': group.block || '-',
+        'GP': group.gp || '-',
+        'Village': group.village || '-',
+        'Cluster': group.cluster || '-',
+        'Year': joinUnique(plots.map((p: any) => p.year)),
+        'Season': joinUnique(plots.map((p: any) => p.season)),
+        'Crop Model': joinUnique(plots.map((p: any) => p.cropMode), 'Other'),
+        'Main Crop': joinUnique(plots.map((p: any) => p.mainCrop)),
+        'Inter Crops': joinUnique(plots.map((p: any) => p.interCrops)),
+        'Sowing Date': joinUnique(plots.map((p: any) => p.sowingDate)),
+        'Total Plots': plots.length,
+        'Area (Acres)': hasNumericArea ? Number(totalArea.toFixed(2)) : '-',
+        'Crop Details': cropDetails || '-',
+        'Submitter': joinUnique(plots.map((p: any) => p.submitterName))
       };
-
-      let actsToExport = plot.activitiesData;
-      if (activeTab === 'bio-inputs') {
-        actsToExport = actsToExport.filter((a: any) => a.application_bio_input && a.application_bio_input.length > 0);
-      } else if (activeTab === 'harvested') {
-        actsToExport = actsToExport.filter((a: any) => a.harvesting && a.harvesting.length > 0);
-      } else if (activeTab === 'cces') {
-        actsToExport = actsToExport.filter((a: any) => a.cce && (a.cce.date_cce || a.cce.sqmtr_5_5_kgs));
-      }
-
-      if (actsToExport.length === 0) {
-        if (activeTab === 'bio-inputs' || activeTab === 'harvested' || activeTab === 'cces') {
-          return [];
-        }
-        return [{ ...basePlot, 'Activity Type': 'No Activity' }];
-      }
-
-      return actsToExport.map((act: any) => {
-        const bioInputs = (act.application_bio_input || []).map((bi: any) => 
-          `${bi.inputs_applied || bi.bio_input_name || '-'}(${bi.Dhravajeevamrutham_Quantity || bi.qty || '-'})`
-        ).join(', ');
-
-        const harvests = (act.harvesting || []).map((h: any) => 
-          `${h.crop_harvested || h.crop || '-'}(${h.yield_quantity || h.yield_Qntl || '-'})`
-        ).join(', ');
-
-        const pestsArr = Array.isArray(act.diseases_pests) ? act.diseases_pests : act.diseases_pests ? [act.diseases_pests] : [];
-        const pests = pestsArr.map((p: any) => 
-          p.pests_diseases_observed || p['diseases_pests-pests_diseases_observed'] || p.pests_diseases || ''
-        ).filter(Boolean).join(', ') || act.pests_diseases_observed || act['diseases_pests-pests_diseases_observed'] || act['diseases_pests_pests_diseases_observed'] || '';
-
-        const pestDate = pestsArr.map((p: any) => 
-          p.date_activity || p['diseases_pests-date_activity'] || p.date || ''
-        ).filter(Boolean).join(', ') || act['diseases_pests-date_activity'] || act.date_activity || '';
-
-        const pestManagement = pestsArr.map((p: any) => 
-          p.inputs_applied_disease_management || p['diseases_pests-inputs_applied_disease_management'] || ''
-        ).filter(Boolean).join(', ') || act.inputs_applied_disease_management || act['diseases_pests-inputs_applied_disease_management'] || '';
-
-        return {
-          ...basePlot,
-          'Activity Type': act.displayActivity || 'Other',
-          'Activity Date': act.displayDate || '-',
-          'Bio Inputs Applied': bioInputs,
-          'Harvest Yield': harvests,
-          'CCE Yield (Kg)': act.cce?.sqmtr_5_5_kgs || '',
-          'Pests & Diseases Observed': pests,
-          'Pest Activity Date': formatDisplayDate(pestDate),
-          'Pest Management Inputs': pestManagement
-        };
-      });
     });
 
     const csv = Papa.unparse(exportData);
@@ -512,8 +552,9 @@ export default function CropsDashboard() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Crops_${activeTab}_Data_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `Crops_${activeTab}_Unique_Farmers_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
   };
   
   const [expandedSubRow, setExpandedSubRow] = useState<string | number | null>(null);
@@ -1102,7 +1143,7 @@ export default function CropsDashboard() {
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white">
               <div className="text-sm text-slate-500">
-                Showing <span className="font-medium text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-slate-900">{Math.min(currentPage * itemsPerPage, filteredData.length)}</span> of <span className="font-medium text-slate-900">{filteredData.length}</span> results
+                Showing <span className="font-medium text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-slate-900">{Math.min(currentPage * itemsPerPage, groupedData.length)}</span> of <span className="font-medium text-slate-900">{groupedData.length}</span> farmers
               </div>
               <div className="flex items-center gap-2">
                 <button
